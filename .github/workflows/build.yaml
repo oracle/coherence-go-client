@@ -61,6 +61,11 @@ jobs:
       run: |
         make copyright
 
+    - name: Trivy Scan
+      shell: bash
+      run: |
+        make trivy-scan
+
     - name: E2E Local Tests
       shell: bash
       run: |
@@ -74,7 +79,7 @@ jobs:
           COHERENCE_TLS_CERTS_PATH=`pwd`/test/utils/certs/guardians-ca.crt \
           COHERENCE_TLS_CLIENT_CERT=`pwd`/test/utils/certs/star-lord.crt \
           COHERENCE_TLS_CLIENT_KEY=`pwd`/test/utils/certs/star-lord.key \
-          COHERENCE_VERSION=22.06.2 PROFILES=,secure,-jakarta,javax make clean certs generate-proto build-test-images test-e2e-standalone
+          COHERENCE_VERSION=22.06.3 PROFILES=,secure,-jakarta,javax make clean certs generate-proto build-test-images test-e2e-standalone
 
     - uses: actions/upload-artifact@v1
       if: failure()

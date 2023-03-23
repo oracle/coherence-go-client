@@ -8,8 +8,8 @@
 Package coherence provides a set of functions and interfaces for Go programs to act as cache clients to a
 Coherence Cluster using Google's gRPC framework for the network transport.
 
-Your cluster must be running Coherence Community Edition (CE) 22.06.2+ or Coherence commercial
-version 14.1.1.2206.1+ and must be running a gRPC Proxy.
+Your cluster must be running Coherence Community Edition (CE) 22.06.4+ or Coherence commercial
+version 14.1.1.2206.4+ and must be running a gRPC Proxy.
 
 This API provides two types of caches, NamedMap and NamedCache. NamedCache is syntactically identical in behaviour to a NamedMap,
 but additionally implements the PutWithExpiry operation.

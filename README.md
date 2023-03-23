@@ -128,7 +128,7 @@ please [visit this site to get an invitation](https://join.slack.com/t/oraclecoh
 The invitation email will include details of how to access our Slack
 workspace.  After you are logged in, please come to `#coherence` and say, "hello!"
 
-If you would like to raise an issue please see [here](https://github.com/oracle/coherence-cli/issues/new/choose).
+If you would like to raise an issue please see [here](https://github.com/oracle/coherence-go-client/issues/new/choose).
 
 ## Contributing
 

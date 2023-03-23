@@ -35,10 +35,14 @@ A clear and concise description of what you expected to happen (or insert a code
 * Coherence Go Client version:
 
   insert release or Git SHA here
+
 * Coherence Cluster version:
+
   insert Coherence cluster version here
 
-  insert release or Git SHA here
+* Go Version
+
+  insert output of `go version`
 
 **Additional context**
 Add any other context about the question here.

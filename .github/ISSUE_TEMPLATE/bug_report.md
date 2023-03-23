@@ -21,6 +21,7 @@ If applicable, add screenshots to help explain your problem.
 
 **Environment (please complete the following information):**
  - Coherence Go Client Version 
+ - Go Version - output of `go version`
  - Coherence cluster version you are connecting to
  - Coherence cluster edition: Community Edition/Enterprise Edition or Grid Edition
  - Java version and Java vendor used for Coherence

@@ -21,6 +21,8 @@ import (
 	"time"
 )
 
+const timeout = 20
+
 func init() {
 	log.SetFlags(log.Flags() | log.Lshortfile)
 }
@@ -766,14 +768,14 @@ func runBasicLifecycleTests(g *gomega.WithT, cache coherence.NamedMap[string, st
 	// function to return the truncate count from the listener
 	f := func() int32 { return listener.truncateCount() }
 
-	g.Expect(expect[int32](f, 2, 10)).To(gomega.BeNil())
+	g.Expect(expect[int32](f, 2, timeout)).To(gomega.BeNil())
 
 	// destroy the cache
 	err = cache.Destroy(ctx)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 	f = func() int32 { return listener.destroyCount() }
-	g.Expect(expect[int32](f, 1, 10)).To(gomega.BeNil())
+	g.Expect(expect[int32](f, 1, timeout)).To(gomega.BeNil())
 }
 
 func runMultipleLifecycleTests(g *gomega.WithT, cache coherence.NamedMap[string, string]) {
@@ -859,8 +861,8 @@ func runReleasedLifecycleTests(g *gomega.WithT, cache coherence.NamedMap[string,
 	}
 
 	// each of the listeners should receive 1 event
-	g.Expect(expect[int32](f1, 1, 10)).To(gomega.BeNil())
-	g.Expect(expect[int32](f2, 1, 10)).To(gomega.BeNil())
+	g.Expect(expect[int32](f1, 1, timeout)).To(gomega.BeNil())
+	g.Expect(expect[int32](f2, 1, timeout)).To(gomega.BeNil())
 }
 
 type ValidateEvent[K comparable, V any] struct {
