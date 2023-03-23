@@ -57,6 +57,9 @@ TBC
 
 ## <a name="examples"></a>Examples
 
+For details examples, please see the [Examples](examples).
+
+
 The following example connects to a Coherence cluster running gRPC Proxy on default
 port of 1408, creates a new `NamedMap` with key `int` and value of a `Person` and
 issues `Put()`, `Get()` and `Size()` operations.
@@ -116,8 +119,6 @@ func main() {
     }
 }
 ```
-
-> Note: For more detailed examples, see [here](examples).
 
 ## Help
 
