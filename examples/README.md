@@ -30,7 +30,7 @@ docker run -d -p 1408:1408 -p 30000:30000 ghcr.io/oracle/coherence-ce:22.06.3
 * [Basic operations using primitives and structs](#basic)
 * [Querying data](#querying)
 * [Aggregating data](#aggregations)
-* [Running processors](#processors)
+* [Mutating data using entry processors](#processors)
 * [Listening for Map Events](#map-events)
 * [Listening for Map Lifecycle Events](#lifecycle-events)
 * [Listening for Session Lifecycle Events](#session-lifecycle-events)
