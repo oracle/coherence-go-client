@@ -79,9 +79,9 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v3
       with:
-        go-version: 1.18
+        go-version: 1.19
 
-    - name: Verify Coherence CLI
+    - name: E2E Local Tests
       env:
         COH_BRANCH: ${{ matrix.branch }}
       shell: bash
@@ -97,7 +97,7 @@ jobs:
         go get google.golang.org/grpc/cmd/protoc-gen-go-grpc
         COHERENCE_BASE_IMAGE=gcr.io/distroless/java17 INCLUDE_LONG_RUNNING=true PROFILES=,jakarta,-javax COHERENCE_VERSION=$COH_VERSION make clean generate-proto build-test-images test-e2e-standalone
 
-    - name: Verify Coherence CLI SSL
+    - name: E2E Local Tests SSL
       env:
         COH_BRANCH: ${{ matrix.branch }}
       shell: bash

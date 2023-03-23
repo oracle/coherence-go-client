@@ -1,6 +1,6 @@
 # Coherence Go Client
 
-![Coherence CI](https://github.com/oracle/coherence-go-client/workflows/CI/badge.svg?branch=main)
+![Coherence Go Client](https://github.com/oracle/coherence-go-client/workflows/CI/badge.svg?branch=main)
 [![License](http://img.shields.io/badge/license-UPL%201.0-blue.svg)](https://oss.oracle.com/licenses/upl/)
 
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=oracle_coherence-go-client&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=oracle_coherence-go-client)
@@ -43,7 +43,7 @@ docker run -d -p 1408:1408 ghcr.io/oracle/coherence-ce:22.06.3
 ## <a name="installations"></a> Installation
 
 ```bash
-$ go get github.com/coherence/coherence-go-client
+go get github.com/coherence/coherence-go-client
 ````
 After executing this command coherence-go-client is ready to use, and it's source will be in:
 
@@ -121,7 +121,14 @@ func main() {
 
 ## Help
 
-TBC
+We have a **public Slack channel** where you can get in touch with us to ask questions about using the Coherence CLI
+or give us feedback or suggestions about what features and improvements you would like to see. We would love
+to hear from you. To join our channel,
+please [visit this site to get an invitation](https://join.slack.com/t/oraclecoherence/shared_invite/enQtNzcxNTQwMTAzNjE4LTJkZWI5ZDkzNGEzOTllZDgwZDU3NGM2YjY5YWYwMzM3ODdkNTU2NmNmNDFhOWIxMDZlNjg2MzE3NmMxZWMxMWE).  
+The invitation email will include details of how to access our Slack
+workspace.  After you are logged in, please come to `#coherence` and say, "hello!"
+
+If you would like to raise an issue please see [here](https://github.com/oracle/coherence-cli/issues/new/choose).
 
 ## Contributing
 
