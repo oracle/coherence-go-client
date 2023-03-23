@@ -1,28 +1,129 @@
-*This repository acts as a template for all of Oracle’s GitHub repositories. It contains information about the guidelines for those repositories. All files and sections contained in this template are mandatory, and a GitHub app ensures alignment with these guidelines. To get started with a new repository, replace the italic paragraphs with the respective text for your project.*
+# Coherence Go Client
 
-# Project name
+![Coherence CI](https://github.com/oracle/coherence-go-client/workflows/CI/badge.svg?branch=main)
+[![License](http://img.shields.io/badge/license-UPL%201.0-blue.svg)](https://oss.oracle.com/licenses/upl/)
 
-*Describe your project's features, functionality and target audience*
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=oracle_coherence-go-client&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=oracle_coherence-go-client)
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=oracle_coherence-go-client&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=oracle_coherence-go-client)
 
-## Installation
+[![Go Report Card](https://goreportcard.com/badge/github.com/oracle/coherence-go-client)](https://goreportcard.com/report/github.com/oracle/coherence-go-client)
+![GitHub release (latest by date)](https://img.shields.io/github/v/release/oracle/coherence-go-client)
 
-*Provide detailed step-by-step installation instructions*
+<img src=https://oracle.github.io/coherence/assets/images/logo-red.png width="30%"><img>
 
-## Documentation
+The Coherence Go Client allows Go applications to act as cache clients 
+to a Coherence Cluster using Google's gRPC framework for the network transport.
 
-*Developer-oriented documentation can be published on GitHub, but all product documentation must be published on <https://docs.oracle.com>*
+#### Features
 
-## Examples
+* Familiar Map-like interface for manipulating cache entries based upon the full Coherence API
+* Cluster-side querying, aggregation and filtering of map entries
+* Cluster-side manipulation of map entries using EntryProcessors
+* Registration of listeners to be notified of:
+  * mutations such as insert, update and delete on Maps
+  * map lifecycle events such as truncated, released or destroyed
+  * session lifecycle events such as connected, disconnected, reconnected and closed 
+* Support for storing Go structs as JSON as well as the ability to serialize to Java objects on the server for access from other language API's
 
-*Describe any included examples or provide a link to a demo/tutorial*
+#### Requirements
+
+* Coherence CE 22.06.3+ or Coherence 14.1.1.2206.4 Commercial edition with a configured [gRPCProxy](https://docs.oracle.com/en/middleware/standalone/coherence/14.1.1.2206/develop-remote-clients/using-coherence-grpc-server.html).
+* Go 1.19.+
+
+#### <a name="start"></a> Starting a gRPC enabled Coherence cluster
+
+Before testing the Go client, you must ensure a Coherence cluster is available. 
+For local development, we recommend using the Coherence CE Docker image; it contains 
+everything necessary for the client to operate correctly.
+
+```bash
+docker run -d -p 1408:1408 ghcr.io/oracle/coherence-ce:22.06.3
+```
+
+## <a name="installations"></a> Installation
+
+```bash
+$ go get github.com/coherence/coherence-go-client
+````
+After executing this command coherence-go-client is ready to use, and it's source will be in:
+
+```bash
+$GOPATH/src/github.com/coherence/coherence-go-client
+```
+
+## <a name="doc"></a>Documentation
+
+TBC
+
+## <a name="examples"></a>Examples
+
+The following example connects to a Coherence cluster running gRPC Proxy on default
+port of 1408, creates a new `NamedMap` with key `int` and value of a `Person` and
+issues `Put()`, `Get()` and `Size()` operations.
+
+```go
+import (
+  "context"	
+  "fmt"
+  "github.com/oracle/coherence-go-client/coherence"
+  "log"
+)
+
+func main() {
+    var (
+        value *string
+        ctx   = context.Background()
+    )
+
+    // create a new Session to the default gRPC port of 1408
+    session, err := coherence.NewSession(ctx, coherence.WithPlainText())
+    if err != nil {
+        panic(err)
+    }
+    defer session.Close()
+
+    // create a new NamedMap with key of int and value of string
+    namedMap, err := coherence.NewNamedMap[int, string](session, "my-map")
+    if err != nil {
+        panic(err)
+    }
+
+    // put a new key / value
+    if _, err = namedMap.Put(ctx, 1, "one"); err != nil {
+        panic(err)
+    }
+	
+    // get the value for key 1
+    if value, err = namedMap.Get(ctx, 1); err != nil {
+       panic(err)
+    }
+    fmt.Println("Value for key 1 is", *value)
+
+    // update the value for key 1
+    if _, err = namedMap.Put(ctx, 1, "ONE"); err != nil {
+        panic(err)
+    }
+
+    // get the updated value for key 1
+    if value, err = namedMap.Get(ctx, 1); err != nil {
+        panic(err)
+    }
+    fmt.Println("Updated value is", *value)
+
+    // remove the entry
+    if _, err = namedMap.Remove(ctx, 1); err != nil {
+        panic(err)
+    }
+}
+```
+
+> Note: For more detailed examples, see [here](examples).
 
 ## Help
 
-*Inform users on where to get help or how to receive official support from Oracle (if applicable)*
+TBC
 
 ## Contributing
-
-*If your project has specific contribution requirements, update the CONTRIBUTING.md file to ensure those requirements are clearly explained*
 
 This project welcomes contributions from the community. Before submitting a pull request, please [review our contribution guide](./CONTRIBUTING.md)
 
@@ -32,13 +133,8 @@ Please consult the [security guide](./SECURITY.md) for our responsible security 
 
 ## License
 
-*The correct copyright notice format for both documentation and software is*
-    "Copyright (c) [year,] year Oracle and/or its affiliates."
-*You must include the year the content was first released (on any platform) and the most recent year in which it was revised*
-
-Copyright (c) 2022 Oracle and/or its affiliates.
-
-*Replace this statement if your project is not licensed under the UPL*
+Copyright (c) 2022, 2023 Oracle and/or its affiliates.
 
 Released under the Universal Permissive License v1.0 as shown at
 <https://oss.oracle.com/licenses/upl/>.
+

@@ -1,0 +1,94 @@
+<?xml version="1.0"?>
+<!--
+  ~ Copyright (c) 2023 Oracle and/or its affiliates.
+  ~ Licensed under the Universal Permissive License v 1.0 as shown at
+  ~ https://oss.oracle.com/licenses/upl.
+  -->
+<cache-config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xmlns="http://xmlns.oracle.com/coherence/coherence-cache-config"
+              xsi:schemaLocation="http://xmlns.oracle.com/coherence/coherence-cache-config coherence-cache-config.xsd">
+
+  <caching-scheme-mapping>
+    <cache-mapping>
+      <cache-name>*</cache-name>
+      <scheme-name>distributed-scheme</scheme-name>
+    </cache-mapping>
+    <cache-mapping>
+      <cache-name>canary</cache-name>
+      <scheme-name>canary-scheme</scheme-name>
+    </cache-mapping>
+    <cache-mapping>
+      <cache-name>preload</cache-name>
+      <scheme-name>simple-cache-loader</scheme-name>
+    </cache-mapping>
+    <cache-mapping>
+      <cache-name>touch</cache-name>
+      <scheme-name>touch-scheme</scheme-name>
+    </cache-mapping>
+  </caching-scheme-mapping>
+
+  <caching-schemes>
+    <distributed-scheme>
+      <scheme-name>distributed-scheme</scheme-name>
+      <service-name>PartitionedCache</service-name>
+      <local-storage system-property="coherence.distributed.localstorage">true
+      </local-storage>
+      <partition-count>31</partition-count>
+      <backing-map-scheme>
+        <local-scheme>
+          <unit-calculator>BINARY</unit-calculator>
+        </local-scheme>
+      </backing-map-scheme>
+      <autostart>true</autostart>
+    </distributed-scheme>
+
+    <distributed-scheme>
+      <scheme-name>touch-scheme</scheme-name>
+      <service-name>PartitionedCacheTouch</service-name>
+      <local-storage system-property="coherence.distributed.localstorage">true
+      </local-storage>
+      <partition-count>31</partition-count>
+      <backing-map-scheme>
+        <local-scheme>
+          <unit-calculator>BINARY</unit-calculator>
+          <expiry-delay>10s</expiry-delay>
+        </local-scheme>
+      </backing-map-scheme>
+      <autostart>true</autostart>
+    </distributed-scheme>
+
+    <distributed-scheme>
+      <scheme-name>canary-scheme</scheme-name>
+      <service-name>CanaryService</service-name>
+      <local-storage system-property="coherence.distributed.localstorage">true
+      </local-storage>
+      <partition-count>31</partition-count>
+      <backing-map-scheme>
+        <local-scheme/>
+      </backing-map-scheme>
+      <autostart>true</autostart>
+    </distributed-scheme>
+
+    <distributed-scheme>
+      <scheme-name>simple-cache-loader</scheme-name>
+      <backing-map-scheme>
+        <read-write-backing-map-scheme>
+          <internal-cache-scheme>
+            <local-scheme/>
+          </internal-cache-scheme>
+          <cachestore-scheme>
+            <class-scheme>
+              <class-name>com.oracle.coherence.go.testing.SimpleCacheLoader</class-name>
+              <init-params>
+                <init-param>
+                  <param-type>java.lang.String</param-type>
+                  <param-value>{cache-name}</param-value>
+                </init-param>
+              </init-params>
+            </class-scheme>
+          </cachestore-scheme>
+        </read-write-backing-map-scheme>
+      </backing-map-scheme>
+    </distributed-scheme>
+  </caching-schemes>
+</cache-config>
