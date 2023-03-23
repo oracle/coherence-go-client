@@ -119,7 +119,7 @@ clean: ## Cleans the build
 	@mkdir -p $(BUILD_OUTPUT)
 	@mkdir -p $(PROTO_OUT)
 	@mkdir -p $(BUILD_CERTS)
-	mvn -B -f java/coherence-go-test $(MAVEN_BUILD_OPTS) clean
+	mvn -B -f java/pom.xml $(MAVEN_BUILD_OPTS) clean
 
 .PHONY: certs
 certs: ## Generates certificates for TLS tests
@@ -140,8 +140,8 @@ $(BUILD_PROPS):
 .PHONY: build-test-images
 build-test-images: ## Build the Test images
 	@echo "${MAVEN_BUILD_OPTS}"
-	mvn -B -f java/coherence-go-test clean package jib:dockerBuild -DskipTests -P member1$(PROFILES) -Djib.to.image=$(TEST_APPLICATION_IMAGE_1) -Dcoherence.test.base.image=$(COHERENCE_BASE_IMAGE) $(MAVEN_BUILD_OPTS)
-	mvn -B -f java/coherence-go-test clean package jib:dockerBuild -DskipTests -P member2$(PROFILES) -Djib.to.image=$(TEST_APPLICATION_IMAGE_2) -Dcoherence.test.base.image=$(COHERENCE_BASE_IMAGE) $(MAVEN_BUILD_OPTS)
+	mvn -B -f java/pom.xml clean package jib:dockerBuild -DskipTests -P member1$(PROFILES) -Djib.to.image=$(TEST_APPLICATION_IMAGE_1) -Dcoherence.test.base.image=$(COHERENCE_BASE_IMAGE) $(MAVEN_BUILD_OPTS)
+	mvn -B -f java/pom.xml clean package jib:dockerBuild -DskipTests -P member2$(PROFILES) -Djib.to.image=$(TEST_APPLICATION_IMAGE_2) -Dcoherence.test.base.image=$(COHERENCE_BASE_IMAGE) $(MAVEN_BUILD_OPTS)
 	echo "CURRENT_UID=$(USER_ID)" >> $(ENV_FILE)
 
 
