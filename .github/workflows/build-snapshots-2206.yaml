@@ -95,7 +95,7 @@ jobs:
 
         echo "Running verify against $COH_VERSION"
         go get google.golang.org/grpc/cmd/protoc-gen-go-grpc
-        COHERENCE_BASE_IMAGE=gcr.io/distroless/java17 INCLUDE_LONG_RUNNING=true COHERENCE_VERSION=$COH_VERSION make clean generate-proto build-test-images test-e2e-standalone
+        COHERENCE_BASE_IMAGE=gcr.io/distroless/java17 INCLUDE_LONG_RUNNING=true COHERENCE_VERSION=$COH_VERSION PROFILES=,-jakarta,javax make clean generate-proto build-test-images test-e2e-standalone
 
     - name: Verify Coherence CLI SSL
       env:
@@ -115,7 +115,7 @@ jobs:
           COHERENCE_TLS_CERTS_PATH=`pwd`/test/utils/certs/guardians-ca.crt \
           COHERENCE_TLS_CLIENT_CERT=`pwd`/test/utils/certs/star-lord.crt \
           COHERENCE_TLS_CLIENT_KEY=`pwd`/test/utils/certs/star-lord.key \
-          COHERENCE_VERSION=$COH_VERSION PROFILES=,secure make clean certs generate-proto build-test-images test-e2e-standalone
+          COHERENCE_VERSION=$COH_VERSION PROFILES=,secure,-jakarta,javax make clean certs generate-proto build-test-images test-e2e-standalone
 
     - uses: actions/upload-artifact@v1
       if: failure()

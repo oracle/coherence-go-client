@@ -13,7 +13,7 @@ set -e
 # INCLUDE_LONG_RUNNING=true
 
 echo "Coherence CE 22.06.3"
-COHERENCE_VERSION=22.06.3 make clean generate-proto build-test-images test-e2e-standalone
+COHERENCE_VERSION=22.06.3 PROFILES=,-jakarta,javax make clean generate-proto build-test-images test-e2e-standalone
 
 echo "Coherence CE 22.06.3 with SSL"
 SECURE=true COHERENCE_IGNORE_INVALID_CERTS=true \

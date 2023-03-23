@@ -95,7 +95,7 @@ jobs:
 
         echo "Running verify against $COH_VERSION"
         go get google.golang.org/grpc/cmd/protoc-gen-go-grpc
-        COHERENCE_BASE_IMAGE=gcr.io/distroless/java17 INCLUDE_LONG_RUNNING=true COHERENCE_VERSION=$COH_VERSION make clean generate-proto build-test-images test-e2e-standalone
+        COHERENCE_BASE_IMAGE=gcr.io/distroless/java17 INCLUDE_LONG_RUNNING=true PROFILES=,jakarta,-javax COHERENCE_VERSION=$COH_VERSION make clean generate-proto build-test-images test-e2e-standalone
 
     - name: Verify Coherence CLI SSL
       env:
@@ -111,7 +111,7 @@ jobs:
 
         echo "Running verify against $COH_VERSION"
         go get google.golang.org/grpc/cmd/protoc-gen-go-grpc
-        COHERENCE_BASE_IMAGE=gcr.io/distroless/java17 SECURE=true COHERENCE_IGNORE_INVALID_CERTS=true INCLUDE_LONG_RUNNING=true \
+        COHERENCE_BASE_IMAGE=gcr.io/distroless/java17 SECURE=true,jakarta,-javax COHERENCE_IGNORE_INVALID_CERTS=true INCLUDE_LONG_RUNNING=true \
           COHERENCE_TLS_CERTS_PATH=`pwd`/test/utils/certs/guardians-ca.crt \
           COHERENCE_TLS_CLIENT_CERT=`pwd`/test/utils/certs/star-lord.crt \
           COHERENCE_TLS_CLIENT_KEY=`pwd`/test/utils/certs/star-lord.key \
