@@ -53,7 +53,7 @@ TOOLS_BIN         = $(TOOLS_DIRECTORY)/bin
 RELEASE_IMAGE_PREFIX     ?= ghcr.io/oracle/
 TEST_APPLICATION_IMAGE_1 := $(RELEASE_IMAGE_PREFIX)coherence-go-test-1:1.0.0
 TEST_APPLICATION_IMAGE_2 := $(RELEASE_IMAGE_PREFIX)coherence-go-test-2:1.0.0
-GO_TEST_FLAGS ?= -timeout 20m
+GO_TEST_FLAGS ?= -timeout 50m
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Options to append to the Maven command

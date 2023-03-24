@@ -53,9 +53,11 @@ $GOPATH/src/github.com/coherence/coherence-go-client
 
 ## <a name="doc"></a>Documentation
 
-TBC
+Visit the documentation on [pkg.go.dev](https://pkg.go.dev/github.com/oracle/coherence-go-client).
 
 ## <a name="examples"></a>Examples
+
+For more detailed examples, please see [here](examples).
 
 The following example connects to a Coherence cluster running gRPC Proxy on default
 port of 1408, creates a new `NamedMap` with key `int` and value of a `Person` and
@@ -63,10 +65,10 @@ issues `Put()`, `Get()` and `Size()` operations.
 
 ```go
 import (
-  "context"	
-  "fmt"
-  "github.com/oracle/coherence-go-client/coherence"
-  "log"
+    "context"
+    "fmt"
+    "github.com/oracle/coherence-go-client/coherence"
+	"log"
 )
 
 func main() {
@@ -116,8 +118,6 @@ func main() {
     }
 }
 ```
-
-> Note: For more detailed examples, see [here](examples).
 
 ## Help
 
