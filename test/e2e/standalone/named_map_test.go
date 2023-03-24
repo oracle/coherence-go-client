@@ -26,6 +26,27 @@ const includeLongRunning = "INCLUDE_LONG_RUNNING"
 
 var ctx = context.Background()
 
+// AccountKey defines the key for an account.
+type AccountKey struct {
+	AccountID   int    `json:"accountID"`
+	AccountType string `json:"accountType"`
+}
+
+// Account defines the attributes for an account.
+type Account struct {
+	AccountID   int     `json:"accountID"`
+	AccountType string  `json:"accountType"`
+	Name        string  `json:"name"`
+	Balance     float32 `json:"balance"`
+}
+
+// GetKey returns the AccountKey for an Account.
+func (a Account) GetKey() AccountKey {
+	return AccountKey{
+		AccountID:   a.AccountID,
+		AccountType: a.AccountType,
+	}
+}
 func TestBasicCrudOperationsVariousTypes(t *testing.T) {
 	var (
 		g       = gomega.NewWithT(t)
@@ -78,21 +99,39 @@ func TestBasicCrudOperationsVariousTypes(t *testing.T) {
 		map[int]string{1: "one", 2: "two", 3: "three"})
 }
 
-// getNewNamedMap returns a map for a session and asserts err is nil
+// TestBasicCrudOperationsVariousTypesWithStructKey tests operations against caches that have keys and values as structs.
+func TestBasicCrudOperationsVariousTypesWithStructKey(t *testing.T) {
+	var (
+		g       = gomega.NewWithT(t)
+		err     error
+		session *coherence.Session
+	)
+
+	session, err = GetSession()
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	defer session.Close()
+
+	account := Account{AccountID: 100, AccountType: "savings", Name: "John Doe", Balance: 100_000}
+
+	RunKeyValueTest[AccountKey, Account](g, getNewNamedMap[AccountKey, Account](g, session, "key-map"), account.GetKey(), account)
+	RunKeyValueTest[AccountKey, Account](g, getNewNamedCache[AccountKey, Account](g, session, "key-cache"), account.GetKey(), account)
+}
+
+// getNewNamedMap returns a map for a session and asserts err is nil.
 func getNewNamedMap[K comparable, V any](g *gomega.WithT, session *coherence.Session, name string) coherence.NamedMap[K, V] {
 	namedMap, err := coherence.NewNamedMap[K, V](session, name)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	return namedMap
 }
 
-// getNewNamedCache returns a cache for a session and asserts err is nil
+// getNewNamedCache returns a cache for a session and asserts err is nil.
 func getNewNamedCache[K comparable, V any](g *gomega.WithT, session *coherence.Session, name string) coherence.NamedCache[K, V] {
 	namedCache, err := coherence.NewNamedCache[K, V](session, name)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	return namedCache
 }
 
-// TestBasicOperationsAgainstMapAndCache runs all tests against NamedMap and NamedCache
+// TestBasicOperationsAgainstMapAndCache runs all tests against NamedMap and NamedCache.
 func TestBasicOperationsAgainstMapAndCache(t *testing.T) {
 	g := gomega.NewWithT(t)
 	session, err := GetSession()

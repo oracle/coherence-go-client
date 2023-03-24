@@ -49,12 +49,20 @@ Source code: [basic/crud.go](basic/crud.go)
 go run basic/crud.go
 ```
 
-#### Using Structs
+#### Using Structs as values
 
 Source code: [basic/struct.go](basic/struct.go)
 
 ```go
 go run basic/struct.go
+```
+
+#### Using Structs as keys and values
+
+Source code: [basic/struct_keys.go](basic/struct_keys.go)
+
+```go
+go run basic/struct_keys.go
 ```
 
 ### <a name="querying"></a> Querying Data
