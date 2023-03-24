@@ -3,9 +3,9 @@
 # https://oss.oracle.com/licenses/upl.
 
 # ---------------------------------------------------------------------------
-# Coherence Go Client GitHub Actions CI build Against Snapshots
+# Coherence Go Client GitHub Actions CI build Against Snapshots v23.03+
 # ---------------------------------------------------------------------------
-name: CI Snapshots
+name: CI Snapshots Jakarta
 
 on:
   workflow_dispatch:
@@ -24,8 +24,6 @@ jobs:
       matrix:
         coherenceVersion:
           - 23.03-SNAPSHOT
-          - 22.06.4-SNAPSHOT
-          - 22.06.5-SNAPSHOT
 
 #   Checkout the source, we need a depth of zero to fetch all of the history otherwise
 #   the copyright check cannot work out the date of the files from Git.

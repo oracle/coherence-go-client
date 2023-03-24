@@ -5,7 +5,7 @@
 # ---------------------------------------------------------------------------
 # Coherence Go Client GitHub Actions test examples against v23.03+
 # ---------------------------------------------------------------------------
-name: CI-Examples-Jakarta
+name: CI-Examples Jakarta
 
 on:
   workflow_dispatch:

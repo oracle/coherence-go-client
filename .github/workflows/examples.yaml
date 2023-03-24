@@ -5,7 +5,7 @@
 # ---------------------------------------------------------------------------
 # Coherence Go Client GitHub Actions test examples against v22.06 versions
 # ---------------------------------------------------------------------------
-name: CI-Examples-22.06
+name: CI-Examples v22.06
 
 on:
   workflow_dispatch:
