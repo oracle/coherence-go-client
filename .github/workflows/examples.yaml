@@ -12,16 +12,18 @@ on:
   push:
     branches:
       - '*'
-    matrix:
-      coherenceVersion:
-        - 22.06.4-SNAPSHOT
-        - 22.06.5-SNAPSHOT
-        - 22.06.3
-        - 22.06.2
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        coherenceVersion:
+          - 22.06.4-SNAPSHOT
+          - 22.06.5-SNAPSHOT
+          - 22.06.3
+          - 22.06.2
 
 #   Checkout the source, we need a depth of zero to fetch all of the history otherwise
 #   the copyright check cannot work out the date of the files from Git.
