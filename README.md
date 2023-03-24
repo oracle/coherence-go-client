@@ -57,18 +57,20 @@ Visit the documentation on [pkg.go.dev](https://pkg.go.dev/github.com/oracle/coh
 
 ## <a name="examples"></a>Examples
 
-For more detailed examples, please see [here](examples).
+For a full set of examples, please see [here](examples).
 
 The following example connects to a Coherence cluster running gRPC Proxy on default
-port of 1408, creates a new `NamedMap` with key `int` and value of a `Person` and
+port of 1408, creates a new `NamedMap` with key `int` and value of a `string` and
 issues `Put()`, `Get()` and `Size()` operations.
+
+> Note: Keys and values can also be Golang `structs`. See detailed examples [here](examples#basic).
 
 ```go
 import (
     "context"
     "fmt"
     "github.com/oracle/coherence-go-client/coherence"
-	"log"
+    "log"
 )
 
 func main() {
