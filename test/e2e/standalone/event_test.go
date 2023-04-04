@@ -937,6 +937,7 @@ func NewCountingLifecycleListener[K comparable, V any](name string) *CountingLif
 
 	countingListener.listener.OnTruncated(func(e coherence.MapLifecycleEvent[K, V]) {
 		atomic.AddInt32(&countingListener.truncCount, 1)
+		log.Printf("%s: Truncated, count=%d", name, countingListener.truncCount)
 	}).OnDestroyed(func(e coherence.MapLifecycleEvent[K, V]) {
 		atomic.AddInt32(&countingListener.destCount, 1)
 	}).OnReleased(func(e coherence.MapLifecycleEvent[K, V]) {
