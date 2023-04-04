@@ -22,6 +22,6 @@ SECURE=true COHERENCE_IGNORE_INVALID_CERTS=true \
   COHERENCE_TLS_CLIENT_KEY=`pwd`/test/utils/certs/star-lord.key \
   COHERENCE_VERSION=22.06.3 PROFILES=,secure make clean certs generate-proto build-test-images test-e2e-standalone
 
-echo "Coherence CE 22.09"
-COHERENCE_BASE_IMAGE=gcr.io/distroless/java17 PROFILES=,jakarta,-javax COHERENCE_VERSION=22.09 make clean generate-proto build-test-images test-e2e-standalone
+echo "Coherence CE 23.03"
+COHERENCE_BASE_IMAGE=gcr.io/distroless/java17 PROFILES=,jakarta,-javax COHERENCE_VERSION=23.03 make clean generate-proto build-test-images test-e2e-standalone
 
