@@ -926,6 +926,11 @@ func (m *mapEventManager[K, V]) ensureStream() (*eventStream, error) {
 					}
 				case *proto.MapListenerResponse_Destroyed:
 					{
+						if m == nil {
+							// namedMap is already destroyed, cannot do anything
+							cancel()
+							return
+						}
 						nm := *m.namedMap
 						listeners := nm.getBaseClient().eventManager.lifecycleListeners
 						event := newMapLifecycleEvent(nm, Destroyed)
