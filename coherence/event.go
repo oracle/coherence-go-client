@@ -926,7 +926,7 @@ func (m *mapEventManager[K, V]) ensureStream() (*eventStream, error) {
 					}
 				case *proto.MapListenerResponse_Destroyed:
 					{
-						if m == nil {
+						if m.namedMap == nil {
 							// namedMap is already destroyed, cannot do anything
 							cancel()
 							return
