@@ -92,5 +92,6 @@ func canFindIndex(g *WithT, namedMap coherence.NamedMap[int, Person]) bool {
 	g.Expect(err).ShouldNot(HaveOccurred())
 
 	jsonString := string(jsonData)
-	return strings.Contains(jsonString, "\"extractor\":\".id\",\"index\":\"Simple")
+	return strings.Contains(jsonString, "\"extractor\":\".id\",\"index\":\"Simple") ||
+		strings.Contains(jsonString, "\"extractor\":\".id\",\"index\":\"Partitioned")
 }
