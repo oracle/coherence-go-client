@@ -17,7 +17,6 @@ import (
 	. "github.com/oracle/coherence-go-client/test/utils"
 	"log"
 	"os"
-	"sync"
 	"testing"
 )
 
@@ -177,14 +176,18 @@ func TestBasicOperationsAgainstMapAndCache(t *testing.T) {
 		{"NamedCacheRunTestGetAll", GetNamedCache[int, Person](g, session, "getall-filter-cache"), RunTestGetAll},
 		{"NamedMapRunTestInvokeAll", GetNamedMap[int, Person](g, session, "invokeall-keys-map"), RunTestInvokeAllKeys},
 		{"NamedCacheRunTestInvokeAll", GetNamedCache[int, Person](g, session, "invokeall-keys-cache"), RunTestInvokeAllKeys},
-		{"NamedMapRunTestKeySet", GetNamedMap[int, Person](g, session, "keyset-map"), RunTestKeySet},
-		{"NamedCacheRunTestKeySet", GetNamedCache[int, Person](g, session, "keyset-cache"), RunTestKeySet},
-		{"NamedMapRunTestEntrySet", GetNamedMap[int, Person](g, session, "entryset-map"), RunTestEntrySet},
-		{"NamedCacheRunTestEntrySet", GetNamedCache[int, Person](g, session, "entryset-cache"), RunTestEntrySet},
-		{"NamedMapRunTestValues", GetNamedMap[int, Person](g, session, "values-map"), RunTestValues},
-		{"NamedCacheRunTestValues", GetNamedCache[int, Person](g, session, "values-cache"), RunTestValues},
-		{"NamedMapRunTestEntrySetGoRoutines", GetNamedMap[int, Person](g, session, "go-map"), RunTestEntrySetGoRoutines},
-		{"NamedCacheRunTestEntrySetGoRoutines", GetNamedCache[int, Person](g, session, "go-cache"), RunTestEntrySetGoRoutines},
+		{"NamedMapRunTestKeySet", GetNamedMap[int, Person](g, session, "keyset-map"), RunTestKeySetLong},
+		{"NamedCacheRunTestKeySet", GetNamedCache[int, Person](g, session, "keyset-cache"), RunTestKeySetLong},
+		{"NamedMapRunTestKeySetShort", GetNamedMap[int, Person](g, session, "keyset-map-short"), RunTestKeySetShort},
+		{"NamedCacheRunTestKeySetShort", GetNamedCache[int, Person](g, session, "keyset-cache-short"), RunTestKeySetShort},
+		{"NamedMapRunTestEntrySet", GetNamedMap[int, Person](g, session, "entryset-map"), RunTestEntrySetLong},
+		{"NamedCacheRunTestEntrySet", GetNamedCache[int, Person](g, session, "entryset-cache"), RunTestEntrySetLong},
+		{"NamedMapRunTestEntrySetShort", GetNamedMap[int, Person](g, session, "entryset-map-short"), RunTestEntrySetShort},
+		{"NamedCacheRunTestEntrySetShort", GetNamedCache[int, Person](g, session, "entryset-cache-short"), RunTestEntrySetShort},
+		{"NamedMapRunTestValues", GetNamedMap[int, Person](g, session, "values-map-short"), RunTestValuesShort},
+		{"NamedCacheRunTestValues", GetNamedCache[int, Person](g, session, "values-cache-short"), RunTestValuesShort},
+		{"NamedMapRunTestValues", GetNamedMap[int, Person](g, session, "values-map"), RunTestValuesLong},
+		{"NamedCacheRunTestValues", GetNamedCache[int, Person](g, session, "values-cache"), RunTestValuesLong},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.testName, func(t *testing.T) {
@@ -766,210 +769,162 @@ func RunTestInvokeAllKeys(t *testing.T, namedMap coherence.NamedMap[int, Person]
 	g.Expect(len(results)).To(gomega.Equal(4))
 }
 
-func RunTestKeySet(t *testing.T, namedMap coherence.NamedMap[int, Person]) {
-	var (
-		g           = gomega.NewWithT(t)
-		results     = make([]int, 0)
-		insertCount = 400_000
-		result      *int
-	)
-
+func RunTestKeySetLong(t *testing.T, namedMap coherence.NamedMap[int, Person]) {
 	if !includeLongRunningTests() {
 		t.Log("Skipping long running tests")
 		return
 	}
+
+	RunTestKeySetBase(t, namedMap, 400_000)
+}
+
+func RunTestKeySetShort(t *testing.T, namedMap coherence.NamedMap[int, Person]) {
+	RunTestKeySetBase(t, namedMap, 5_000)
+}
+
+// RunTestKeySetBase runs the base RunTestKeySet test
+func RunTestKeySetBase(t *testing.T, namedMap coherence.NamedMap[int, Person], insertCount int) {
+	g := gomega.NewWithT(t)
 
 	err := namedMap.Clear(ctx)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
-	// test with empty cache to ensure we receive the ErrDone straight away
-	iter := namedMap.KeySet(ctx)
-	_, err = iter.Next()
-	g.Expect(err).To(gomega.Equal(coherence.ErrDone))
+	// test with empty cache to ensure we receive no entries
+	counter := 0
+	for range namedMap.KeySet(ctx) {
+		counter++
+	}
+	g.Expect(counter).To(gomega.Equal(0))
 
 	// test with single entry which will force only 1 page to be returned
 	_, err = namedMap.Put(ctx, 1, Person{ID: 1, Name: "Tim", Age: 54})
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
-	iter = namedMap.KeySet(ctx)
-	result, err = iter.Next()
-	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-	g.Expect(*result).To(gomega.Equal(1))
-	_, err = iter.Next()
-	g.Expect(err).To(gomega.Equal(coherence.ErrDone))
+	for ch := range namedMap.KeySet(ctx) {
+		g.Expect(ch.Err).ShouldNot(gomega.HaveOccurred())
+		g.Expect(ch.Key).Should(gomega.Equal(1))
+		counter++
+	}
+	g.Expect(counter).To(gomega.Equal(1))
 
 	// test with enough data to use multiple requests
 	addManyPeople(g, namedMap, 1, insertCount)
 
-	iter = namedMap.KeySet(ctx)
-	for {
-		result, err = iter.Next()
+	counter = 0
 
-		if err == coherence.ErrDone {
-			break
-		}
-
-		g.Expect(err).ShouldNot(gomega.HaveOccurred())
-		results = append(results, *result)
+	for ch := range namedMap.KeySet(ctx) {
+		g.Expect(ch.Err).ShouldNot(gomega.HaveOccurred())
+		counter++
 	}
 
-	g.Expect(len(results)).To(gomega.Equal(insertCount))
+	g.Expect(counter).To(gomega.Equal(insertCount))
 	_ = namedMap.Clear(ctx)
 }
 
-func RunTestEntrySet(t *testing.T, namedMap coherence.NamedMap[int, Person]) {
-	var (
-		g           = gomega.NewWithT(t)
-		results     = make([]coherence.Entry[int, Person], 0)
-		err         error
-		value       *coherence.Entry[int, Person]
-		insertCount = 400_000
-	)
-
+func RunTestEntrySetLong(t *testing.T, namedMap coherence.NamedMap[int, Person]) {
 	if !includeLongRunningTests() {
 		t.Log("Skipping long running tests")
 		return
 	}
 
+	RunTestEntrySetBase(t, namedMap, 400_000)
+}
+
+func RunTestEntrySetShort(t *testing.T, namedMap coherence.NamedMap[int, Person]) {
+	RunTestEntrySetBase(t, namedMap, 5_000)
+}
+
+func RunTestEntrySetBase(t *testing.T, namedMap coherence.NamedMap[int, Person], insertCount int) {
+	var (
+		g   = gomega.NewWithT(t)
+		err error
+	)
+
 	err = namedMap.Clear(ctx)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
-	// test with empty cache to ensure we receive the ErrDone straight away
-	iter := namedMap.EntrySet(ctx)
-	_, err = iter.Next()
-	g.Expect(err).To(gomega.Equal(coherence.ErrDone))
+	// test with empty cache to ensure we receive no entries
+	counter := 0
+	for range namedMap.EntrySet(ctx) {
+		counter++
+	}
+	g.Expect(counter).To(gomega.Equal(0))
 
 	// test with single entry which will force only 1 page to be returned
 	_, err = namedMap.Put(ctx, 1, Person{ID: 1, Name: "Tim", Age: 54})
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
-	iter = namedMap.EntrySet(ctx)
-	value, err = iter.Next()
-	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-	g.Expect(value.Value.ID).To(gomega.Equal(1))
-	_, err = iter.Next()
-	g.Expect(err).To(gomega.Equal(coherence.ErrDone))
+	for se := range namedMap.EntrySet(ctx) {
+		g.Expect(se.Err).ShouldNot(gomega.HaveOccurred())
+		g.Expect(se.Value.ID).To(gomega.Equal(1))
+		g.Expect(se.Key).To(gomega.Equal(1))
+	}
 
 	// test with enough data to use multiple requests
 	addManyPeople(g, namedMap, 1, insertCount)
 
-	iter = namedMap.EntrySet(ctx)
-
-	for {
-		value, err = iter.Next()
-		if err == coherence.ErrDone {
-			break
-		}
-		g.Expect(err).ShouldNot(gomega.HaveOccurred())
-		g.Expect(value.Key).ShouldNot(gomega.BeNil())
-		g.Expect(value.Value).ShouldNot(gomega.BeNil())
-		results = append(results, *value)
+	counter = 0
+	for ch := range namedMap.EntrySet(ctx) {
+		g.Expect(ch.Err).ShouldNot(gomega.HaveOccurred())
+		g.Expect(ch.Key).ShouldNot(gomega.BeNil())
+		g.Expect(ch.Value).ShouldNot(gomega.BeNil())
+		counter++
 	}
 
-	g.Expect(len(results)).To(gomega.Equal(insertCount))
+	g.Expect(counter).To(gomega.Equal(insertCount))
 	_ = namedMap.Clear(ctx)
 }
 
-func RunTestValues(t *testing.T, namedMap coherence.NamedMap[int, Person]) {
-	var (
-		g           = gomega.NewWithT(t)
-		results     = make([]Person, 0)
-		err         error
-		value       *Person
-		insertCount = 400_000
-	)
+func RunTestValuesShort(t *testing.T, namedMap coherence.NamedMap[int, Person]) {
+	RunTestValuesBase(t, namedMap, 5_000)
+}
 
+func RunTestValuesLong(t *testing.T, namedMap coherence.NamedMap[int, Person]) {
 	if !includeLongRunningTests() {
 		t.Log("Skipping long running tests")
 		return
 	}
+	RunTestValuesBase(t, namedMap, 400_000)
+}
+
+func RunTestValuesBase(t *testing.T, namedMap coherence.NamedMap[int, Person], insertCount int) {
+	var (
+		g       = gomega.NewWithT(t)
+		results = make([]Person, 0)
+		err     error
+	)
 
 	err = namedMap.Clear(ctx)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
-	// test with empty cache to ensure we receive the ErrDone straight away
-	iter := namedMap.Values(ctx)
-	_, err = iter.Next()
-	g.Expect(err).To(gomega.Equal(coherence.ErrDone))
+	// test with empty cache to ensure we receive zero entries
+	counter := 0
+	for range namedMap.Values(ctx) {
+		counter++
+	}
+	g.Expect(counter).To(gomega.Equal(0))
 
 	// test with single entry which will force only 1 page to be returned
 	_, err = namedMap.Put(ctx, 1, Person{ID: 1, Name: "Tim", Age: 54})
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
-	iter = namedMap.Values(ctx)
-	value, err = iter.Next()
-	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-	g.Expect(value.ID).To(gomega.Equal(1))
-	_, err = iter.Next()
-	g.Expect(err).To(gomega.Equal(coherence.ErrDone))
+	for ch := range namedMap.Values(ctx) {
+		g.Expect(ch.Err).ShouldNot(gomega.HaveOccurred())
+		g.Expect(ch.Value.ID).To(gomega.Equal(1))
+		counter++
+	}
 
 	// test with enough data to use multiple requests
 	addManyPeople(g, namedMap, 1, insertCount)
 
-	iter = namedMap.Values(ctx)
-
-	for {
-		value, err = iter.Next()
-		if err == coherence.ErrDone {
-			break
-		}
-		g.Expect(err).ShouldNot(gomega.HaveOccurred())
-		g.Expect(value.ID).Should(gomega.BeNumerically(">", 0))
-		results = append(results, *value)
+	for ch := range namedMap.Values(ctx) {
+		g.Expect(ch.Err).ShouldNot(gomega.HaveOccurred())
+		g.Expect(ch.Value.ID).Should(gomega.BeNumerically(">", 0))
+		results = append(results, ch.Value)
 	}
 
 	g.Expect(len(results)).To(gomega.Equal(insertCount))
 	_ = namedMap.Clear(ctx)
-}
-
-func RunTestEntrySetGoRoutines(t *testing.T, namedMap coherence.NamedMap[int, Person]) {
-	var (
-		g           = gomega.NewWithT(t)
-		err         error
-		insertCount = 500_000
-		wg          sync.WaitGroup
-		count       [4]int
-	)
-
-	if !includeLongRunningTests() {
-		t.Log("Skipping long running tests")
-		return
-	}
-
-	err = namedMap.Clear(ctx)
-	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-
-	countLen := len(count)
-	wg.Add(countLen)
-
-	// test with enough data to use multiple requests
-	addManyPeople(g, namedMap, 1, insertCount)
-
-	iter := namedMap.EntrySet(ctx)
-
-	// run 4 go routines reading data off the same iterator to ensure the values are
-	// correctly iterated through.
-	for i := 0; i < countLen; i++ {
-		go func(index int) {
-			defer wg.Done()
-			for {
-				value1, err1 := iter.Next()
-				if err1 == coherence.ErrDone {
-					break
-				}
-				g.Expect(err1).ShouldNot(gomega.HaveOccurred())
-				g.Expect(value1.Key).ShouldNot(gomega.BeNil())
-				g.Expect(value1.Value).ShouldNot(gomega.BeNil())
-				count[index]++
-			}
-			t.Log("Index", index, "count", count[index])
-		}(i)
-	}
-
-	wg.Wait()
-
-	g.Expect(count[0] + count[1] + count[2] + count[3]).To(gomega.Equal(insertCount))
-
 }
 
 func addManyPeople(g *gomega.WithT, namedMap coherence.NamedMap[int, Person], startKey, count int) {

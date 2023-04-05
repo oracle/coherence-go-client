@@ -593,8 +593,35 @@ func executeInvokeAllFilterOrKeys[K comparable, V any, R any](ctx context.Contex
 }
 
 // executeKeySet executes the KeySet operation against a baseClient.
-func executeKeySet[K comparable, V any](ctx context.Context, bc *baseClient[K, V]) KeyPageIterator[K, V] {
-	return newKeyPageIterator[K, V](ctx, bc)
+func executeKeySet[K comparable, V any](ctx context.Context, bc *baseClient[K, V]) <-chan *StreamedKey[K] {
+	var (
+		err  = bc.ensureClientConnection()
+		ch   = make(chan *StreamedKey[K])
+		iter = newKeyPageIterator[K, V](ctx, bc)
+	)
+
+	if err != nil {
+		ch <- &StreamedKey[K]{Err: err}
+		return ch
+	}
+
+	go func() {
+		for {
+			result, err1 := iter.Next()
+
+			if err1 == ErrDone {
+				close(ch)
+				return
+			} else if err1 != nil {
+				ch <- &StreamedKey[K]{Err: err1}
+				close(ch)
+				return
+			}
+			ch <- &StreamedKey[K]{Key: *result}
+		}
+	}()
+
+	return ch
 }
 
 // executeKeySetFilter executes the KeySet operation with filter against a baseClient.
@@ -916,8 +943,35 @@ func executeSize[K comparable, V any](ctx context.Context, bc *baseClient[K, V])
 }
 
 // executeEntrySet executes the KeySet operation against a baseClient.
-func executeEntrySet[K comparable, V any](ctx context.Context, bc *baseClient[K, V]) EntryPageIterator[K, V] {
-	return newEntryPageIterator[K, V](ctx, bc)
+func executeEntrySet[K comparable, V any](ctx context.Context, bc *baseClient[K, V]) <-chan *StreamedEntry[K, V] {
+	var (
+		err  = bc.ensureClientConnection()
+		ch   = make(chan *StreamedEntry[K, V])
+		iter = newEntryPageIterator[K, V](ctx, bc)
+	)
+
+	if err != nil {
+		ch <- &StreamedEntry[K, V]{Err: err}
+		return ch
+	}
+
+	go func() {
+		for {
+			result, err1 := iter.Next()
+
+			if err1 == ErrDone {
+				close(ch)
+				return
+			} else if err1 != nil {
+				ch <- &StreamedEntry[K, V]{Err: err1}
+				close(ch)
+				return
+			}
+			ch <- &StreamedEntry[K, V]{Key: result.Key, Value: result.Value}
+		}
+	}()
+
+	return ch
 }
 
 func executeEntrySetFilter[K comparable, V any](ctx context.Context, bc *baseClient[K, V], fltr filters.Filter) <-chan *StreamedEntry[K, V] {
@@ -1055,6 +1109,38 @@ func executeValues[K comparable, V any](ctx context.Context, bc *baseClient[K, V
 			}
 
 			ch <- &StreamedValue[V]{Value: *response}
+		}
+	}()
+
+	return ch
+}
+
+// executeValuesNoFilter executes the Values operation against a baseClient when no filter is required.
+func executeValuesNoFilter[K comparable, V any](ctx context.Context, bc *baseClient[K, V]) <-chan *StreamedValue[V] {
+	var (
+		err  = bc.ensureClientConnection()
+		ch   = make(chan *StreamedValue[V])
+		iter = newValuePageIterator[K, V](ctx, bc)
+	)
+
+	if err != nil {
+		ch <- &StreamedValue[V]{Err: err}
+		return ch
+	}
+
+	go func() {
+		for {
+			result, err1 := iter.Next()
+
+			if err1 == ErrDone {
+				close(ch)
+				return
+			} else if err1 != nil {
+				ch <- &StreamedValue[V]{Err: err1}
+				close(ch)
+				return
+			}
+			ch <- &StreamedValue[V]{Value: *result}
 		}
 	}()
 

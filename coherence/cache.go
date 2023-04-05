@@ -96,8 +96,10 @@ type NamedMap[K comparable, V any] interface {
 	// As always, the result must be accessed (and will be valid) only if the error is nil.
 	EntrySetFilter(ctx context.Context, filter filters.Filter) <-chan *StreamedEntry[K, V]
 
-	// EntrySet returns a EntryPageIterator which can be used to retrieve all the entries from the cache.
-	EntrySet(ctx context.Context) EntryPageIterator[K, V]
+	// EntrySet returns a channel from which all entries can be obtained.
+	// Note: the entries are paged internally to avoid excessive memory usage, but you need to be
+	// carefull when running this operation against NamedMaps with large number of entries.
+	EntrySet(ctx context.Context) <-chan *StreamedEntry[K, V]
 
 	// Get returns the value to which the specified key is mapped. V will be nil if there was no previous value.
 	Get(ctx context.Context, key K) (*V, error)
@@ -121,8 +123,10 @@ type NamedMap[K comparable, V any] interface {
 	// As always, the result must be accessed (and will be valid) only of the error is nil.
 	KeySetFilter(ctx context.Context, filter filters.Filter) <-chan *StreamedKey[K]
 
-	// KeySet returns a KeyPageIterator which can be used to retrieve all the keys.
-	KeySet(ctx context.Context) KeyPageIterator[K, V]
+	// KeySet returns a channel from which keys of all entries can be obtained.
+	// Note: the entries are paged internally to avoid excessive memory usage, but you need to be
+	// carefull when running this operation against NamedMaps with large number of entries.
+	KeySet(ctx context.Context) <-chan *StreamedKey[K]
 
 	// Name returns the name of the NamedMap.
 	Name() string
@@ -177,8 +181,10 @@ type NamedMap[K comparable, V any] interface {
 	// NamedMap that satisfy the filter.
 	ValuesFilter(ctx context.Context, filter filters.Filter) <-chan *StreamedValue[V]
 
-	// Values returns a ValuePageIterator which can be used to retrieve all the values from the cache.
-	Values(ctx context.Context) ValuePageIterator[K, V]
+	// Values return a view of all values contained in this NamedMap.
+	// Note: the entries are paged internally to avoid excessive memory usage, but you need to be
+	// carefull when running this operation against NamedMaps with large number of entries.
+	Values(ctx context.Context) <-chan *StreamedValue[V]
 
 	getBaseClient() *baseClient[K, V]
 }

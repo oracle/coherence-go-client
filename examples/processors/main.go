@@ -17,12 +17,17 @@ import (
 	"github.com/oracle/coherence-go-client/coherence/processors"
 )
 
+type Person struct {
+	ID   int    `json:"id"`
+	Name string `json:"name"`
+	Age  int    `json:"age"`
+}
+
+func (p Person) String() string {
+	return fmt.Sprintf("Person{id=%d, name=%s, age=%d}", p.ID, p.Name, p.Age)
+}
+
 func main() {
-	type Person struct {
-		ID   int    `json:"id"`
-		Name string `json:"name"`
-		Age  int    `json:"age"`
-	}
 
 	var (
 		person1 = Person{ID: 1, Name: "Tim", Age: 53}

@@ -189,15 +189,16 @@ Ex. 2 - Working with structs
 	}
 	fmt.Println("Person is", *person)
 
-Ex. 3 - Working with streaming filtered results using channels
+Ex. 3 - Working with streaming filtered and un-filtered results using channels
 
 	// Channels are used to deal with individual keys, values or entries
-	// streamed from the backend using a filter.  Each result element is wrapped in
-	// in a struct called StreamEntry which is a wrapper object
-	// that wraps an error and a result. As always, the Err object must be
-	// checked for errors before accessing the Val field.
-	// Other functions that return channels are KeySetFilter(), ValuesFilter(),
-	// InvokeAll() and InvokeAllFilter().
+	// streamed from the backend using a filter or an open query.  Depending
+	// upon the operation, each result element is wrapped in one of the structs
+	// StreamedEntry, StreamedValue or StreamedKey which wraps an error and a
+	// Key and/or a Value. As always, the Err object must be
+	// checked for errors before accessing the Key or Value fields.
+	// All functions that return channels are EntrySetFilter(), KeySetFilter(), ValuesFilter(),
+	// EntrySet(), KeySet(), Values(), InvokeAll() and InvokeAllFilter().
 
 	namedMap, err := coherence.NewNamedMap[int, Person](session, "people")
 	if err != nil {
@@ -220,33 +221,7 @@ Ex. 3 - Working with streaming filtered results using channels
 	// we can also do more complex filtering such as looking for people > 30 and where there name begins with 'T'
 	ch := namedMap.EntrySetFilter(ctx, filters.Greater(age, 20).And(filters.Like(name, "T%", true)))
 
-Ex. 4 - Working with KeySet(), EntrySet() and Values() results
-
-	// The KeySet(),  EntrySet() and Values() both return all keys, entries and values respectively and can possibly
-	// return big datasets when using large NamedMaps or NamedCaches. Because of this reason, both these calls
-	// return "Page Iterators" which internally page the data back allowing you to more efficiently process large data sets.
-
-	namedMap, err := coherence.NewNamedMap[int, Person](session, "people")
-	if err != nil {
-	    log.Fatal(err)
-	}
-
-	iter := namedMap.Values(ctx)
-	for {
-	    person, err = iter.Next()
-	    if err == coherence.ErrDone {
-	        // no more entries to iterate over
-	        break
-	    }
-	    // check for an actual error
-	    if err != nil {
-	        log.Fatal(err)
-	    }
-	    // process the value
-	    fmt.Println("Person:", *person)
-	}
-
-Ex. 5 Using entry processors for in-place processing
+Ex. 4 Using entry processors for in-place processing
 
 	// A Processor is an object that allows you to process (update) one or more NamedMap entries on the NamedMap itself,
 	// instead of moving the entries to the client across the network. In other words, using processors we send
@@ -273,21 +248,21 @@ Ex. 5 Using entry processors for in-place processing
 
 	// 2. Increase the salary of all people in Perth
 	ch2 := coherence.InvokeAllFilter[int, Person, float32](ctx, namedMap, filters.Equal(city, "Perth"), processors.Multiply("salary", 1.1, true)
-	for e := range ch {
-	    if e.Err != nil {
-	        log.Fatal(e.Err)
+	for result := range ch {
+	    if result.Err != nil {
+	        log.Fatal(result.Err)
 	    }
 	}
 
 	// 3. Increase the salary of people with Id 1 and 5
 	ch2 := coherence.InvokeAllKeys[int, Person, float32](ctx, namedMap, []int{1, 5}, processors.Multiply("salary", 1.1, true)
-	for e := range ch {
-	    if e.Err != nil {
-	        log.Fatal(e.Err)
+	for result := range ch {
+	    if result.Err != nil {
+	        log.Fatal(result.Err)
 	    }
 	}
 
-Ex.6 Aggregating results
+Ex. 5 Aggregating results
 
 	// Aggregators can be used to perform operations against a subset of entries to obtain a single result.
 	// Entry aggregation occurs in parallel across the grid to provide map-reduce support when working with
@@ -320,7 +295,7 @@ Ex.6 Aggregating results
 	salaryResult, err = coherence.AggregateFilter[int, Person, []Person](ctx, namedMap, filters.Greater(age, 40),
 	    aggregators.TopN[float32, Person](extractors.Extract[float32]("salary"), false, 2))
 
-Ex. 7 Responding to Map events
+Ex. 6 Responding to Map events
 
 	// The Coherence Go Client provides the ability to add a MapListener that will receive events (inserts, updates, deletes)
 	// that occur against a NamedMap or NamedCache. You can listen for all events, events based upon a filter or
@@ -399,7 +374,7 @@ Ex. 7 Responding to Map events
 	    log.Fatal("unable to add listener", listener)
 	}
 
-Ex. 8 Responding to Cache Lifecycle events
+Ex. 7 Responding to Cache Lifecycle events
 
 	// The Coherence Go Client provides the ability to add a MapLifecycleListener that will receive events (truncated and destroyed)
 	// that occur against a NamedMap or NamedCache.
@@ -460,7 +435,7 @@ Ex. 8 Responding to Cache Lifecycle events
 	// Cache size is 1 truncating cache
 	// **EVENT=Truncated: value=NamedMap{name=people, format=json}
 
-Ex. 9 Responding to Session Lifecycle events
+Ex. 8 Responding to Session Lifecycle events
 
 	// The Coherence Go Client provides the ability to add a SessionLifecycleListener that will receive events (connected, closed,
 	// disconnected or reconnected) that occur against the session.

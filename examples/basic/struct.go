@@ -22,6 +22,10 @@ type Person struct {
 	Age  int    `json:"age"`
 }
 
+func (p Person) String() string {
+	return fmt.Sprintf("Person{id=%d, name=%s, age=%d}", p.ID, p.Name, p.Age)
+}
+
 func main() {
 	var (
 		person *Person

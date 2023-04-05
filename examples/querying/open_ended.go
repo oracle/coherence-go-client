@@ -22,12 +22,7 @@ func main() {
 		Age  int    `json:"age"`
 	}
 
-	var (
-		ctx    = context.Background()
-		entry  *coherence.Entry[int, Person]
-		person *Person
-		key    *int
-	)
+	ctx := context.Background()
 
 	// create a new Session to the default gRPC port of 1408 using plain text
 	session, err := coherence.NewSession(ctx, coherence.WithPlainText())
@@ -53,52 +48,37 @@ func main() {
 	}
 
 	fmt.Println("Running KeySet()")
-	iter := namedMap.KeySet(ctx)
 	count := 0
 
-	for {
-		key, err = iter.Next()
-		if err == coherence.ErrDone {
-			break
+	for result := range namedMap.KeySet(ctx) {
+		if result.Err != nil {
+			panic(result.Err)
 		}
-		if err != nil {
-			panic(err)
-		}
-		fmt.Println("key", *key)
+		fmt.Println("key", result.Key)
 		count++
 	}
 	fmt.Println("KeySet count", count)
 
 	fmt.Println("Running EntrySet()")
-	iter2 := namedMap.EntrySet(ctx)
 	count = 0
 
-	for {
-		entry, err = iter2.Next()
-		if err == coherence.ErrDone {
-			break
+	for result := range namedMap.EntrySet(ctx) {
+		if result.Err != nil {
+			panic(result.Err)
 		}
-		if err != nil {
-			panic(err)
-		}
-		fmt.Println("Key:", entry.Key, "Value:", entry.Value)
+		fmt.Println("Key:", result.Key, "Value:", result.Value)
 		count++
 	}
 	fmt.Println("EntrySet count", count)
 
 	fmt.Println("Running Values()")
-	iter3 := namedMap.Values(ctx)
 	count = 0
 
-	for {
-		person, err = iter3.Next()
-		if err == coherence.ErrDone {
-			break
+	for result := range namedMap.Values(ctx) {
+		if result.Err != nil {
+			panic(result.Err)
 		}
-		if err != nil {
-			panic(err)
-		}
-		fmt.Println(*person)
+		fmt.Println(result.Value)
 		count++
 	}
 	fmt.Println("Values() count", count)

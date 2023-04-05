@@ -34,6 +34,7 @@ docker run -d -p 1408:1408 -p 30000:30000 ghcr.io/oracle/coherence-ce:22.06.3
 * [Listening for Map Events](#map-events)
 * [Listening for Map Lifecycle Events](#lifecycle-events)
 * [Listening for Session Lifecycle Events](#session-lifecycle-events)
+* [Adding Indexs](#indexes)
 
 ### <a name="basic"></a> Basic Operations
 
@@ -199,4 +200,11 @@ Source code: [events/session/all/all_events.go](events/session/all/all_events.go
 
 ```go
 go run events/session/all/all_events.go
+```
+### <a name="indexes"></a> Adding Indexes
+
+Source code: [indexes/main.go](indexes/main.go)
+
+```go
+go run indexes/main.go
 ```

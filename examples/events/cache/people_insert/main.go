@@ -19,14 +19,18 @@ import (
 	"time"
 )
 
-func main() {
-	type Person struct {
-		ID         int    `json:"id"`
-		Name       string `json:"name"`
-		Age        int    `json:"age"`
-		InsertTime int64  `json:"insertTime"`
-	}
+type Person struct {
+	ID         int    `json:"id"`
+	Name       string `json:"name"`
+	Age        int    `json:"age"`
+	InsertTime int64  `json:"insertTime"`
+}
 
+func (p Person) String() string {
+	return fmt.Sprintf("Person{id=%d, name=%s, age=%d, insertTime=%v}", p.ID, p.Name, p.Age, p.InsertTime)
+}
+
+func main() {
 	var (
 		ctx        = context.Background()
 		err        error

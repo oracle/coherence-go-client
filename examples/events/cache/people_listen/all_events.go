@@ -24,6 +24,10 @@ type Person struct {
 	InsertTime int64  `json:"insertTime"`
 }
 
+func (p Person) String() string {
+	return fmt.Sprintf("Person{id=%d, name=%s, age=%d, insertTime=%v}", p.ID, p.Name, p.Age, p.InsertTime)
+}
+
 func main() {
 	ctx := context.Background()
 
