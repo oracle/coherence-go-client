@@ -167,6 +167,12 @@ func executeDestroy[K comparable, V any](ctx context.Context, bc *baseClient[K, 
 	request := pb.DestroyRequest{Cache: bc.name, Scope: bc.sessionOpts.Scope}
 
 	_, err = bc.client.Destroy(ctx, &request)
+	if err != nil {
+		return err
+	}
+
+	// also mark as released, which
+	executeRelease[K, V](bc, nm)
 
 	if manager := bc.eventManager; manager != nil {
 		manager.close()
@@ -175,23 +181,20 @@ func executeDestroy[K comparable, V any](ctx context.Context, bc *baseClient[K, 
 	// make the baseClient as destroyed as it can no longer be used
 	bc.destroyed = true
 
-	// also mark as released
-	executeRelease[K, V](bc, nm)
-
-	return err
+	return nil
 }
 
 // executeRelease releases a NamedCache or NamedMap
 func executeRelease[K comparable, V any](bc *baseClient[K, V], nm NamedMap[K, V]) {
-	if manager := bc.eventManager; manager != nil {
-		manager.close()
-	}
-
 	bc.eventManager.dispatch(Released, func() MapLifecycleEvent[K, V] {
 		return newMapLifecycleEvent(nm, Released)
 	})
 
 	bc.released = true
+
+	if manager := bc.eventManager; manager != nil {
+		manager.close()
+	}
 }
 
 // executeContainsKey executes the containsKey operation against a baseClient.
