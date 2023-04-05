@@ -5,6 +5,6 @@
  */
 
 /*
-Package events provides examples using events.
+Package events shows examples using events.
 */
 package events
