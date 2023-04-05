@@ -780,6 +780,8 @@ func runBasicLifecycleTests(g *gomega.WithT, cache coherence.NamedMap[string, st
 	err = cache.Destroy(ctx)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
+	Sleep(10)
+
 	f = func() int32 { return listener.destroyCount() }
 	g.Expect(expect[int32](f, 1, timeout)).To(gomega.BeNil())
 }
@@ -799,6 +801,9 @@ func runMultipleLifecycleTests(g *gomega.WithT, cache coherence.NamedMap[string,
 	cache.AddLifecycleListener(listener2.listener)
 
 	defer cache.RemoveLifecycleListener(listener1.listener)
+	defer cache.RemoveLifecycleListener(listener2.listener)
+
+	Sleep(10)
 
 	_, err := cache.Put(ctx, "A", "A")
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
@@ -811,7 +816,7 @@ func runMultipleLifecycleTests(g *gomega.WithT, cache coherence.NamedMap[string,
 	err = cache.Truncate(ctx)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
-	// function to return the truncate count from the listener
+	// function to return the truncate count from the listeners
 	f1 := func() int32 {
 		return listener1.truncateCount()
 	}

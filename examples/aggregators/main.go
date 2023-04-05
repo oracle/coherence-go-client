@@ -5,7 +5,7 @@
  */
 
 /*
-Package main provides aggregation examples using a NamedMap with key of int and value of Person struct.
+Package main shows aggregation examples using a NamedMap with key of int and value of Person struct.
 */
 package main
 

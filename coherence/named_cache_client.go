@@ -207,18 +207,21 @@ func (nc *NamedCacheClient[K, V]) IsEmpty(ctx context.Context) (bool, error) {
 //	}
 //
 //	ch := namedMap.EntrySetFilter(ctx, filters.GreaterEqual(extractors.Extract[int]("age"), 20))
-//	for e := range ch2 {
-//	    if e.Err != nil {
+//	for result := range ch {
+//	    if result.Err != nil {
 //	        // process, handle the error
 //	    } else {
-//	        fmt.Println("Key:", e.Key, "Value:", e.Value)
+//	        fmt.Println("Key:", result.Key, "Value:", result.Value)
 //	    }
 //	}
 func (nc *NamedCacheClient[K, V]) EntrySetFilter(ctx context.Context, fltr filters.Filter) <-chan *StreamedEntry[K, V] {
 	return executeEntrySetFilter(ctx, &nc.baseClient, fltr)
 }
 
-// EntrySet returns a EntryPageIterator which can be used to retrieve all the entries.
+// EntrySet returns a channel from which all entries can be obtained.
+//
+// Note: the entries are paged internally to avoid excessive memory usage, but you need to be
+// carefull when running this operation against NamedCaches with large number of entries.
 //
 // The example below shows how to iterate the entries in a NamedCache.
 //
@@ -227,22 +230,15 @@ func (nc *NamedCacheClient[K, V]) EntrySetFilter(ctx context.Context, fltr filte
 //	    log.Fatal(err)
 //	}
 //
-//	iter := namedMap.EntrySet(ctx)
-//
-//	for {
-//	    person, err = iter.Next()
-//	    if err == coherence.ErrDone {
-//	        // no more entries to iterate over
-//	        break
+//	ch := namedMap.EntrySet(ctx)
+//	for result := range ch {
+//	    if result.Err != nil {
+//	        // process, handle the error
+//	    } else {
+//	        fmt.Println("Key:", result.Key, "Value:", result.Value)
 //	    }
-//	    // check for an actual error
-//	    if err != nil {
-//	        log.Fatal(err)
-//	    }
-//	    // process the entry
-//	    fmt.Println("Key:", entry.Key, "Person:", entry.Value)
 //	}
-func (nc *NamedCacheClient[K, V]) EntrySet(ctx context.Context) EntryPageIterator[K, V] {
+func (nc *NamedCacheClient[K, V]) EntrySet(ctx context.Context) <-chan *StreamedEntry[K, V] {
 	return executeEntrySet[K, V](ctx, &nc.baseClient)
 }
 
@@ -279,11 +275,11 @@ func (nc *NamedCacheClient[K, V]) Get(ctx context.Context, key K) (*V, error) {
 //	}
 //
 //	ch := namedMap.GetAll(ctx, []int{1, 3, 4})
-//	for e := range ch2 {
-//	    if e.Err != nil {
+//	for result := range ch {
+//	    if result.Err != nil {
 //	        // process, handle the error
 //	    } else {
-//	        fmt.Println("Key:", e.Key, "Value:", e.Value)
+//	        fmt.Println("Key:", result.Key, "Value:", result.Value)
 //	    }
 //	}
 func (nc *NamedCacheClient[K, V]) GetAll(ctx context.Context, keys []K) <-chan *StreamedEntry[K, V] {
@@ -308,18 +304,21 @@ func (nc *NamedCacheClient[K, V]) GetOrDefault(ctx context.Context, key K, def V
 //	}
 //
 //	ch := namedMap.KeySetFilter(ctx, filters.GreaterEqual(extractors.Extract[int]("age"), 20))
-//	for e := range ch2 {
-//	    if e.Err != nil {
+//	for result := range ch {
+//	    if result.Err != nil {
 //	        // process, handle the error
 //	    } else {
-//	        fmt.Println("Key:", e.Key)
+//	        fmt.Println("Key:", result.Key)
 //	    }
 //	}
 func (nc *NamedCacheClient[K, V]) KeySetFilter(ctx context.Context, fltr filters.Filter) <-chan *StreamedKey[K] {
 	return executeKeySetFilter(ctx, &nc.baseClient, fltr)
 }
 
-// KeySet returns a KeyPageIterator which can be used to retrieve all the keys.
+// KeySet returns a channel from which keys of all entries can be obtained.
+//
+// Note: the entries are paged internally to avoid excessive memory usage, but you need to be
+// carefull when running this operation against NamedMaps with large number of entries.
 //
 // The example below shows how to iterate the keys in a NamedCache.
 //
@@ -328,22 +327,15 @@ func (nc *NamedCacheClient[K, V]) KeySetFilter(ctx context.Context, fltr filters
 //	    log.Fatal(err)
 //	}
 //
-//	iter := namedMap.KeySet(ctx)
-//
-//	for {
-//	    key, err = iter.Next()
-//	    if err == coherence.ErrDone {
-//	        // no more entries to iterate over
-//	        break
+//	ch := namedMap.KeySet(ctx)
+//	for result := range ch {
+//	    if result.Err != nil {
+//	        // process, handle the error
+//	    } else {
+//	        fmt.Println("Key:", result.Key)
 //	    }
-//	    // check for an actual error
-//	    if err != nil {
-//	        log.Fatal(err)
-//	    }
-//	    // process the key
-//	    fmt.Println("Key:", *key)
 //	}
-func (nc *NamedCacheClient[K, V]) KeySet(ctx context.Context) KeyPageIterator[K, V] {
+func (nc *NamedCacheClient[K, V]) KeySet(ctx context.Context) <-chan *StreamedKey[K] {
 	return executeKeySet[K, V](ctx, &nc.baseClient)
 }
 
@@ -480,18 +472,21 @@ func (nc *NamedCacheClient[K, V]) Size(ctx context.Context) (int, error) {
 //	}
 //
 //	ch := namedMap.ValuesFilter(ctx, filters.GreaterEqual(extractors.Extract[int]("age"), 20))
-//	for e := range ch2 {
-//	    if e.Err != nil {
+//	for result := range ch {
+//	    if result.Err != nil {
 //	        // process, handle the error
 //	    } else {
-//	        fmt.Println("Value:", e.Value
+//	        fmt.Println("Value:", result.Value)
 //	    }
 //	}
 func (nc *NamedCacheClient[K, V]) ValuesFilter(ctx context.Context, fltr filters.Filter) <-chan *StreamedValue[V] {
 	return executeValues(ctx, &nc.baseClient, fltr)
 }
 
-// Values returns a ValuePageIterator which can be used to retrieve all the values.
+// Values returns a view of all values contained in this NamedCache.
+//
+// Note: the entries are paged internally to avoid excessive memory usage, but you need to be
+// carefull when running this operation against NamedCaches with large number of entries.
 //
 // The example below shows how to iterate the values in a NamedCache.
 //
@@ -500,23 +495,16 @@ func (nc *NamedCacheClient[K, V]) ValuesFilter(ctx context.Context, fltr filters
 //	    log.Fatal(err)
 //	}
 //
-//	iter := namedMap.Values(ctx)
-//
-//	for {
-//	    person, err = iter.Next()
-//	    if err == coherence.ErrDone {
-//	        // no more entries to iterate over
-//	        break
+//	ch := namedMap.Values(ctx)
+//	for result := range ch {
+//	    if result.Err != nil {
+//	        // process, handle the error
+//	    } else {
+//	        fmt.Println("Value:", result.Value)
 //	    }
-//	    // check for an actual error
-//	    if err != nil {
-//	        log.Fatal(err)
-//	    }
-//	    // process the value
-//	    fmt.Println("Person:", *person)
 //	}
-func (nc *NamedCacheClient[K, V]) Values(ctx context.Context) ValuePageIterator[K, V] {
-	return newValuePageIterator[K, V](ctx, &nc.baseClient)
+func (nc *NamedCacheClient[K, V]) Values(ctx context.Context) <-chan *StreamedValue[V] {
+	return executeValuesNoFilter[K, V](ctx, &nc.baseClient)
 }
 
 // String returns a string representation of a NamedCacheClient.

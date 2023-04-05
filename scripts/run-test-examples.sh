@@ -19,7 +19,7 @@ function wait_for_ready() {
     PORT=30000
   fi
   pause
-  echo "waiting for management to be ready on $PORT ..."
+  echo "waiting for management to be ready on ${PORT}..."
   while [ $counter -gt 0 ]
   do
     curl http://127.0.0.1:${PORT}/management/coherence/cluster > /dev/null 2>&1

@@ -27,6 +27,10 @@ type Person struct {
 	Salary int    `json:"salary"`
 }
 
+func (p Person) String() string {
+	return fmt.Sprintf("Person{id=%d, name=%s, age=%d, salary=%d}", p.ID, p.Name, p.Age, p.Salary)
+}
+
 func main() {
 
 	ctx := context.Background()
