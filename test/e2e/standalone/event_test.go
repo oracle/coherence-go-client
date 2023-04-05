@@ -726,6 +726,10 @@ func runBasicTests(
 		g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	}
 
+	defer func(cache coherence.NamedMap[string, string], ctx context.Context) {
+		_ = cache.RemoveListener(ctx, listener.listener)
+	}(cache, ctx)
+
 	_, err2 := cache.Put(ctx, "A", "A")
 	g.Expect(err2).ShouldNot(gomega.HaveOccurred())
 
@@ -760,6 +764,8 @@ func runBasicLifecycleTests(g *gomega.WithT, cache coherence.NamedMap[string, st
 	// issue truncate
 	err = cache.Truncate(ctx)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+
+	Sleep(10)
 
 	// issue truncate again
 	err = cache.Truncate(ctx)
@@ -1094,6 +1100,7 @@ func expect[T comparable](f func() T, expectedValue T, timeout int) error {
 	)
 	for duration < timeout {
 		lastValue = f()
+		log.Printf("Last value: %v, expected value: %v", lastValue, expectedValue)
 		if lastValue == expectedValue {
 			return nil
 		}
