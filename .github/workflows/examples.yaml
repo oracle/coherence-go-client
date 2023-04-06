@@ -72,7 +72,7 @@ jobs:
     - name: Verify Examples
       shell: bash
       run: |
-        go get google.golang.org/grpc/cmd/protoc-gen-go-grpc
+        go get google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.3.0
         COHERENCE_VERSION=${{ matrix.coherenceVersion }} PROFILES=,-jakarta,javax make clean generate-proto build-test-images test-cluster-startup test-examples
         make test-cluster-shutdown || true
 

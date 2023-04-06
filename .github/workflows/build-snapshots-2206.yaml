@@ -70,7 +70,7 @@ jobs:
       shell: bash
       run: |
         echo "Running verify against $COH_VERSION"
-        go get google.golang.org/grpc/cmd/protoc-gen-go-grpc
+        go get google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.3.0
         COHERENCE_BASE_IMAGE=gcr.io/distroless/java17 INCLUDE_LONG_RUNNING=true COHERENCE_VERSION=$COH_VERSION PROFILES=,-jakarta,javax make clean generate-proto build-test-images test-e2e-standalone
 
     - name: E2E Local Tests SSL
@@ -79,7 +79,7 @@ jobs:
       shell: bash
       run: |
         echo "Running verify against $COH_VERSION"
-        go get google.golang.org/grpc/cmd/protoc-gen-go-grpc
+        go get google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.3.0
         COHERENCE_BASE_IMAGE=gcr.io/distroless/java17 SECURE=true COHERENCE_IGNORE_INVALID_CERTS=true INCLUDE_LONG_RUNNING=true \
           COHERENCE_TLS_CERTS_PATH=`pwd`/test/utils/certs/guardians-ca.crt \
           COHERENCE_TLS_CLIENT_CERT=`pwd`/test/utils/certs/star-lord.crt \
