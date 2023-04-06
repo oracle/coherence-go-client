@@ -41,7 +41,8 @@ func main() {
 
 	// check arguments
 	if len(os.Args) != 3 {
-		panic("please provide a starting ID and number to insert")
+		log.Println("please provide a starting ID and number to insert")
+		return
 	}
 
 	if startID, err = strconv.Atoi(os.Args[1]); err != nil {

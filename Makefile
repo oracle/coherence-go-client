@@ -331,7 +331,7 @@ test-discovery: test-clean gotestsum $(BUILD_PROPS) ## Run Discovery tests with 
 # ----------------------------------------------------------------------------------------------------------------------
 $(TOOLS_BIN)/golangci-lint:
 	@mkdir -p $(TOOLS_BIN)
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(TOOLS_BIN) v1.50.1
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(TOOLS_BIN) v1.52.2
 
 
 # ----------------------------------------------------------------------------------------------------------------------

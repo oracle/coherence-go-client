@@ -233,7 +233,7 @@ type StreamedEntry[K comparable, V any] struct {
 	Value V
 }
 
-// Entry represents a returned entry from EntryPageIterator.
+// Entry represents a returned entry from entryPageIterator.
 type Entry[K comparable, V any] struct {
 	Key   K
 	Value V
