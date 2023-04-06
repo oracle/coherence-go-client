@@ -75,7 +75,7 @@ func newUniversalExtractor[T, E any](name string) *universalExtractor[T, E] {
 }
 
 // Extract a value from the object.
-func (ue *universalExtractor[T, E]) Extract(obj T) (E, error) {
+func (ue *universalExtractor[T, E]) Extract(_ T) (E, error) {
 	var zeroValue E
 	return zeroValue, nil
 }
@@ -140,14 +140,14 @@ func Chained[T, E any](property string) ValueExtractor[T, E] {
 
 // Extract a value from the object.
 // This is an internal type (exported only for serialization purpose).
-func (ue *chainedExtractor[T, E]) Extract(obj T) (E, error) {
+func (ue *chainedExtractor[T, E]) Extract(_ T) (E, error) {
 	var zeroValue E
 	return zeroValue, nil
 }
 
 // Extract a value from the object.
 // This is an internal type (exported only for serialization purpose).
-func (ue *compositeExtractor[T, E]) Extract(obj T) (E, error) {
+func (ue *compositeExtractor[T, E]) Extract(_ T) (E, error) {
 	var zeroValue E
 	return zeroValue, nil
 }
@@ -167,7 +167,7 @@ type identityExtractor[T, E any] struct {
 	abstractExtractor
 }
 
-func (ue *identityExtractor[T, E]) Extract(obj T) (E, error) {
+func (ue *identityExtractor[T, E]) Extract(_ T) (E, error) {
 	var zeroValue E
 	return zeroValue, nil
 }

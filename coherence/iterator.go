@@ -17,28 +17,28 @@ import (
 )
 
 var (
-	_ KeyPageIterator[int, string]   = &streamedKeyIterator[int, string]{}
-	_ EntryPageIterator[int, string] = &streamedEntryIterator[int, string]{}
-	_ ValuePageIterator[int, string] = &streamedValueIterator[int, string]{}
+	_ keyPageIterator[int, string]   = &streamedKeyIterator[int, string]{}
+	_ entryPageIterator[int, string] = &streamedEntryIterator[int, string]{}
+	_ valuePageIterator[int, string] = &streamedValueIterator[int, string]{}
 
 	// ErrDone indicates that there are no more entries to return.
 	ErrDone = errors.New("iterator done")
 )
 
-// KeyPageIterator defines an iterator of type K which is used to return
+// keyPageIterator defines an iterator of type K which is used to return
 // values from KeySet() function. This iterator pages data internally so that
 // if this iterator is called on a large cache it does not end up returning
 // every key at once and potentially causing memory pressure.
 //
 // You can keep calling .Next() until err returns coherence.ErrDone, which indicates no more keys to iterate.
-type KeyPageIterator[K comparable, V any] interface {
+// This is an internal type only.
+type keyPageIterator[K comparable, V any] interface {
 	// Next returns the next key and error, if error is ErrDone then this means
 	// there are no more keys, otherwise it means an actual error.
 	Next() (*K, error)
 }
 
 type streamedKeyIterator[K comparable, V any] struct {
-	KeyPageIterator[K, V]
 	exhausted bool
 	dataList  *list.List
 	ctx       context.Context
@@ -47,7 +47,7 @@ type streamedKeyIterator[K comparable, V any] struct {
 	sync.RWMutex
 }
 
-func newKeyPageIterator[K comparable, V any](ctx context.Context, bc *baseClient[K, V]) KeyPageIterator[K, V] {
+func newKeyPageIterator[K comparable, V any](ctx context.Context, bc *baseClient[K, V]) keyPageIterator[K, V] {
 	iter := &streamedKeyIterator[K, V]{
 		exhausted: false,
 		dataList:  list.New(),
@@ -143,19 +143,20 @@ func (it *streamedKeyIterator[K, V]) getNextPage() error {
 	return nil
 }
 
-// EntryPageIterator defines an iterator of type Entry which is used to return
+// entryPageIterator defines an iterator of type Entry which is used to return
 // entries from EntrySet() function. This iterator pages data internally so that
 // if this iterator is called on a large cache it does not end up returning
 // every entry at once and potentially causing memory pressure.
 //
 // You can keep calling .Next() until err returns coherence.ErrDone, which indicates no more entries to iterate.
-type EntryPageIterator[K comparable, V any] interface {
+// This is an internal type only.
+type entryPageIterator[K comparable, V any] interface {
 	// Next returns the next entry and error, if error is ErrDone then this means
 	// there are no more entries, otherwise it means an actual error.
 	Next() (*Entry[K, V], error)
 }
 
-func newEntryPageIterator[K comparable, V any](ctx context.Context, bc *baseClient[K, V]) EntryPageIterator[K, V] {
+func newEntryPageIterator[K comparable, V any](ctx context.Context, bc *baseClient[K, V]) entryPageIterator[K, V] {
 	iter := &streamedEntryIterator[K, V]{
 		exhausted: false,
 		dataList:  list.New(),
@@ -168,7 +169,6 @@ func newEntryPageIterator[K comparable, V any](ctx context.Context, bc *baseClie
 }
 
 type streamedEntryIterator[K comparable, V any] struct {
-	EntryPageIterator[K, V]
 	exhausted bool
 	dataList  *list.List
 	ctx       context.Context
@@ -267,24 +267,24 @@ func (it *streamedEntryIterator[K, V]) getNextPage() error {
 	return nil
 }
 
-// ValuePageIterator defines an iterator of type V which is used to return
+// valuePageIterator defines an iterator of type V which is used to return
 // values from Values() function. This iterator pages data internally so that
 // if this iterator is called on a large cache it does not end up returning
 // every value at once and potentially causing memory pressure.
 //
 // You can keep calling .Next() until err returns coherence.ErrDone, which indicates no more entries to iterate.
-type ValuePageIterator[K comparable, V any] interface {
+// This is an internal type only.
+type valuePageIterator[K comparable, V any] interface {
 	// Next returns the next value and error, if error is ErrDone then this means
 	// there are no more keys, otherwise it means an actual error.
 	Next() (*V, error)
 }
 
 type streamedValueIterator[K comparable, V any] struct {
-	ValuePageIterator[K, V]
 	entryIterator *streamedEntryIterator[K, V]
 }
 
-func newValuePageIterator[K comparable, V any](ctx context.Context, bc *baseClient[K, V]) ValuePageIterator[K, V] {
+func newValuePageIterator[K comparable, V any](ctx context.Context, bc *baseClient[K, V]) valuePageIterator[K, V] {
 	internalIter := &streamedEntryIterator[K, V]{
 		exhausted: false,
 		dataList:  list.New(),
