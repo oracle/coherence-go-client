@@ -499,7 +499,7 @@ Ex. 8 Responding to Session Lifecycle events
 By default, the Coherence Go client serializes any keys and values to JSON and then stores them as JsonObjects in Coherence.
 This is usually sufficient for most applications where you are only accessing your data via the Go Client.
 
-If you wish to access your data via other clients such as Java, JavaScript or Python, it's best to use Java classes, known to Coherence server,
+If you wish to access your data via other clients such as Java, JavaScript, C++, .NET or Python, it's best to use Java classes, known to Coherence server,
 representing the data model. The following describes how to achieve interoperability with Java.
 
 Step 1. Create your Java Classes
