@@ -80,8 +80,8 @@ func TestMapAndLifecycleEventsAll(t *testing.T) {
 	runReleasedLifecycleTests(g, namedMap)
 	runReleasedLifecycleTests(g, namedCache)
 
-	namedCache = GetNamedCache[string, string](g, session, "test-lifecycle-all-cache")
-	namedMap = GetNamedMap[string, string](g, session, "test-lifecycle-all-map")
+	namedCache = GetNamedCache[string, string](g, session, "test-lifecycle-all-cache-multi")
+	namedMap = GetNamedMap[string, string](g, session, "test-lifecycle-all-map-multi")
 
 	runMultipleLifecycleTests(g, namedMap)
 	runMultipleLifecycleTests(g, namedCache)
