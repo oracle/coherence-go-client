@@ -16,7 +16,7 @@ to a Coherence Cluster using Google's gRPC framework for the network transport.
 
 #### Features
 
-* Familiar Map-like interface for manipulating cache entries based upon the full Coherence API
+* Familiar Map-like interface for manipulating cache entries based upon the Coherence client API
 * Cluster-side querying, aggregation and filtering of map entries
 * Cluster-side manipulation of map entries using EntryProcessors
 * Registration of listeners to be notified of:
