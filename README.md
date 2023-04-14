@@ -54,11 +54,13 @@ $GOPATH/src/github.com/coherence/coherence-go-client
 
 ## <a name="doc"></a>Documentation
 
-Visit the documentation on [pkg.go.dev](https://pkg.go.dev/github.com/oracle/coherence-go-client) or the [FAQ Page](https://github.com/oracle/coherence-go-client/wiki/FAQ).
+* [Godoc on pkg.go.dev](https://pkg.go.dev/github.com/oracle/coherence-go-client)
+* [FAQ Page](https://github.com/oracle/coherence-go-client/wiki/FAQ)
+* [Troubleshooting Guide](https://github.com/oracle/coherence-go-client/wiki/Troubleshooting)
 
 ## <a name="examples"></a>Examples
 
-For a full set of examples, please see [here](examples).
+For a comprehensive set of Go client API examples, please see [examples](examples).
 
 The following example connects to a Coherence cluster running gRPC Proxy on default
 port of 1408, creates a new `NamedMap` with key `int` and value of a `string` and
@@ -124,8 +126,7 @@ func main() {
 
 ## Help
 
-We have a **public Slack channel** where you can get in touch with us to ask questions about using the Coherence CLI
-or give us feedback or suggestions about what features and improvements you would like to see. We would love
+We have a **public Slack channel** where you can get in touch with us to ask questions about using the Coherence Go client as well as give us feedback or suggestions about what features and improvements you would like to see. We would love
 to hear from you. To join our channel,
 please [visit this site to get an invitation](https://join.slack.com/t/oraclecoherence/shared_invite/enQtNzcxNTQwMTAzNjE4LTJkZWI5ZDkzNGEzOTllZDgwZDU3NGM2YjY5YWYwMzM3ODdkNTU2NmNmNDFhOWIxMDZlNjg2MzE3NmMxZWMxMWE).  
 The invitation email will include details of how to access our Slack
@@ -133,7 +134,8 @@ workspace.  After you are logged in, please come to `#coherence` and say, "hello
 
 If you would like to raise an issue please see [here](https://github.com/oracle/coherence-go-client/issues/new/choose).
 
-You may also find your question is already answered on our [FAQ Page](https://github.com/oracle/coherence-go-client/wiki/FAQ).
+You may also find your question is already answered on our [FAQ](https://github.com/oracle/coherence-go-client/wiki/FAQ) or
+[troubleshooting](https://github.com/oracle/coherence-go-client/wiki/Troubleshooting) Wiki.
 
 ## Contributing
 
