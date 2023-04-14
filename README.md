@@ -133,6 +133,8 @@ workspace.  After you are logged in, please come to `#coherence` and say, "hello
 
 If you would like to raise an issue please see [here](https://github.com/oracle/coherence-go-client/issues/new/choose).
 
+You may also find your question is already answered on our [FAQ Page](https://github.com/oracle/coherence-go-client/wiki/FAQ).
+
 ## Contributing
 
 This project welcomes contributions from the community. Before submitting a pull request, please [review our contribution guide](./CONTRIBUTING.md)
