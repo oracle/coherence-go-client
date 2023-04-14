@@ -16,14 +16,15 @@ to a Coherence Cluster using Google's gRPC framework for the network transport.
 
 #### Features
 
-* Familiar Map-like interface for manipulating cache entries based upon the full Coherence API
+* Familiar Map-like interface for manipulating cache entries including but not limited to:
+  * `Put`, `PutIfAbsent`, `PutAll`, `Get`, `GetAll`, `Remove`, `Clear`, `GetOrDefault`, `Replace`, `ReplaceMapping`, `Size`, `IsEmpty`
 * Cluster-side querying, aggregation and filtering of map entries
 * Cluster-side manipulation of map entries using EntryProcessors
 * Registration of listeners to be notified of:
   * mutations such as insert, update and delete on Maps
   * map lifecycle events such as truncated, released or destroyed
   * session lifecycle events such as connected, disconnected, reconnected and closed 
-* Support for storing Go structs as JSON as well as the ability to serialize to Java objects on the server for access from other language API's
+* Support for storing Go structs as JSON as well as the ability to serialize to Java objects on the server for access from other Coherence language API's
 
 #### Requirements
 
@@ -53,17 +54,19 @@ $GOPATH/src/github.com/coherence/coherence-go-client
 
 ## <a name="doc"></a>Documentation
 
-Visit the documentation on [pkg.go.dev](https://pkg.go.dev/github.com/oracle/coherence-go-client).
+* [Godoc on pkg.go.dev](https://pkg.go.dev/github.com/oracle/coherence-go-client)
+* [FAQ Page](https://github.com/oracle/coherence-go-client/wiki/FAQ)
+* [Troubleshooting Guide](https://github.com/oracle/coherence-go-client/wiki/Troubleshooting)
 
 ## <a name="examples"></a>Examples
 
-For a full set of examples, please see [here](examples).
+For a comprehensive set of Go client API examples, please see [examples](examples).
 
 The following example connects to a Coherence cluster running gRPC Proxy on default
 port of 1408, creates a new `NamedMap` with key `int` and value of a `string` and
 issues `Put()`, `Get()` and `Size()` operations.
 
-> Note: Keys and values can also be Golang `structs`. See detailed examples [here](examples#basic).
+> Note: Keys and values can also be Go `structs`. See detailed examples [here](examples#basic).
 
 ```go
 import (
@@ -123,8 +126,7 @@ func main() {
 
 ## Help
 
-We have a **public Slack channel** where you can get in touch with us to ask questions about using the Coherence CLI
-or give us feedback or suggestions about what features and improvements you would like to see. We would love
+We have a **public Slack channel** where you can get in touch with us to ask questions about using the Coherence Go client as well as give us feedback or suggestions about what features and improvements you would like to see. We would love
 to hear from you. To join our channel,
 please [visit this site to get an invitation](https://join.slack.com/t/oraclecoherence/shared_invite/enQtNzcxNTQwMTAzNjE4LTJkZWI5ZDkzNGEzOTllZDgwZDU3NGM2YjY5YWYwMzM3ODdkNTU2NmNmNDFhOWIxMDZlNjg2MzE3NmMxZWMxMWE).  
 The invitation email will include details of how to access our Slack
@@ -132,13 +134,16 @@ workspace.  After you are logged in, please come to `#coherence` and say, "hello
 
 If you would like to raise an issue please see [here](https://github.com/oracle/coherence-go-client/issues/new/choose).
 
+You may also find your question is already answered on our [FAQ](https://github.com/oracle/coherence-go-client/wiki/FAQ) or
+[troubleshooting](https://github.com/oracle/coherence-go-client/wiki/Troubleshooting) Wiki.
+
 ## Contributing
 
 This project welcomes contributions from the community. Before submitting a pull request, please [review our contribution guide](./CONTRIBUTING.md)
 
 ## Security
 
-Please consult the [security guide](./SECURITY.md) for our responsible security vulnerability disclosure process
+Please consult the [security guide](./SECURITY.md) for our responsible security vulnerability disclosure process.
 
 ## License
 
