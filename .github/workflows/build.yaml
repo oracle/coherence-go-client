@@ -72,6 +72,12 @@ jobs:
         go get google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.3.0
         INCLUDE_LONG_RUNNING=true PROFILES=,-jakarta,javax COHERENCE_VERSION=22.06.3 make clean generate-proto build-test-images test-e2e-standalone
 
+    - uses: actions/upload-artifact@v3
+      if: failure()
+      with:
+        name: test-output
+        path: build/_output/test-logs
+
     - name: E2E Local Tests SSL
       shell: bash
       run: |
@@ -81,7 +87,7 @@ jobs:
           COHERENCE_TLS_CLIENT_KEY=`pwd`/test/utils/certs/star-lord.key \
           COHERENCE_VERSION=22.06.3 PROFILES=,secure,-jakarta,javax make clean certs generate-proto build-test-images test-e2e-standalone
 
-    - uses: actions/upload-artifact@v1
+    - uses: actions/upload-artifact@v3
       if: failure()
       with:
         name: test-output
