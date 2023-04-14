@@ -64,7 +64,7 @@ The following example connects to a Coherence cluster running gRPC Proxy on defa
 port of 1408, creates a new `NamedMap` with key `int` and value of a `string` and
 issues `Put()`, `Get()` and `Size()` operations.
 
-> Note: Keys and values can also be Golang `structs`. See detailed examples [here](examples#basic).
+> Note: Keys and values can also be Go `structs`. See detailed examples [here](examples#basic).
 
 ```go
 import (
