@@ -193,7 +193,7 @@ copyright: getcopyright ## Check copyright headers
 .PHONY: golangci
 golangci: $(TOOLS_BIN)/golangci-lint ## Go code review
 	$(TOOLS_BIN)/golangci-lint run -v --timeout=5m  ./...
-
+	cd examples && $(TOOLS_BIN)/golangci-lint run -v --timeout=5m  ./...
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Download and build proto files

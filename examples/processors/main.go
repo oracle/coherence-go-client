@@ -28,7 +28,6 @@ func (p Person) String() string {
 }
 
 func main() {
-
 	var (
 		person1 = Person{ID: 1, Name: "Tim", Age: 53}
 		person2 = Person{ID: 2, Name: "Helen", Age: 44}
@@ -38,11 +37,10 @@ func main() {
 
 	// create a new Session to the default gRPC port of 1408 using plain text
 	session, err := coherence.NewSession(ctx, coherence.WithPlainText())
-	defer session.Close()
-
 	if err != nil {
 		panic(err)
 	}
+	defer session.Close()
 
 	// create a new NamedMap of Person with key int
 	namedMap, err := coherence.NewNamedMap[int, Person](session, "processor-test")

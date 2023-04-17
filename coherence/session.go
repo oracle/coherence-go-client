@@ -165,7 +165,8 @@ func WithFormat(format string) func(sessionOptions *SessionOptions) {
 	}
 }
 
-// WithScope returns a function to set the scope for a session.
+// WithScope returns a function to set the scope for a session. This will prefix all
+// caches with the provided scope to make them unique within a scope.
 func WithScope(scope string) func(sessionOptions *SessionOptions) {
 	return func(s *SessionOptions) {
 		s.Scope = scope

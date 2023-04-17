@@ -15,13 +15,13 @@ import (
 	"github.com/oracle/coherence-go-client/coherence"
 )
 
-func main() {
-	type Person struct {
-		ID   int    `json:"id"`
-		Name string `json:"name"`
-		Age  int    `json:"age"`
-	}
+type Person struct {
+	ID   int    `json:"id"`
+	Name string `json:"name"`
+	Age  int    `json:"age"`
+}
 
+func main() {
 	var ctx = context.Background()
 
 	// create a new Session to the default gRPC port of 1408 using plain text

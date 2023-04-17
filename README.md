@@ -17,7 +17,7 @@ to a Coherence Cluster using Google's gRPC framework for the network transport.
 #### Features
 
 * Familiar Map-like interface for manipulating cache entries including but not limited to:
-  * `Put`, `PutIfAbsent`, `PutAll`, `Get`, `GetAll`, `Remove`, `Clear`, `GetOrDefault`, `Replace`, `ReplaceMapping`, `Size`, `IsEmpty`
+  * `Put`, `PutWithExpiry`, `PutIfAbsent`, `PutAll`, `Get`, `GetAll`, `Remove`, `Clear`, `GetOrDefault`, `Replace`, `ReplaceMapping`, `Size`, `IsEmpty`, `ContainsKey`, `ContainsValue`, `ContainsEntry`
 * Cluster-side querying, aggregation and filtering of map entries
 * Cluster-side manipulation of map entries using EntryProcessors
 * Registration of listeners to be notified of:
