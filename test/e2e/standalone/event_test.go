@@ -89,12 +89,16 @@ func TestMapAndLifecycleEventsAll(t *testing.T) {
 	namedCache = GetNamedCache[string, string](g, session, "test-lifecycle-all-cache")
 	namedMap = GetNamedMap[string, string](g, session, "test-lifecycle-all-map")
 
+	Sleep(10)
+
 	runBasicLifecycleTests(g, namedMap, namedMap.Name())
 	runBasicLifecycleTests(g, namedCache, namedCache.Name())
 
 	// re-create the cache as it has been destroyed above
 	namedCache = GetNamedCache[string, string](g, session, "test-events-all-cache")
 	namedMap = GetNamedMap[string, string](g, session, "test-events-all-map")
+
+	Sleep(10)
 
 	runBasicTests(g, namedCache, namedCache.Name(), &expected, -1)
 	runBasicTests(g, namedMap, namedMap.Name(), &expected, -1)
@@ -761,12 +765,14 @@ func runBasicLifecycleTests(g *gomega.WithT, cache coherence.NamedMap[string, st
 	_, err := cache.Put(ctx, "A", "A")
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
+	size, err := cache.Size(ctx)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	g.Expect(size).To(gomega.Equal(1))
+
 	// issue truncate
 	log.Println("Issue first truncate")
 	err = cache.Truncate(ctx)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-
-	Sleep(10)
 
 	// issue truncate again
 	log.Println("Issue second truncate")

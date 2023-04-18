@@ -14,15 +14,19 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 import com.tangosol.net.CacheFactory;
 import com.tangosol.net.Cluster;
+import com.tangosol.net.Coherence;
+import com.tangosol.net.CoherenceConfiguration;
 import com.tangosol.net.DefaultCacheServer;
 import com.tangosol.net.NamedCache;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
+import com.tangosol.net.SessionConfiguration;
 import com.tangosol.net.management.MBeanServerProxy;
 
 /**
@@ -73,8 +77,19 @@ public class RestServer {
             throw new RuntimeException("Failed to start http server", thrown);
         }
 
+        Coherence coherence;
 
-        DefaultCacheServer.main(args);
+        String sScope = getScope();
+        if ("".equals(sScope)) {
+             CoherenceConfiguration cfg = CoherenceConfiguration.builder().build();
+             coherence = Coherence.clusterMember(cfg);
+        } else{
+            CacheFactory.log("Starting with Scope: " + sScope, CacheFactory.LOG_WARN);
+            SessionConfiguration session = SessionConfiguration.builder().withScopeName(sScope).build();
+            CoherenceConfiguration cfg = CoherenceConfiguration.builder().withSession(session).build();
+            coherence = Coherence.clusterMember(cfg);
+        }
+        coherence.start().join();
     }
 
     private static void send(HttpExchange t, int status, String body) throws IOException {
@@ -120,12 +135,10 @@ public class RestServer {
                     sb.append("\nKey: ").append(e).append(" Value: ").append(nc.get(e)).append("\n");
                 }
                 send(t, 200, sb.toString());
-                return;
             }
         }
         catch (Exception e) {
-             send(t, 400, e.getMessage());
-             return;
+            send(t, 400, e.getMessage());
         }
     }
 
@@ -151,9 +164,9 @@ public class RestServer {
     private static void checkCustomerCache(HttpExchange t) throws IOException {
         // validate that the customer object for key 1 is in fact a Customer object for the given cache
         try {
-            String cacheName = t.getRequestURI().getPath().replace("/checkCustomerCache/", "");
+            String                        cacheName = t.getRequestURI().getPath().replace("/checkCustomerCache/", "");
             NamedCache<Integer, Customer> customers = CacheFactory.getCache(cacheName);
-            Customer customer = customers.get(1);
+            Customer                      customer  = customers.get(1);
             if (!"Tim".equals(customer.getCustomerName())) {
                 throw new RuntimeException("Could not get customer name");
             }
@@ -194,8 +207,10 @@ public class RestServer {
     private static void balanced(HttpExchange t) throws IOException {
         // always add Base services
         Set<String> setServices = BASE_SERVICES;
-        
-        CacheFactory.log("Checking for the following balanced services: " + setServices, CacheFactory.LOG_INFO);
+
+        String sScope = getScope();
+
+        CacheFactory.log("Checking for the following balanced services: " + setServices + ", with scope=" + sScope, CacheFactory.LOG_INFO);
 
         // check the status of each of the services and ensure they are not ENDANGERED
         MBeanServerProxy proxy = CacheFactory.ensureCluster().getManagement().getMBeanServerProxy();
@@ -204,7 +219,12 @@ public class RestServer {
         }
 
         for (String s : setServices) {
-            String statusHA = (String) proxy.getAttribute("Coherence:type=Service,name=" + s + ",nodeId=1", "StatusHA");
+            String sServiceName = s;
+            // prefix the scope name if set
+            if (!sScope.equals("")) {
+                sServiceName = "\"" + sScope + ":" + sServiceName + "\"";
+            }
+            String statusHA = (String) proxy.getAttribute("Coherence:type=Service,name=" + sServiceName + ",nodeId=1", "StatusHA");
             if (ENDANGERED.equals(statusHA)) {
                 // fail fast
                 send(t, 200, "Service " + s + " is still " + ENDANGERED + ".\nFull list is: " + setServices);
@@ -216,8 +236,14 @@ public class RestServer {
         send(t, 200, "OK");
     }
 
+    private static String getScope() {
+        String sScope = System.getProperty("coherence.scope");
+        return sScope == null ? "" : sScope;
+    }
+
     private static final Set<String> BASE_SERVICES =
             new HashSet<>(Arrays.asList("PartitionedCache", "PartitionedCacheTouch", "CanaryService"));
-    private static final String ENDANGERED = "ENDANGERED";
+
+    private static final String      ENDANGERED    = "ENDANGERED";
 
 }

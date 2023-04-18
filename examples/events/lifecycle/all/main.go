@@ -81,7 +81,6 @@ func main() {
 	}
 
 	sleep("sleeping to ensure we see events")
-
 }
 
 func sleep(msg string) {

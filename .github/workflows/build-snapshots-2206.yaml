@@ -73,6 +73,20 @@ jobs:
         go get google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.3.0
         COHERENCE_BASE_IMAGE=gcr.io/distroless/java17 INCLUDE_LONG_RUNNING=true COHERENCE_VERSION=$COH_VERSION PROFILES=,-jakarta,javax make clean generate-proto build-test-images test-e2e-standalone
 
+    - name: E2E Local Tests With Scope
+      env:
+        COH_VERSION: ${{ matrix.coherenceVersion }}
+      shell: bash
+      run: |
+        go get google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.3.0
+        COHERENCE_BASE_IMAGE=gcr.io/distroless/java17 COHERENCE_VERSION=$COH_VERSION PROFILES=,-jakarta,javax,scope make clean generate-proto build-test-images test-e2e-standalone-scope
+
+    - uses: actions/upload-artifact@v3
+      if: failure()
+      with:
+        name: test-output
+        path: build/_output/test-logs
+
     - uses: actions/upload-artifact@v3
       if: failure()
       with:

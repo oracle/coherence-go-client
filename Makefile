@@ -258,6 +258,18 @@ test-e2e-standalone: test-clean test gotestsum $(BUILD_PROPS) ## Run e2e tests w
 	@cat $(COVERAGE_DIR)/cover-functional.html | grep 'github.com/oracle/coherence-go-client/coherence' | grep option | sed 's/^.*github/github/' | sed 's,</option.*,,'
 
 # ----------------------------------------------------------------------------------------------------------------------
+# Executes the Go end to end tests for standalone Coherence with Scope set
+# ----------------------------------------------------------------------------------------------------------------------
+.PHONY: test-e2e-standalone-scope
+test-e2e-standalone-scope: test-clean test gotestsum $(BUILD_PROPS) ## Run e2e tests with Coherence with Scope set
+	CGO_ENABLED=0 $(GOTESTSUM) --format testname --junitfile $(TEST_LOGS_DIR)/go-client-test-scope.xml \
+	  -- $(GO_TEST_FLAGS) -v -coverprofile=$(COVERAGE_DIR)/cover-functional-scope.out -v ./test/e2e/scope/... -coverpkg=./coherence/...
+	go tool cover -html=$(COVERAGE_DIR)/cover-functional-scope.out -o $(COVERAGE_DIR)/cover-functional-scope.html
+	@echo
+	@echo "**** CODE COVERAGE ****"
+	@cat $(COVERAGE_DIR)/cover-functional-scope.html | grep 'github.com/oracle/coherence-go-client/coherence' | grep option | sed 's/^.*github/github/' | sed 's,</option.*,,'
+
+# ----------------------------------------------------------------------------------------------------------------------
 # Executes the test of the examples
 # ----------------------------------------------------------------------------------------------------------------------
 .PHONY: test-examples

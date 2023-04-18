@@ -39,7 +39,7 @@
     <!-- The version of Coherence to use in the test images -->
     <coherence.test.groupId>com.oracle.coherence.ce</coherence.test.groupId>
     <coherence.test.version>${coherence.version}</coherence.test.version>
-    
+
     <coherence.test.base.image>gcr.io/distroless/java:11</coherence.test.base.image>
 
     <!-- library dependency versions -->
@@ -69,6 +69,7 @@
     <coherence.security.key></coherence.security.key>
     <coherence.security.cert></coherence.security.cert>
     <coherence.security.ca.cert></coherence.security.ca.cert>
+    <coherence.scope></coherence.scope>
   </properties>
 
   <dependencyManagement>
@@ -176,6 +177,14 @@
       </properties>
     </profile>
 
+    <!-- enable testing with scope -->
+    <profile>
+      <id>scope</id>
+      <properties>
+        <coherence.scope>test</coherence.scope>
+      </properties>
+    </profile>
+
     <!-- member1 image -->
     <profile>
       <id>member1</id>
@@ -191,6 +200,7 @@
               </from>
               <container>
                 <jvmFlags>
+                  <jvmFlag>-Dcoherence.scope=${coherence.scope}</jvmFlag>
                   <jvmFlag>-Dcoherence.wka=server1</jvmFlag>
                   <jvmFlag>-Dcoherence.cluster=cluster1</jvmFlag>
                   <jvmFlag>-Dcoherence.member=member1</jvmFlag>
@@ -236,6 +246,7 @@
               </from>
               <container>
                 <jvmFlags>
+                  <jvmFlag>-Dcoherence.scope=${coherence.scope}</jvmFlag>
                   <jvmFlag>-Dcoherence.wka=server1</jvmFlag>
                   <jvmFlag>-Dcoherence.cluster=cluster1</jvmFlag>
                   <jvmFlag>-Dcoherence.member=member2</jvmFlag>

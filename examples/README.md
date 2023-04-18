@@ -74,6 +74,16 @@ Source code: [basic/contains/main.go](basic/contains/main.go)
 go run basic/contains/main.go
 ```
 
+#### Putting entries that expire
+
+This examples uses a `NamedMap` and issues `PutWithExpiry()` to expire a value after a certain time.
+
+Source code: [basic/expiry/main.go](basic/expiry/main.go)
+
+```go
+go run basic/expiry/main.go
+```
+
 ### <a name="querying"></a> Querying Data
 
 These example shows how to query data operations against a NamedMap or NamedCache.
