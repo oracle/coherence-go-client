@@ -35,7 +35,7 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Println("Put key", 1, ", value", 1)
+	fmt.Println("Put key 1, value one")
 	// put a new key / value
 	if _, err = namedMap.Put(ctx, 1, "one"); err != nil {
 		panic(err)

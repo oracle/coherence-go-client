@@ -17,7 +17,6 @@ import (
 	"log"
 	"reflect"
 	"strings"
-	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -698,7 +697,6 @@ type mapEventManager[K comparable, V any] struct {
 	lifecycleListeners   []*MapLifecycleListener[K, V]
 	pendingRegistrations map[string]*pendingListenerOp[K, V]
 	eventStream          *eventStream
-	sync.RWMutex
 }
 
 // pendingListenerOp is a simple holder for the listener

@@ -12,7 +12,7 @@ cd coherence-go-client/examples
 ### Install the Coherence Go Client
 
 ```bash
-go get github.com/coherence/coherence-go-client
+go get github.com/coherence/coherence-go-client@latest
 ````
 
 ### Start a Coherence Cluster
@@ -42,28 +42,46 @@ These example shows how to carry out basic operations against a NamedMap or Name
 
 #### Using Primitive Types
 
-This examples runs Put(), Get(), Remove() operations against a NamedMap or NamedCache with key in and value string.
+This examples runs `Put()`, `Get()`, `Remove()` operations against a NamedMap or NamedCache with key in and value string.
 
-Source code: [basic/crud.go](basic/crud.go)
+Source code: [basic/crud/main.go](basic/crud/main.go)
 
 ```go
-go run basic/crud.go
+go run basic/crud/main.go
 ```
 
 #### Using Structs as values
 
-Source code: [basic/struct.go](basic/struct.go)
+Source code: [basic/struct/main.go](basic/struct/main.go)
 
 ```go
-go run basic/struct.go
+go run basic/struct/main.go
 ```
 
 #### Using Structs as keys and values
 
-Source code: [basic/struct_keys.go](basic/struct_keys.go)
+Source code: [basic/struct_keys/main.go](basic/struct_keys/main.go)
 
 ```go
-go run basic/struct_keys.go
+go run basic/struct_keys/main.go
+```
+
+#### Using Various contains functions
+
+Source code: [basic/contains/main.go](basic/contains/main.go)
+
+```go
+go run basic/contains/main.go
+```
+
+#### Putting entries that expire
+
+This examples uses a `NamedMap` and issues `PutWithExpiry()` to expire a value after a certain time.
+
+Source code: [basic/expiry/main.go](basic/expiry/main.go)
+
+```go
+go run basic/expiry/main.go
 ```
 
 ### <a name="querying"></a> Querying Data
@@ -72,18 +90,18 @@ These example shows how to query data operations against a NamedMap or NamedCach
 
 #### Querying Using Keys
 
-Source code: [querying/using_keys.go](querying/using_keys.go)
+Source code: [querying/keys/main.go](querying/keys/main.go)
 
 ```go
-go run querying/using_keys.go
+go run querying/keys/main.go
 ```
 
 #### Querying Using Filters
 
-Source code: [querying/using_filters.go](querying/using_filters.go)
+Source code: [querying/filters/main.go](querying/filters/main.go)
 
 ```go
-go run querying/using_filters.go
+go run querying/filters/main.go
 ```
 
 #### Querying All Data
@@ -92,10 +110,10 @@ go run querying/using_filters.go
 > returning all data in one large dataset. Care should still be taken to minimize occurrences of these queries
 > on large caches.
 
-Source code: [querying/open_ended.go](querying/open_ended.go)
+Source code: [querying/main.go](querying/main.go)
 
 ```go
-go run querying/open_ended.go
+go run querying/main.go
 ```
 
 ### <a name="aggregations"></a> Aggregating Data
@@ -122,84 +140,94 @@ These examples show how to listen for events on a NamedMap or NamedCache.
 
 #### Listening for All Cache Events
 
-Source code: [events/cache/all/all_events.go](events/cache/all/all_events.go)
+Source code: [events/cache/all/main.go](events/cache/all/main.go)
 
 ```go
-go run events/cache/all/all_events.go
+go run events/cache/all/main.go
 ```
 
 #### Listening for Cache Insert Events
 
-Source code: [events/cache/insert/insert_events.go](events/cache/insert/insert_events.go)
+Source code: [events/cache/insert/main.go](events/cache/insert/main.go)
 
 ```go
-go run events/cache/insert/insert_events.go
+go run events/cache/insert/main.go
 ```
 
 #### Listening for Cache Update Events
 
-Source code: [events/cache/update/update_events.go](events/cache/update/update_events.go)
+Source code: [events/cache/update/main.go](events/cache/update/main.go)
 
 ```go
-go run events/cache/update/update_events.go
+go run events/cache/update/main.go
 ```
 
 #### Listening for Cache Delete Events
 
-Source code: [events/cache/delete/delete_events.go](events/cache/delete/delete_events.go)
+Source code: [events/cache/delete/main.go](events/cache/delete/main.go)
 
 ```go
-go run events/cache/delete/delete_events.go
+go run events/cache/delete/main.go
+```
+
+#### Listening for Cache Events using Filters
+
+Source code: [events/cache/filters/main.go](events/cache/filters/main.go)
+
+```go
+go run events/cache/filters/main.go
+```
+
+#### Listening for Cache Events using Keys
+
+Source code: [events/cache/key/main.go](events/cache/key/main.go)
+
+```go
+go run events/cache/key/main.go
 ```
 
 ### <a name="lifecycle-events"></a> Listening for Map Lifecycle Events
 
 #### Listening for Truncate Cache Events
 
-Source code: [events/lifecycle/truncated/truncated_events.go](events/lifecycle/truncated/truncated_events.go)
+Source code: [events/lifecycle/truncated/main.go](events/lifecycle/truncated/main.go)
 
 ```go
-go run events/lifecycle/truncated/truncated_events.go
+go run events/lifecycle/truncated/main.go
 ```
 #### Listening for Destroyed Cache Lifecycle Events
 
-Source code: [events/lifecycle/destroyed/destroyed_events.go](events/lifecycle/destroyed/destroyed_events.go)
+Source code: [events/lifecycle/destroyed/main.go](events/lifecycle/destroyed/main.go)
 
 ```go
-go run events/lifecycle/destroyed/destroyed_events.go
+go run events/lifecycle/destroyed/main.go
 ``````
 
 #### Listening for Released Cache Lifecycle Events
 
-Source code: [events/lifecycle/released/released_events.go](events/lifecycle/released/released_events.go)
+Source code: [events/lifecycle/released/main.go](events/lifecycle/released/main.go)
 
 ```go
-go run events/lifecycle/released/released_events.go
+go run events/lifecycle/released/main.go
 ```
 
-#### Listening for Released Cache Lifecycle Events
-
-Source code: [events/lifecycle/released/released_events.go](events/lifecycle/released/released_events.go)
-
-```go
-go run events/lifecycle/released/released_events.go
-```
 #### Listening for All Cache Lifecycle Events
 
-Source code: [events/lifecycle/all/all_events.go](events/lifecycle/all/all_events.go)
+Source code: [events/lifecycle/all/main.go](events/lifecycle/all/main.go)
 
 ```go
-go run events/lifecycle/all/all_events.go
+go run events/lifecycle/all/main.go
 ```
 
 ### <a name="session-lifecycle-events"></a> Listening for Session Lifecycle Events
 
 #### Listening for All Session Events
 
-Source code: [events/session/all/all_events.go](events/session/all/all_events.go)
+Source code: [events/session/all/main.go](events/session/all/main.go)
 
 ```go
-go run events/session/all/all_events.go
+go run events/session/all/main.go
+
 ```
 ### <a name="indexes"></a> Adding Indexes
 

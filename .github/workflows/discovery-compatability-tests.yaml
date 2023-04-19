@@ -22,8 +22,7 @@ jobs:
         coherenceVersion:
           - 23.03
           - 22.09
-          - 22.06.3
-          - 22.06.4-SNAPSHOT
+          - 22.06.4
           - 22.06.5-SNAPSHOT
           - 23.03.1-SNAPSHOT
 

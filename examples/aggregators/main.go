@@ -41,11 +41,12 @@ func main() {
 
 	// create a new Session to the default gRPC port of 1408 using plain text
 	session, err := coherence.NewSession(ctx, coherence.WithPlainText())
-	defer session.Close()
 
 	if err != nil {
 		panic(err)
 	}
+
+	defer session.Close()
 
 	// create a new NamedMap of Person with key int
 	namedMap, err := coherence.NewNamedMap[int, Person](session, "aggregation-test")
@@ -60,6 +61,9 @@ func main() {
 		panic(err)
 	}
 	values, err := coherence.Aggregate(ctx, namedMap, aggregators.Distinct(extractors.Extract[string]("department")))
+	if err != nil {
+		panic(err)
+	}
 	fmt.Println("Distinct departments", *values)
 
 	if count, err = coherence.Aggregate(ctx, namedMap, aggregators.Count()); err != nil {
@@ -87,6 +91,9 @@ func main() {
 	// return the oldest person in each department
 	departmentResult, err := coherence.Aggregate(ctx, namedMap,
 		aggregators.GroupBy(extractors.Extract[string]("department"), aggregators.Max(extractors.Extract[int]("age"))))
+	if err != nil {
+		panic(err)
+	}
 	for _, v := range departmentResult.Entries {
 		fmt.Println("Department", v.Key, "Max age", v.Value)
 	}

@@ -15,6 +15,9 @@ set -e
 echo "Coherence CE 22.06.3"
 COHERENCE_VERSION=22.06.3 PROFILES=,-jakarta,javax make clean generate-proto build-test-images test-e2e-standalone
 
+echo "Coherence CE 22.06.3 with scope"
+COHERENCE_VERSION=22.06.3 PROFILES=,-jakarta,javax,scope make clean generate-proto build-test-images test-e2e-standalone-scope
+
 echo "Coherence CE 22.06.3 with SSL"
 SECURE=true COHERENCE_IGNORE_INVALID_CERTS=true \
   COHERENCE_TLS_CERTS_PATH=`pwd`/test/utils/certs/guardians-ca.crt \

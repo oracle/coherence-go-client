@@ -17,13 +17,14 @@ import (
 	"github.com/oracle/coherence-go-client/coherence/filters"
 )
 
+type Person struct {
+	ID   int    `json:"id"`
+	Name string `json:"name"`
+	Age  int    `json:"age"`
+	City string `json:"city"`
+}
+
 func main() {
-	type Person struct {
-		ID   int    `json:"id"`
-		Name string `json:"name"`
-		Age  int    `json:"age"`
-		City string `json:"city"`
-	}
 
 	var (
 		ctx    = context.Background()
