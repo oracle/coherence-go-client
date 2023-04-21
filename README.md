@@ -25,6 +25,7 @@ to a Coherence Cluster using Google's gRPC framework for the network transport.
   * map lifecycle events such as truncated, released or destroyed
   * session lifecycle events such as connected, disconnected, reconnected and closed 
 * Support for storing Go structs as JSON as well as the ability to serialize to Java objects on the server for access from other Coherence language API's
+* Full support for Go generics in all Coherence API's
 
 #### Requirements
 
