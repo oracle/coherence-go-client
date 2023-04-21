@@ -12,7 +12,7 @@
 <img src=https://oracle.github.io/coherence/assets/images/logo-red.png width="30%"><img>
 
 The Coherence Go Client allows Go applications to act as cache clients 
-to a Coherence Cluster using Google's gRPC framework for the network transport.
+to a Coherence Cluster using gRPC for the network transport.
 
 #### Features
 
