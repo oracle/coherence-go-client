@@ -55,7 +55,7 @@ $GOPATH/src/github.com/coherence/coherence-go-client
 
 ## <a name="doc"></a>Documentation
 
-* [Godoc on pkg.go.dev](https://pkg.go.dev/github.com/oracle/coherence-go-client)
+* [Godoc on pkg.go.dev](https://pkg.go.dev/github.com/oracle/coherence-go-client/coherence)
 * [FAQ Page](https://github.com/oracle/coherence-go-client/wiki/FAQ)
 * [Troubleshooting Guide](https://github.com/oracle/coherence-go-client/wiki/Troubleshooting)
 
