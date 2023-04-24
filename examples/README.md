@@ -22,7 +22,7 @@ For local development, we recommend using the Coherence CE Docker image; it cont
 everything necessary for the client to operate correctly.
 
 ```bash
-docker run -d -p 1408:1408 -p 30000:30000 ghcr.io/oracle/coherence-ce:22.06.3
+docker run -d -p 1408:1408 -p 30000:30000 ghcr.io/oracle/coherence-ce:22.06.4
 ```
 
 ### Index
