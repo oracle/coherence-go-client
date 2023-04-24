@@ -14,6 +14,8 @@
 The Coherence Go Client allows Go applications to act as cache clients 
 to a Coherence Cluster using gRPC for the network transport.
 
+> [Coherence](https://coherence.community/) is a scalable, fault-tolerant, cloud-ready, distributed platform for building grid-based applications and reliably storing data. The product is used at scale, for both compute and raw storage, in a vast array of industries such as critical financial trading systems, high performance telecommunication products and eCommerce applications.
+
 #### Features
 
 * Familiar Map-like interface for manipulating cache entries including but not limited to:
