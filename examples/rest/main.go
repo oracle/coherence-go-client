@@ -7,6 +7,8 @@
 /*
 Package main starts a listener on port localhost:17268 which provides a basic REST API providing POST, GET, PUT and DELETE operations against a NamedMap.
 
+Note: This example specifically doesn't use or include any Go frameworks for REST, such as Gorilla or Gin, as so to minimize any dependencies.
+
 1.  Return all people
 
 	$ curl -X GET -i http://localhost:17268/people
