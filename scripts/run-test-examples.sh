@@ -64,11 +64,11 @@ echo "PIDS: ALL_PIDS"
 
 trap "kill -9 $ALL_PIDS || true" EXIT SIGINT SIGQUIT
 
-curl -X GET -i http://localhost:8888/people | grep Address
-curl -X GET -i http://localhost:8888/people/1 | grep '"id":1'
-curl -X DELETE -i http://localhost:8888/people/1
-curl -X GET -i http://localhost:8888/people/1 | grep 404
-curl -X POST -i http://localhost:8888/people/1 -d '{"id":1,"name":"Person-1","address":"Address 1","city":"Adelaide","age":16}'
-curl -X GET -i http://localhost:8888/people/1 | grep Address
-curl -X PUT -i http://localhost:8888/people/1 -d '{"id":1,"name":"Person-1","address":"Address 1","city":"Singapore","age":16}'
-curl -X GET -i http://localhost:8888/people/1 | grep Singapore
+curl -X GET -i http://localhost:17268/people | grep Address
+curl -X GET -i http://localhost:17268/people/1 | grep '"id":1'
+curl -X DELETE -i http://localhost:17268/people/1
+curl -X GET -i http://localhost:17268/people/1 | grep 404
+curl -X POST -i http://localhost:17268/people/1 -d '{"id":1,"name":"Person-1","address":"Address 1","city":"Adelaide","age":16}'
+curl -X GET -i http://localhost:17268/people/1 | grep Address
+curl -X PUT -i http://localhost:17268/people/1 -d '{"id":1,"name":"Person-1","address":"Address 1","city":"Singapore","age":16}'
+curl -X GET -i http://localhost:17268/people/1 | grep Singapore

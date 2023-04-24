@@ -5,11 +5,11 @@
  */
 
 /*
-Package main starts a listener on port localhost:8888 which provides a basic REST API providing POST, GET, PUT and DELETE operations against a NamedMap.
+Package main starts a listener on port localhost:17268 which provides a basic REST API providing POST, GET, PUT and DELETE operations against a NamedMap.
 
 1.  Return all people
 
-	$ curl -X GET -i http://localhost:8888/people
+	$ curl -X GET -i http://localhost:17268/people
 	HTTP/1.1 200 OK
 	Date: Mon, 24 Apr 2023 01:25:15 GMT
 	Content-Length: 378
@@ -21,7 +21,7 @@ Package main starts a listener on port localhost:8888 which provides a basic RES
 
 2.  Return an individual person
 
-	$ curl -X GET -i http://localhost:8888/people/1
+	$ curl -X GET -i http://localhost:17268/people/1
 	HTTP/1.1 200 OK
 	Date: Mon, 24 Apr 2023 01:25:25 GMT
 	Content-Length: 76
@@ -31,31 +31,31 @@ Package main starts a listener on port localhost:8888 which provides a basic RES
 
 3.  Remove person 1
 
-	$ curl -X DELETE -i http://localhost:8888/people/1
+	$ curl -X DELETE -i http://localhost:17268/people/1
 	HTTP/1.1 200 OK
 	Date: Mon, 24 Apr 2023 02:46:35 GMT
 	Content-Length: 0
 
-	$ curl -X GET -i http://localhost:8888/people/1
+	$ curl -X GET -i http://localhost:17268/people/1
 	HTTP/1.1 404 Not Found
 	Date: Mon, 24 Apr 2023 02:46:43 GMT
 	Content-Length: 0
 
 4.  Create a new person
 
-	curl -X POST -i http://localhost:8888/people/1 -d '{"id":1,"name":"Person-1","address":"Address 1","city":"Adelaide","age":16}'
+	curl -X POST -i http://localhost:17268/people/1 -d '{"id":1,"name":"Person-1","address":"Address 1","city":"Adelaide","age":16}'
 	HTTP/1.1 200 OK
 	Date: Mon, 24 Apr 2023 02:48:01 GMT
 	Content-Length: 0
 
 5. 	Update person 1
 
-	$ curl -X PUT -i http://localhost:8888/people/1 -d '{"id":1,"name":"Person-1","address":"Address 1","city":"Singapore","age":16}'
+	$ curl -X PUT -i http://localhost:17268/people/1 -d '{"id":1,"name":"Person-1","address":"Address 1","city":"Singapore","age":16}'
 	HTTP/1.1 200 OK
 	Date: Mon, 24 Apr 2023 02:48:33 GMT
 	Content-Length: 0
 
-	$ curl -X GET -i http://localhost:8888/people/1
+	$ curl -X GET -i http://localhost:17268/people/1
 	HTTP/1.1 200 OK
 	Date: Mon, 24 Apr 2023 02:48:37 GMT
 	Content-Length: 77
@@ -114,10 +114,10 @@ func main() {
 	// Add routes
 	http.HandleFunc("/people", getAllPeople)
 	http.HandleFunc("/people/", handlePersonRequest)
-	fmt.Println("Listening on http://localhost:8888/, press CTRL-C to stop.")
+	fmt.Println("Listening on http://localhost:17268/, press CTRL-C to stop.")
 
 	server := &http.Server{
-		Addr:              "localhost:8888",
+		Addr:              "localhost:17268",
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 

@@ -31,11 +31,11 @@ docker run -d -p 1408:1408 -p 30000:30000 ghcr.io/oracle/coherence-ce:22.06.3
 * [Querying data](#querying)
 * [Aggregating data](#aggregations)
 * [Mutating data using entry processors](#processors)
-* [Listening for Map Events](#map-events)
-* [Listening for Map Lifecycle Events](#lifecycle-events)
-* [Listening for Session Lifecycle Events](#session-lifecycle-events)
-* [Adding Indexes](#indexes)
-* [Basic REST Server](#rest)
+* [Listening for map events](#map-events)
+* [Listening for map lifecycle events](#lifecycle-events)
+* [Listening for session lifecycle events](#session-lifecycle-events)
+* [Adding indexes](#indexes)
+* [Basic REST server](#rest)
 
 ### <a name="basic"></a> Basic Operations
 
@@ -85,11 +85,11 @@ Source code: [basic/expiry/main.go](basic/expiry/main.go)
 go run basic/expiry/main.go
 ```
 
-### <a name="querying"></a> Querying Data
+### <a name="querying"></a> Querying data
 
 These examples shows how to query data operations against a NamedMap or NamedCache.
 
-#### Querying Using Keys
+#### Querying using keys
 
 Source code: [querying/keys/main.go](querying/keys/main.go)
 
@@ -97,7 +97,7 @@ Source code: [querying/keys/main.go](querying/keys/main.go)
 go run querying/keys/main.go
 ```
 
-#### Querying Using Filters
+#### Querying using filters
 
 Source code: [querying/filters/main.go](querying/filters/main.go)
 
@@ -105,7 +105,7 @@ Source code: [querying/filters/main.go](querying/filters/main.go)
 go run querying/filters/main.go
 ```
 
-#### Querying All Data
+#### Querying all data
 
 > Note: When using open-ended queries, Coherence internally pages data to ensure that you are not
 > returning all data in one large dataset. Care should still be taken to minimize occurrences of these queries
@@ -117,7 +117,7 @@ Source code: [querying/main.go](querying/main.go)
 go run querying/main.go
 ```
 
-### <a name="aggregations"></a> Aggregating Data
+### <a name="aggregations"></a> Aggregating data
 
 This example shows how to carry out various aggregations against a NamedMap or NamedCache.
 
@@ -127,9 +127,9 @@ Source code: [aggregators/main.go](aggregators/main.go)
 go run aggregators/main.go
 ```
 
-### <a name="processors"></a> Running Processors
+### <a name="processors"></a> Running processors
 
-This example shows how to run processors against a or NamedMap or NamedCache with a key of int and value of Person struct.
+This example shows how to run entry processors against a or NamedMap or NamedCache with a key of int and value of Person struct.
 
 Source code: [processors/main.go](processors/main.go)
 
@@ -137,11 +137,11 @@ Source code: [processors/main.go](processors/main.go)
 go run processors/main.go
 ```
 
-### <a name="map-events"></a> Listening for MapEvents
+### <a name="map-events"></a> Listening for map events
 
-These exampless show how to listen for events on a NamedMap or NamedCache.
+These examples show how to listen for events on a NamedMap or NamedCache.
 
-#### Listening for All Cache Events
+#### Listening for all cache events
 
 Source code: [events/cache/all/main.go](events/cache/all/main.go)
 
@@ -149,7 +149,7 @@ Source code: [events/cache/all/main.go](events/cache/all/main.go)
 go run events/cache/all/main.go
 ```
 
-#### Listening for Cache Insert Events
+#### Listening for cache insert events
 
 Source code: [events/cache/insert/main.go](events/cache/insert/main.go)
 
@@ -157,7 +157,7 @@ Source code: [events/cache/insert/main.go](events/cache/insert/main.go)
 go run events/cache/insert/main.go
 ```
 
-#### Listening for Cache Update Events
+#### Listening for cache update events
 
 Source code: [events/cache/update/main.go](events/cache/update/main.go)
 
@@ -165,7 +165,7 @@ Source code: [events/cache/update/main.go](events/cache/update/main.go)
 go run events/cache/update/main.go
 ```
 
-#### Listening for Cache Delete Events
+#### Listening for cache delete events
 
 Source code: [events/cache/delete/main.go](events/cache/delete/main.go)
 
@@ -173,7 +173,7 @@ Source code: [events/cache/delete/main.go](events/cache/delete/main.go)
 go run events/cache/delete/main.go
 ```
 
-#### Listening for Cache Events using Filters
+#### Listening for ache events using filters
 
 Source code: [events/cache/filters/main.go](events/cache/filters/main.go)
 
@@ -181,7 +181,7 @@ Source code: [events/cache/filters/main.go](events/cache/filters/main.go)
 go run events/cache/filters/main.go
 ```
 
-#### Listening for Cache Events using Keys
+#### Listening for cache events using keys
 
 Source code: [events/cache/key/main.go](events/cache/key/main.go)
 
@@ -189,16 +189,16 @@ Source code: [events/cache/key/main.go](events/cache/key/main.go)
 go run events/cache/key/main.go
 ```
 
-### <a name="lifecycle-events"></a> Listening for Map Lifecycle Events
+### <a name="lifecycle-events"></a> Listening for map lifecycle events
 
-#### Listening for Truncate Cache Events
+#### Listening for truncate cache events
 
 Source code: [events/lifecycle/truncated/main.go](events/lifecycle/truncated/main.go)
 
 ```go
 go run events/lifecycle/truncated/main.go
 ```
-#### Listening for Destroyed Cache Lifecycle Events
+#### Listening for destroyed cache lifecycle events
 
 Source code: [events/lifecycle/destroyed/main.go](events/lifecycle/destroyed/main.go)
 
@@ -206,7 +206,7 @@ Source code: [events/lifecycle/destroyed/main.go](events/lifecycle/destroyed/mai
 go run events/lifecycle/destroyed/main.go
 ``````
 
-#### Listening for Released Cache Lifecycle Events
+#### Listening for released cache lifecycle events
 
 Source code: [events/lifecycle/released/main.go](events/lifecycle/released/main.go)
 
@@ -214,7 +214,7 @@ Source code: [events/lifecycle/released/main.go](events/lifecycle/released/main.
 go run events/lifecycle/released/main.go
 ```
 
-#### Listening for All Cache Lifecycle Events
+#### Listening for all cache lifecycle events
 
 Source code: [events/lifecycle/all/main.go](events/lifecycle/all/main.go)
 
@@ -224,7 +224,7 @@ go run events/lifecycle/all/main.go
 
 ### <a name="session-lifecycle-events"></a> Listening for Session Lifecycle Events
 
-#### Listening for All Session Events
+#### Listening for all session events
 
 Source code: [events/session/all/main.go](events/session/all/main.go)
 
@@ -232,7 +232,7 @@ Source code: [events/session/all/main.go](events/session/all/main.go)
 go run events/session/all/main.go
 ```
 
-### <a name="indexes"></a> Adding Indexes
+### <a name="indexes"></a> Adding indexes
 
 This example shows how to add a remove indexes on a NamedMap or NamedCache to help query or aggregation performance.
 
@@ -242,9 +242,9 @@ Source code: [indexes/main.go](indexes/main.go)
 go run indexes/main.go
 ```
 
-### <a name="rest"></a> Basic REST Server
+### <a name="rest"></a> Basic REST server
 
-This example starts a listener on port localhost:8888 which provides a basic REST API providing POST, GET, PUT and DELETE operations against a NamedMap
+This example starts a listener on port localhost:17268 which provides a basic REST API providing POST, GET, PUT and DELETE operations against a NamedMap.
 
 Source code: [rest/main.go](rest/main.go)
 
