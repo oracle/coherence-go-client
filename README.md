@@ -70,11 +70,12 @@ issues `Put()`, `Get()` and `Size()` operations.
 > Note: Keys and values can also be Go `structs`. See detailed examples [here](examples#basic).
 
 ```go
+package main
+
 import (
     "context"
     "fmt"
     "github.com/oracle/coherence-go-client/coherence"
-    "log"
 )
 
 func main() {
