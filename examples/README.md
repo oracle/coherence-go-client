@@ -35,10 +35,11 @@ docker run -d -p 1408:1408 -p 30000:30000 ghcr.io/oracle/coherence-ce:22.06.3
 * [Listening for Map Lifecycle Events](#lifecycle-events)
 * [Listening for Session Lifecycle Events](#session-lifecycle-events)
 * [Adding Indexes](#indexes)
+* [Basic REST Server](#rest)
 
 ### <a name="basic"></a> Basic Operations
 
-These example shows how to carry out basic operations against a NamedMap or NamedCache.
+These examples shows how to carry out basic operations against a NamedMap or NamedCache.
 
 #### Using Primitive Types
 
@@ -76,7 +77,7 @@ go run basic/contains/main.go
 
 #### Putting entries that expire
 
-This examples uses a `NamedMap` and issues `PutWithExpiry()` to expire a value after a certain time.
+This example uses a `NamedMap` and issues `PutWithExpiry()` to expire a value after a certain time.
 
 Source code: [basic/expiry/main.go](basic/expiry/main.go)
 
@@ -86,7 +87,7 @@ go run basic/expiry/main.go
 
 ### <a name="querying"></a> Querying Data
 
-These example shows how to query data operations against a NamedMap or NamedCache.
+These examples shows how to query data operations against a NamedMap or NamedCache.
 
 #### Querying Using Keys
 
@@ -118,6 +119,8 @@ go run querying/main.go
 
 ### <a name="aggregations"></a> Aggregating Data
 
+This example shows how to carry out various aggregations against a NamedMap or NamedCache.
+
 Source code: [aggregators/main.go](aggregators/main.go)
 
 ```go
@@ -136,7 +139,7 @@ go run processors/main.go
 
 ### <a name="map-events"></a> Listening for MapEvents
 
-These examples show how to listen for events on a NamedMap or NamedCache.
+These exampless show how to listen for events on a NamedMap or NamedCache.
 
 #### Listening for All Cache Events
 
@@ -227,12 +230,24 @@ Source code: [events/session/all/main.go](events/session/all/main.go)
 
 ```go
 go run events/session/all/main.go
-
 ```
+
 ### <a name="indexes"></a> Adding Indexes
+
+This example shows how to add a remove indexes on a NamedMap or NamedCache to help query or aggregation performance.
 
 Source code: [indexes/main.go](indexes/main.go)
 
 ```go
 go run indexes/main.go
+```
+
+### <a name="rest"></a> Basic REST Server
+
+This example starts a listener on port localhost:8888 which provides a basic REST API providing POST, GET, PUT and DELETE operations against a NamedMap
+
+Source code: [rest/main.go](rest/main.go)
+
+```go
+go run rest/main.go
 ```
