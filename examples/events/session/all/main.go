@@ -54,7 +54,7 @@ func main() {
 
 	session.Close()
 
-	sleep("sleeping to ensure we see events")
+	sleep("Sleeping to ensure we see events")
 }
 
 func sleep(msg string) {

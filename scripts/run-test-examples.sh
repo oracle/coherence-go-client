@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #
-# Copyright (c) 2022 Oracle and/or its affiliates.
+# Copyright (c) 2022, 2023 Oracle and/or its affiliates.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # https://oss.oracle.com/licenses/upl.
 #
@@ -42,7 +42,7 @@ wait_for_ready
 set -e
 cd examples
 
-find . -type f -name '*.go' | grep -v people_listen | grep -v people_insert | grep -v doc.go | while read file
+find . -type f -name '*.go' | grep -v people_listen | grep -v people_insert | grep -v doc.go | grep -v rest | while read file
 do
   echo
   echo "==========================================="
@@ -51,3 +51,24 @@ do
 
   go run $file
 done
+
+# Special case for REST server example
+go run rest/main.go &
+PID=$!
+
+sleep 10
+
+# Get all PIDS
+ALL_PIDS=`ps -ef | grep $PID | grep -v grep | awk '{print $2}' | tr '\n' ' '`
+echo "PIDS: ALL_PIDS"
+
+trap "kill -9 $ALL_PIDS || true" EXIT SIGINT SIGQUIT
+
+curl -X GET -i http://localhost:17268/people | grep Address
+curl -X GET -i http://localhost:17268/people/1 | grep '"id":1'
+curl -X DELETE -i http://localhost:17268/people/1
+curl -X GET -i http://localhost:17268/people/1 | grep 404
+curl -X POST -i http://localhost:17268/people/1 -d '{"id":1,"name":"Person-1","address":"Address 1","city":"Adelaide","age":16}'
+curl -X GET -i http://localhost:17268/people/1 | grep Address
+curl -X PUT -i http://localhost:17268/people/1 -d '{"id":1,"name":"Person-1","address":"Address 1","city":"Singapore","age":16}'
+curl -X GET -i http://localhost:17268/people/1 | grep Singapore

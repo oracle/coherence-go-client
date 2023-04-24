@@ -1,8 +1,8 @@
 //
-// Copyright (c) 2020, Oracle and/or its affiliates.
+// Copyright (c) 2020, 2023 Oracle and/or its affiliates.
 //
 // Licensed under the Universal Permissive License v 1.0 as shown at
-// http://oss.oracle.com/licenses/upl.
+// https://oss.oracle.com/licenses/upl.
 
 // Authors:
 //  Mahesh Kannan
@@ -1657,9 +1657,9 @@ type AddIndexRequest struct {
 	Cache string `protobuf:"bytes,2,opt,name=cache,proto3" json:"cache,omitempty"`
 	// The serialization format.
 	Format string `protobuf:"bytes,3,opt,name=format,proto3" json:"format,omitempty"`
-	// The serialized ValueExtractor to use to creat the index.
+	// The serialized ValueExtractor to use to create the index.
 	Extractor []byte `protobuf:"bytes,4,opt,name=extractor,proto3" json:"extractor,omitempty"`
-	// A flag indicating whether to sort the index
+	// A flag indicating whether to sort the index.
 	Sorted bool `protobuf:"varint,5,opt,name=sorted,proto3" json:"sorted,omitempty"`
 	// The optional comparator to use to sort the index.
 	Comparator []byte `protobuf:"bytes,6,opt,name=comparator,proto3" json:"comparator,omitempty"`
@@ -1751,7 +1751,7 @@ type RemoveIndexRequest struct {
 	Cache string `protobuf:"bytes,2,opt,name=cache,proto3" json:"cache,omitempty"`
 	// The serialization format.
 	Format string `protobuf:"bytes,3,opt,name=format,proto3" json:"format,omitempty"`
-	// The serialized ValueExtractor to use to creat the index.
+	// The serialized ValueExtractor to use to create the index.
 	Extractor []byte `protobuf:"bytes,4,opt,name=extractor,proto3" json:"extractor,omitempty"`
 }
 
@@ -1827,7 +1827,7 @@ type AggregateRequest struct {
 	Cache string `protobuf:"bytes,2,opt,name=cache,proto3" json:"cache,omitempty"`
 	// The serialization format.
 	Format string `protobuf:"bytes,3,opt,name=format,proto3" json:"format,omitempty"`
-	// The serialized EntryAggregator to use to creat the index.
+	// The serialized EntryAggregator to aggregate.
 	Aggregator []byte `protobuf:"bytes,4,opt,name=aggregator,proto3" json:"aggregator,omitempty"`
 	// The optional set of serialized keys of the entries to aggregate.
 	Keys [][]byte `protobuf:"bytes,5,rep,name=keys,proto3" json:"keys,omitempty"`
@@ -1921,7 +1921,7 @@ type InvokeRequest struct {
 	Cache string `protobuf:"bytes,2,opt,name=cache,proto3" json:"cache,omitempty"`
 	// The serialization format.
 	Format string `protobuf:"bytes,3,opt,name=format,proto3" json:"format,omitempty"`
-	// The serialized EntryProcessor to use to creat the index.
+	// The serialized EntryProcessor to invoke.
 	Processor []byte `protobuf:"bytes,4,opt,name=processor,proto3" json:"processor,omitempty"`
 	// The serialized key of the entry to process.
 	Key []byte `protobuf:"bytes,5,opt,name=key,proto3" json:"key,omitempty"`
@@ -2006,7 +2006,7 @@ type InvokeAllRequest struct {
 	Cache string `protobuf:"bytes,2,opt,name=cache,proto3" json:"cache,omitempty"`
 	// The serialization format.
 	Format string `protobuf:"bytes,3,opt,name=format,proto3" json:"format,omitempty"`
-	// The serialized EntryProcessor to use to creat the index.
+	// The serialized EntryProcessor to invoke.
 	Processor []byte `protobuf:"bytes,4,opt,name=processor,proto3" json:"processor,omitempty"`
 	// The optional set of serialized keys of the entries to process.
 	Keys [][]byte `protobuf:"bytes,5,rep,name=keys,proto3" json:"keys,omitempty"`

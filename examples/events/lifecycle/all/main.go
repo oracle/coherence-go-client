@@ -73,14 +73,14 @@ func main() {
 		panic(err)
 	}
 
-	sleep("sleeping to ensure we see event")
+	sleep("Sleeping to ensure we see event")
 
 	fmt.Println("Cache size is", size, "destroy cache")
 	if err = namedMap.Destroy(ctx); err != nil {
 		panic(err)
 	}
 
-	sleep("sleeping to ensure we see events")
+	sleep("Sleeping to ensure we see events")
 }
 
 func sleep(msg string) {

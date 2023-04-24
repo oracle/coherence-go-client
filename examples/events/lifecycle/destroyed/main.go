@@ -73,7 +73,7 @@ func main() {
 		panic(err)
 	}
 
-	sleep("sleeping to ensure we see event")
+	sleep("Sleeping to ensure we see event")
 
 	fmt.Println("Ensure we can no longer use the namedMap")
 	_, err = namedMap.Size(ctx)

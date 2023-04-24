@@ -39,7 +39,7 @@ For local development, we recommend using the Coherence CE Docker image; it cont
 everything necessary for the client to operate correctly.
 
 ```bash
-docker run -d -p 1408:1408 ghcr.io/oracle/coherence-ce:22.06.3
+docker run -d -p 1408:1408 ghcr.io/oracle/coherence-ce:22.06.4
 ```
 
 ## <a name="installations"></a> Installation
@@ -55,7 +55,7 @@ $GOPATH/src/github.com/coherence/coherence-go-client
 
 ## <a name="doc"></a>Documentation
 
-* [Godoc on pkg.go.dev](https://pkg.go.dev/github.com/oracle/coherence-go-client)
+* [Godoc on pkg.go.dev](https://pkg.go.dev/github.com/oracle/coherence-go-client/coherence)
 * [FAQ Page](https://github.com/oracle/coherence-go-client/wiki/FAQ)
 * [Troubleshooting Guide](https://github.com/oracle/coherence-go-client/wiki/Troubleshooting)
 
