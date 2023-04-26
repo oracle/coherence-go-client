@@ -51,7 +51,7 @@ func main() {
 		panic(err)
 	}
 
-	// Create a listener and add to the cache
+	// Create a listener and add to the NamedMap
 	listener := NewAllEventsListener[int, Person]()
 	if err = namedMap.AddListener(ctx, listener.listener); err != nil {
 		panic(err)
@@ -105,10 +105,8 @@ func NewAllEventsListener[K comparable, V any]() *AllEventsListener[K, V] {
 		var (
 			newValue *V
 			oldValue *V
-			key      *K
-			err      error
 		)
-		key, err = e.Key()
+		key, err := e.Key()
 		if err != nil {
 			panic("unable to deserialize key")
 		}
