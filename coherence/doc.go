@@ -248,7 +248,7 @@ Ex. 4 Using entry processors for in-place processing
 
 	// 2. Increase the salary of all people in Perth
 	ch2 := coherence.InvokeAllFilter[int, Person, float32](ctx, namedMap, filters.Equal(city, "Perth"), processors.Multiply("salary", 1.1, true)
-	for result := range ch {
+	for result := range ch2 {
 	    if result.Err != nil {
 	        log.Fatal(result.Err)
 	    }
@@ -256,7 +256,7 @@ Ex. 4 Using entry processors for in-place processing
 
 	// 3. Increase the salary of people with Id 1 and 5
 	ch2 := coherence.InvokeAllKeys[int, Person, float32](ctx, namedMap, []int{1, 5}, processors.Multiply("salary", 1.1, true)
-	for result := range ch {
+	for result := range ch2 {
 	    if result.Err != nil {
 	        log.Fatal(result.Err)
 	    }
@@ -277,7 +277,6 @@ Ex. 5 Aggregating results
 	}
 
 	// Retrieve the distinct cities from all people
-	var citiesValues *[]string
 	citiesValues, err := coherence.Aggregate(ctx, namedMap, extractors.Extract[string]("city"))
 	if err != nil {
 	    log.Fatal(err)
