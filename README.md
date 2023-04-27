@@ -42,7 +42,7 @@ everything necessary for the client to operate correctly.
 docker run -d -p 1408:1408 ghcr.io/oracle/coherence-ce:22.06.4
 ```
 
-## <a name="installations"></a> Installation
+## Installation
 
 ```bash
 go get github.com/coherence/coherence-go-client@latest
@@ -149,7 +149,7 @@ Please consult the [security guide](./SECURITY.md) for our responsible security 
 
 ## License
 
-Copyright (c) 2022, 2023 Oracle and/or its affiliates.
+Copyright (c) 2023 Oracle and/or its affiliates.
 
 Released under the Universal Permissive License v1.0 as shown at
 <https://oss.oracle.com/licenses/upl/>.
