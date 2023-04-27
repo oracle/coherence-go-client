@@ -67,7 +67,7 @@ func main() {
 	}
 	fmt.Println("Person is", *person)
 
-	// update the age to 54
+	// update the age to 68
 	if _, err = coherence.Invoke[int, Person, bool](ctx, namedMap, 1, processors.Update("age", 68)); err != nil {
 		panic(err)
 	}
@@ -95,7 +95,7 @@ func main() {
 		fmt.Println("Updated person with key", se.Value)
 	}
 
-	// invoke an entry process over all people older than 67 and set then as retired
+	// invoke an entry process over all people older than 67 and set them as retired
 	age := extractors.Extract[int]("age")
 	ch2 := coherence.InvokeAllFilter[int, Person, int](ctx, namedMap, filters.Greater(age, 67),
 		processors.Update("retired", true))
