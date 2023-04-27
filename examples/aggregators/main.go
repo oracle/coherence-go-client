@@ -81,7 +81,7 @@ func main() {
 	fmt.Println("Number of people aged greater than 19 is", *count)
 
 	// Average age of people < 30
-	bigRat, err = coherence.AggregateFilter(ctx, namedMap, filters.Less(age, 30), aggregators.Average(extractors.Extract[int]("age")))
+	bigRat, err = coherence.AggregateFilter(ctx, namedMap, filters.Less(age, 30), aggregators.Average(age))
 	if err != nil {
 		panic(err)
 	}
@@ -90,7 +90,7 @@ func main() {
 
 	// return the oldest person in each department
 	departmentResult, err := coherence.Aggregate(ctx, namedMap,
-		aggregators.GroupBy(extractors.Extract[string]("department"), aggregators.Max(extractors.Extract[int]("age"))))
+		aggregators.GroupBy(extractors.Extract[string]("department"), aggregators.Max(age)))
 	if err != nil {
 		panic(err)
 	}
