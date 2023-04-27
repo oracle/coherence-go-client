@@ -85,7 +85,7 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Println("Retiring all people over 67, just an example ;)")
+	fmt.Println("Incrementing the age of each person")
 	// invoke an entry processor over all people, this returns the keys that have been updated
 	ch := coherence.InvokeAll[int, Person, int](ctx, namedMap, processors.Increment("age", 1))
 	for se := range ch {
@@ -95,6 +95,7 @@ func main() {
 		fmt.Println("Updated person with key", se.Value)
 	}
 
+	fmt.Println("Retiring all people over 67, just an example ;)")
 	// invoke an entry process over all people older than 67 and set them as retired
 	age := extractors.Extract[int]("age")
 	ch2 := coherence.InvokeAllFilter[int, Person, int](ctx, namedMap, filters.Greater(age, 67),
