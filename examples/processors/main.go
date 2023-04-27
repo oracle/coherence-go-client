@@ -13,23 +13,25 @@ import (
 	"context"
 	"fmt"
 	"github.com/oracle/coherence-go-client/coherence"
+	"github.com/oracle/coherence-go-client/coherence/extractors"
 	"github.com/oracle/coherence-go-client/coherence/filters"
 	"github.com/oracle/coherence-go-client/coherence/processors"
 )
 
 type Person struct {
-	ID   int    `json:"id"`
-	Name string `json:"name"`
-	Age  int    `json:"age"`
+	ID      int    `json:"id"`
+	Name    string `json:"name"`
+	Age     int    `json:"age"`
+	Retired bool   `json:"retired"`
 }
 
 func (p Person) String() string {
-	return fmt.Sprintf("Person{id=%d, name=%s, age=%d}", p.ID, p.Name, p.Age)
+	return fmt.Sprintf("Person{id=%d, name=%s, age=%d, retired=%v}", p.ID, p.Name, p.Age, p.Retired)
 }
 
 func main() {
 	var (
-		person1 = Person{ID: 1, Name: "Tim", Age: 53}
+		person1 = Person{ID: 1, Name: "Tim", Age: 54}
 		person2 = Person{ID: 2, Name: "Helen", Age: 44}
 		person  *Person
 		ctx     = context.Background()
@@ -66,7 +68,7 @@ func main() {
 	fmt.Println("Person is", *person)
 
 	// update the age to 54
-	if _, err = coherence.Invoke[int, Person, bool](ctx, namedMap, 1, processors.Update("age", 54)); err != nil {
+	if _, err = coherence.Invoke[int, Person, bool](ctx, namedMap, 1, processors.Update("age", 68)); err != nil {
 		panic(err)
 	}
 
@@ -83,13 +85,25 @@ func main() {
 		panic(err)
 	}
 
+	fmt.Println("Retiring all people over 67, just an example ;)")
 	// invoke an entry processor over all people, this returns the keys that have been updated
 	ch := coherence.InvokeAll[int, Person, int](ctx, namedMap, processors.Increment("age", 1))
 	for se := range ch {
 		if se.Err != nil {
 			panic(se.Err)
 		}
-		fmt.Println("Updated key", se.Value)
+		fmt.Println("Updated person with key", se.Value)
+	}
+
+	// invoke an entry process over all people older than 67 and set then as retired
+	age := extractors.Extract[int]("age")
+	ch2 := coherence.InvokeAllFilter[int, Person, int](ctx, namedMap, filters.Greater(age, 67),
+		processors.Update("retired", true))
+	for se := range ch2 {
+		if se.Err != nil {
+			panic(se.Err)
+		}
+		fmt.Println("Retired person with key", se.Value)
 	}
 
 	fmt.Println("Displaying all people")
