@@ -50,7 +50,7 @@ go get github.com/coherence/coherence-go-client@latest
 After executing this command coherence-go-client is ready to use, and it's source will be in:
 
 ```bash
-$GOPATH/src/github.com/coherence/coherence-go-client
+$GOPATH/pkg/mod/github.com/oracle/coherence-go-client@v1.0.0-rc1
 ```
 
 ## <a name="doc"></a>Documentation
