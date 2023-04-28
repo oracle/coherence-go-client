@@ -20,7 +20,7 @@ import (
 
 var _ NamedMap[string, string] = &NamedMapClient[string, string]{}
 
-// NamedMapClient is the implementation of coherence.NamedMap interface.
+// NamedMapClient is the implementation of the [NamedMap] interface.
 // The type parameters are K = type of the key and V= type of the value.
 type NamedMapClient[K comparable, V any] struct {
 	NamedMap[K, V]
@@ -54,7 +54,7 @@ func Invoke[K comparable, V any, R any](ctx context.Context, nm NamedMap[K, V], 
 // The type parameter is R = type of the result of the invocation.
 //
 // The example below shows how to run an entry processor to increment the age of any people older than 1. This function
-// returns a stream of StreamedValue[R] of the values changed.
+// returns a stream of [StreamedValue][R] of the values changed.
 //
 //	namedMap, err := coherence.NewNamedMap[int, Person](session, "people")
 //	if err != nil {
@@ -83,7 +83,7 @@ func InvokeAllFilter[K comparable, V any, R any](ctx context.Context, nm NamedMa
 // The type parameter is R = type of the result of the invocation.
 //
 // The example below shows how to run an entry processor to increment the age of any people with keys 1 and 2. This function
-// returns a stream of StreamedValue[R] of the values changed.
+// returns a stream of  [StreamedValue][R] of the values changed.
 //
 //	namedMap, err := coherence.NewNamedMap[int, Person](session, "people")
 //	if err != nil {
@@ -97,7 +97,7 @@ func InvokeAllFilter[K comparable, V any, R any](ctx context.Context, nm NamedMa
 //	        // process the error
 //	        log.Println(se.Err)
 //	    } else {
-//	        // process the result which will be the person changed
+//	        // process the result which will be the key of the person changed
 //	        fmt.Println(se.Value)
 //	    }
 //	}
@@ -105,12 +105,12 @@ func InvokeAllKeys[K comparable, V any, R any](ctx context.Context, nm NamedMap[
 	return executeInvokeAllFilterOrKeys[K, V, R](ctx, nm.getBaseClient(), nil, keys, proc)
 }
 
-// InvokeAll invokes the specified function against all entries in a NamedMap..
+// InvokeAll invokes the specified function against all entries in a [NamedMap].
 // Functions are invoked atomically against a specific entry as the function may mutate the entry.
 // The type parameter is R = type of the result of the invocation.
 //
 // The example below shows how to run an entry processor to increment the age of all people. This function
-// returns a stream of StreamedValue[R] of the values changed.
+// returns a stream of [StreamedValue][R] of the values changed.
 //
 //	namedMap, err := coherence.NewNamedMap[int, Person](session, "people")
 //	if err != nil {
@@ -124,7 +124,7 @@ func InvokeAllKeys[K comparable, V any, R any](ctx context.Context, nm NamedMap[
 //	        // process the error
 //	        log.Println(se.Err)
 //	    } else {
-//	        // process the result which will be the person changed
+//	        // process the result which will be the key of the person changed
 //	        fmt.Println(se.Value)
 //	    }
 //	}
@@ -174,7 +174,7 @@ func AggregateFilter[K comparable, V, R any](ctx context.Context, nm NamedMap[K,
 }
 
 // Aggregate performs an aggregating operation (identified by aggregator) against all the
-// entries in a NamedMap or NamedCache.
+// entries in a [NamedMap] or [NamedCache].
 // The type parameter is R = type of the result of the aggregation.
 //
 // The example below shows how to get the average age of all people.
@@ -195,7 +195,7 @@ func Aggregate[K comparable, V, R any](ctx context.Context, nm NamedMap[K, V], a
 	return executeAggregate[K, V, R](ctx, nm.getBaseClient(), make([]K, 0), nil, aggr)
 }
 
-// AddIndex adds the index based upon the supplied ValueExtractor.
+// AddIndex adds the index based upon the supplied [extractors.ValueExtractor].
 // The type parameters are T = type to extract from and E = type of the extracted value.
 //
 // The example below shows how to add a sorted index (on age) on the age attribute.
@@ -212,7 +212,7 @@ func AddIndex[K comparable, V, T, E any](ctx context.Context, nm NamedMap[K, V],
 	return executeAddIndex(ctx, nm.getBaseClient(), extractor, sorted, nil)
 }
 
-// AddIndexWithComparator adds the index based upon the supplied ValueExtractor and comparator.
+// AddIndexWithComparator adds the index based upon the supplied [extractors.ValueExtractor] and comparator.
 // The type parameters are T = type to extract from and E = type of the extracted value.
 //
 // The example below shows how to add an index on the age attribute sorted by name.
@@ -230,7 +230,7 @@ func AddIndexWithComparator[K comparable, V, T, E any](ctx context.Context, nm N
 	return executeAddIndex(ctx, nm.getBaseClient(), extractor, false, comparator)
 }
 
-// RemoveIndex removes index based upon the supplied ValueExtractor.
+// RemoveIndex removes index based upon the supplied [extractors.ValueExtractor].
 // The type parameters are T = type to extract from and E = type of the extracted value.
 //
 // The example below shows how to remove and index on the age attribute.
@@ -247,67 +247,67 @@ func RemoveIndex[K comparable, V, T, E any](ctx context.Context, nm NamedMap[K, 
 	return executeRemoveIndex(ctx, nm.getBaseClient(), extractor)
 }
 
-// AddLifecycleListener adds a MapLifecycleListener that will receive events (truncated or released) that occur
-// against the NamedMap.
+// AddLifecycleListener adds a [MapLifecycleListener] that will receive events (truncated or released) that occur
+// against the [NamedMap].
 func (nm *NamedMapClient[K, V]) AddLifecycleListener(listener MapLifecycleListener[K, V]) {
 	registerLifecycleListener(nm.getBaseClient(), listener)
 }
 
-// AddFilterListener adds a MapListener that will receive events (inserts, updates, deletes) that occur
-// against the NamedMap where entries satisfy the specified filters.Filter, with the key, and optionally,
+// AddFilterListener adds a [MapListener] that will receive events (inserts, updates, deletes) that occur
+// against the [NamedMap] where entries satisfy the specified [filters.Filter], with the key, and optionally,
 // the old-value and new-value included.
 func (nm *NamedMapClient[K, V]) AddFilterListener(ctx context.Context, listener MapListener[K, V], filter filters.Filter) error {
 	return nm.getBaseClient().eventManager.addFilterListener(ctx, listener, filter, false)
 }
 
-// AddFilterListenerLite adds a MapListener that will receive events (inserts, updates, deletes) that occur
-// against the NamedMap where entries satisfy the specified filters.Filter, with the key,
+// AddFilterListenerLite adds a [MapListener] that will receive events (inserts, updates, deletes) that occur
+// against the [NamedMap] where entries satisfy the specified [filters.Filter], with the key,
 // the old-value and new-value included.
 func (nm *NamedMapClient[K, V]) AddFilterListenerLite(ctx context.Context, listener MapListener[K, V], filter filters.Filter) error {
 	return nm.getBaseClient().eventManager.addFilterListener(ctx, listener, filter, true)
 }
 
-// AddListener adds a MapListener that will receive events (inserts, updates, deletes) that occur
+// AddListener adds a [MapListener] that will receive events (inserts, updates, deletes) that occur
 // against the map, with the key, old-value and new-value included.
-// This call is equivalent to calling AddFilterListener with filters.Always as the filter.
+// This call is equivalent to calling [AddFilterListener] with [filters.Always] as the filter.
 func (nm *NamedMapClient[K, V]) AddListener(ctx context.Context, listener MapListener[K, V]) error {
 	return nm.getBaseClient().eventManager.addFilterListener(ctx, listener, nil, false)
 }
 
-// AddListenerLite adds a MapListener that will receive events (inserts, updates, deletes) that occur
+// AddListenerLite adds a [MapListener] that will receive events (inserts, updates, deletes) that occur
 // against the map, with the key, and optionally, the old-value and new-value included.
-// This call is equivalent to calling AddFilterListenerLite with filters.Always as the filter.
+// This call is equivalent to calling [AddFilterListenerLite] with [filters.Always] as the filter.
 func (nm *NamedMapClient[K, V]) AddListenerLite(ctx context.Context, listener MapListener[K, V]) error {
 	return nm.getBaseClient().eventManager.addFilterListener(ctx, listener, nil, true)
 }
 
-// AddKeyListener adds a MapListener that will receive events (inserts, updates, deletes) that occur
-// against the specified key within the map, with the key, old-value and new-value included.
+// AddKeyListener adds a [MapListener] that will receive events (inserts, updates, deletes) that occur
+// against the specified key within the [NamedMap], with the key, old-value and new-value included.
 func (nm *NamedMapClient[K, V]) AddKeyListener(ctx context.Context, listener MapListener[K, V], key K) error {
 	return nm.getBaseClient().eventManager.addKeyListener(ctx, listener, key, false)
 }
 
-// AddKeyListenerLite adds a MapListener that will receive events (inserts, updates, deletes) that occur
-// against the specified key within the map, with the key, and optionally, the old-value and new-value included.
+// AddKeyListenerLite adds a [MapListener] that will receive events (inserts, updates, deletes) that occur
+// against the specified key within the [NamedMap], with the key, and optionally, the old-value and new-value included.
 func (nm *NamedMapClient[K, V]) AddKeyListenerLite(ctx context.Context, listener MapListener[K, V], key K) error {
 	return nm.getBaseClient().eventManager.addKeyListener(ctx, listener, key, true)
 }
 
-// Clear removes all mappings from this NamedMap. This operation is observable and will
+// Clear removes all mappings from this [NamedMap]. This operation is observable and will
 // trigger any registered events.
 func (nm *NamedMapClient[K, V]) Clear(ctx context.Context) error {
 	return executeClear[K, V](ctx, &nm.baseClient)
 }
 
-// Truncate removes all mappings from this NamedMap.
+// Truncate removes all mappings from this [NamedMap].
 // Note: the removal of entries caused by this truncate operation will not be observable.
 func (nm *NamedMapClient[K, V]) Truncate(ctx context.Context) error {
 	return executeTruncate[K, V](ctx, &nm.baseClient)
 }
 
-// Destroy releases and destroys this instance of NamedMap.
+// Destroy releases and destroys this instance of [NamedMap].
 // Warning This method is used to completely destroy the specified
-// NamedMap across the cluster. All references in the entire cluster to this
+// [NamedMap] across the cluster. All references in the entire cluster to this
 // cache will be invalidated, the data will be cleared, and all
 // internal resources will be released.
 // Note: the removal of entries caused by this operation will not be observable.
@@ -337,9 +337,9 @@ func (nm *NamedMapClient[K, V]) Destroy(ctx context.Context) error {
 	return nil
 }
 
-// Release releases the instance of NamedMap.
-// This operation does not affect the contents of the NamedMap, but only releases the client
-// resources. To access the NamedMap, you must get a new instance.
+// Release releases the instance of [NamedMap].
+// This operation does not affect the contents of the [NamedMap], but only releases the client
+// resources. To access the [NamedMap], you must get a new instance.
 func (nm *NamedMapClient[K, V]) Release() {
 	s := nm.session
 
@@ -359,9 +359,9 @@ func (nm *NamedMapClient[K, V]) Release() {
 	}
 }
 
-// ContainsKey returns true if this NamedMap contains a mapping for the specified key.
+// ContainsKey returns true if this [NamedMap] contains a mapping for the specified key.
 //
-// The example below shows how to check if a NamedMap contains a mapping for the key 1.
+// The example below shows how to check if a [NamedMap] contains a mapping for the key 1.
 //
 //	namedMap, err := coherence.NewNamedMap[int, Person](session, "people")
 //	if err != nil {
@@ -375,9 +375,9 @@ func (nm *NamedMapClient[K, V]) ContainsKey(ctx context.Context, key K) (bool, e
 	return executeContainsKey(ctx, &nm.baseClient, key)
 }
 
-// ContainsValue returns true if this NamedMap contains a mapping for the specified value.
+// ContainsValue returns true if this [NamedMap] contains a mapping for the specified value.
 //
-// The example below shows how to check if a NamedMap contains a mapping for the person.
+// The example below shows how to check if a [NamedMap] contains a mapping for the person.
 //
 //	namedMap, err := coherence.NewNamedMap[int, Person](session, "people")
 //	if err != nil {
@@ -392,9 +392,9 @@ func (nm *NamedMapClient[K, V]) ContainsValue(ctx context.Context, value V) (boo
 	return executeContainsValue(ctx, &nm.baseClient, value)
 }
 
-// ContainsEntry returns true if this NamedMap contains a mapping for the specified key and value.
+// ContainsEntry returns true if this [NamedMap] contains a mapping for the specified key and value.
 //
-// The example below shows how to check if a NamedMap contains a mapping for the key 1 and person.
+// The example below shows how to check if a [NamedMap] contains a mapping for the key 1 and person.
 //
 //	namedMap, err := coherence.NewNamedMap[int, Person](session, "people")
 //	if err != nil {
@@ -409,16 +409,16 @@ func (nm *NamedMapClient[K, V]) ContainsEntry(ctx context.Context, key K, value 
 	return executeContainsEntry(ctx, &nm.baseClient, key, value)
 }
 
-// IsEmpty returns true if this NamedMap contains no mappings.
+// IsEmpty returns true if this [NamedMap] contains no mappings.
 func (nm *NamedMapClient[K, V]) IsEmpty(ctx context.Context) (bool, error) {
 	return executeIsEmpty(ctx, &nm.baseClient)
 }
 
 // EntrySetFilter returns a channel from which entries satisfying the specified filter can be obtained.
-// Each entry in the channel is of type *StreamEntry which wraps an error and the result.
+// Each entry in the channel is of type [*StreamedEntry] which wraps an error and the result.
 // As always, the result must be accessed (and will be valid) only if the error is nil.
 //
-// The example below shows how to iterate the entries in a NamedMap where the age > 20.
+// The example below shows how to iterate the entries in a [NamedMap] where the age > 20.
 //
 //	namedMap, err := coherence.NewNamedMap[int, Person](session, "people")
 //	if err != nil {
@@ -440,9 +440,9 @@ func (nm *NamedMapClient[K, V]) EntrySetFilter(ctx context.Context, fltr filters
 // EntrySet returns a channel from which  all entries can be obtained.
 //
 // Note: the entries are paged internally to avoid excessive memory usage, but you need to be
-// carefull when running this operation against NamedMaps with large number of entries.
+// careful when running this operation against [NamedMap]s with large number of entries.
 //
-// The example below shows how to iterate the entries in a NamedMap.
+// The example below shows how to iterate the entries in a [NamedMap].
 //
 //	namedMap, err := coherence.NewNamedMap[int, Person](session, "people")
 //	if err != nil {
@@ -462,7 +462,7 @@ func (nm *NamedMapClient[K, V]) EntrySet(ctx context.Context) <-chan *StreamedEn
 }
 
 // Get returns the value to which the specified key is mapped. V will be nil
-// if this NamedMap contains no mapping for the key.
+// if this [NamedMap] contains no mapping for the key.
 //
 //	namedMap, err := coherence.NewNamedMap[int, Person](session, "people")
 //	if err != nil {
@@ -483,7 +483,7 @@ func (nm *NamedMapClient[K, V]) Get(ctx context.Context, key K) (*V, error) {
 }
 
 // GetAll returns a channel from which entries satisfying the specified filter can be obtained.
-// Each entry in the channel is of type *StreamEntry which wraps an error and the result.
+// Each entry in the channel is of type [*StreamedEntry] which wraps an error and the result.
 // As always, the result must be accessed (and will be valid) only if the error is nil.
 //
 // The example below shows how to get all the entries for keys 1, 3 and 4.
@@ -515,7 +515,7 @@ func (nm *NamedMapClient[K, V]) GetOrDefault(ctx context.Context, key K, def V) 
 // Each entry in the channel is of type *StreamEntry which wraps an error and the key.
 // As always, the result must be accessed (and will be valid) only if the error is nil.
 //
-// The example below shows how to iterate the keys in a NamedMap where the age > 20.
+// The example below shows how to iterate the keys in a [NamedMap] where the age > 20.
 //
 //	namedMap, err := coherence.NewNamedMap[int, Person](session, "people")
 //	if err != nil {
@@ -537,9 +537,9 @@ func (nm *NamedMapClient[K, V]) KeySetFilter(ctx context.Context, fltr filters.F
 // KeySet returns a channel from which keys of all entries can be obtained.
 //
 // Note: the entries are paged internally to avoid excessive memory usage, but you need to be
-// carefull when running this operation against NamedMaps with large number of entries.
+// careful when running this operation against [NamedMap]s with large number of entries.
 //
-// The example below shows how to iterate the keys in a NamedMap.
+// The example below shows how to iterate the keys in a [NamedMap].
 //
 //	namedMap, err := coherence.NewNamedMap[int, Person](session, "people")
 //	if err != nil {
@@ -565,8 +565,8 @@ func (nm *NamedMapClient[K, V]) Name() string {
 	return nm.name
 }
 
-// PutAll copies all the mappings from the specified map to this NamedMap.
-// This is the most efficient way to add multiple entries into a NamedMap as it
+// PutAll copies all the mappings from the specified map to this [NamedMap].
+// This is the most efficient way to add multiple entries into a [NamedMap] as it
 // is carried out in parallel and no previous values are returned.
 //
 //	var peopleData = map[int]Person{
@@ -588,7 +588,7 @@ func (nm *NamedMapClient[K, V]) PutAll(ctx context.Context, entries map[K]V) err
 	return executePutAll(ctx, &nm.baseClient, entries)
 }
 
-// PutIfAbsent adds the specified mapping if the key is not already associated with a value in the NamedMap
+// PutIfAbsent adds the specified mapping if the key is not already associated with a value in the [NamedMap]
 // and returns nil, else returns the current value.
 func (nm *NamedMapClient[K, V]) PutIfAbsent(ctx context.Context, key K, value V) (*V, error) {
 	return executePutIfAbsent(ctx, &nm.baseClient, key, value)
@@ -600,7 +600,7 @@ func (nm *NamedMapClient[K, V]) Put(ctx context.Context, key K, value V) (*V, er
 	return executePutWithExpiry(ctx, &nm.baseClient, key, value, time.Duration(0))
 }
 
-// Remove removes the mapping for a key from this NamedMap if it is present and
+// Remove removes the mapping for a key from this [NamedMap] if it is present and
 // returns the previous value or nil if there wasn't one.
 //
 //	namedMap, err := coherence.NewNamedMap[int, Person](session, "people")
@@ -666,16 +666,16 @@ func (nm *NamedMapClient[K, V]) GetSession() *Session {
 	return nm.session
 }
 
-// Size returns the number of mappings contained within this NamedMap.
+// Size returns the number of mappings contained within this [NamedMap].
 func (nm *NamedMapClient[K, V]) Size(ctx context.Context) (int, error) {
 	return executeSize(ctx, &nm.baseClient)
 }
 
-// ValuesFilter returns a view of filtered values contained in this NamedMap.
+// ValuesFilter returns a view of filtered values contained in this [NamedMap].
 // The returned channel will be asynchronously filled with values in the
-// NamedMap that satisfy the filter.
+// [NamedMap] that satisfy the filter.
 //
-// The example below shows how to iterate the values in a NamedMap where the age > 20.
+// The example below shows how to iterate the values in a [NamedMap] where the age > 20.
 //
 //	namedMap, err := coherence.NewNamedMap[int, Person](session, "people")
 //	if err != nil {
@@ -694,12 +694,12 @@ func (nm *NamedMapClient[K, V]) ValuesFilter(ctx context.Context, fltr filters.F
 	return executeValues(ctx, &nm.baseClient, fltr)
 }
 
-// Values returns a view of all values contained in this NamedMap.
+// Values returns a view of all values contained in this [NamedMap].
 //
 // Note: the entries are paged internally to avoid excessive memory usage, but you need to be
-// carefull when running this operation against NamedMaps with large number of entries.
+// careful when running this operation against [NamedMap]s with large number of entries.
 //
-// The example below shows how to iterate the values in a NamedMap.
+// The example below shows how to iterate the values in a [NamedMap].
 //
 //	namedMap, err := coherence.NewNamedMap[int, Person](session, "people")
 //	if err != nil {
@@ -788,12 +788,12 @@ func newNamedMap[K comparable, V any](session *Session, name string, sOpts *Sess
 	return newMap, nil
 }
 
-// reconnectSessionListener is a session listener to be called on reconnect for a specific NamedMap.
+// reconnectSessionListener is a session listener to be called on reconnect for a specific [NamedMap].
 type namedMapReconnectListener[K comparable, V any] struct {
 	listener SessionLifecycleListener
 }
 
-// newReconnectSessionListener creates s new namedMapReconnectListener.
+// newReconnectSessionListener creates new namedMapReconnectListener.
 func newNamedMapReconnectListener[K comparable, V any](session *Session, nm NamedMapClient[K, V]) *namedMapReconnectListener[K, V] {
 	listener := namedMapReconnectListener[K, V]{
 		listener: NewSessionLifecycleListener(),
@@ -822,7 +822,7 @@ func newBaseClient[K comparable, V any](session *Session, name string, format st
 	}
 }
 
-// getExistingError returns an error indicating a NamedMap or NamedCache exists with different type parameters
+// getExistingError returns an error indicating a [NamedMap] or [NamedCache] exists with different type parameters
 func getExistingError(cacheType, name string) error {
 	return fmt.Errorf(mapOrCacheExists, cacheType, name)
 }

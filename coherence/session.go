@@ -76,11 +76,14 @@ type SessionOptions struct {
 //
 //	session, err := coherence.NewSession(ctx, coherence.WithAddress("acme.com:1408"), coherence.WithPlainText())
 //
+// You can also set the environment variable COHERENCE_SERVER_ADDRESS to specify the address.
+//
 // Example 3: Create a Session that will eventually connect to default "localhost:1408" using a secured connection
 //
 //	session, err := coherence.NewSession(ctx)
 //
-// A Session can also be configured using environment variables COHERENCE_SERVER_HOST_NAME and COHERENCE_SERVER_GRPC_PORT.
+// A Session can also be configured using environment variable COHERENCE_SERVER_ADDRESS. See https://github.com/grpc/grpc/blob/master/doc/naming.md
+// for information on values for this.
 //
 // To Configure SSL, you must first enable SSL on the gRPC Proxy, see
 // https://docs.oracle.com/en/middleware/standalone/coherence/14.1.1.2206/develop-remote-clients/using-coherence-grpc-server.html for details.
@@ -94,20 +97,6 @@ type SessionOptions struct {
 //
 // Finally, the Close() method can be used to close the Session. Once a Session is closed, no APIs
 // on the NamedMap instances should be invoked. If invoked they all will return an error.
-//
-// Example 4. Setting session connection and retry timeouts.
-//
-// There are various session options to control how long the Coherence Go Client waits for connection and reconnection
-// of underlying gRPC channels before errors are returned. In the following example the client will wait up to
-// 10,000ms to connect and if it fails, will return an error.
-//
-//	session, err := coherence.NewSession(ctx, coherence.WithAddress("acme.com:1408"), coherence.WithInitialConnectTimeout(10000))
-//
-// The following options and environment variables are available:
-//
-//	Option:                 coherence.WithConnectTimeout(millis)
-//	Environment Variable:	COHERENCE_CONNECT_TIMEOUT
-//	Meaning:                the time in millis to try for a session connection
 func NewSession(ctx context.Context, options ...func(session *SessionOptions)) (*Session, error) {
 	session := &Session{
 		sessionID:             uuid.New(),
@@ -142,8 +131,7 @@ func NewSession(ctx context.Context, options ...func(session *SessionOptions)) (
 
 	// if no address option sent in then use the env or defaults
 	if session.sessOpts.Address == "" {
-		session.sessOpts.Address = getStringValueFromEnvVarOrDefault(envHostName, "localhost") + ":" +
-			getStringValueFromEnvVarOrDefault(envGRPCPort, "1408")
+		session.sessOpts.Address = getStringValueFromEnvVarOrDefault(envHostName, "localhost:1408")
 	}
 
 	// ensure initial connection

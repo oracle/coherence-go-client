@@ -16,7 +16,7 @@ import (
 
 var _ NamedCache[string, string] = &NamedCacheClient[string, string]{}
 
-// NamedCacheClient is the implementation of coherence.NamedCache interface.
+// NamedCacheClient is the implementation of the [NamedCache] interface.
 // The type parameters are K = type of the key and V= type of the value.
 type NamedCacheClient[K comparable, V any] struct {
 	NamedCache[K, V]
@@ -29,66 +29,66 @@ func (nc *NamedCacheClient[K, V]) getBaseClient() *baseClient[K, V] { // nolint
 }
 
 // AddLifecycleListener Adds a MapLifecycleListener that will receive events (truncated or released) that occur
-// against the NamedCache.
+// against the [NamedCache].
 func (nc *NamedCacheClient[K, V]) AddLifecycleListener(listener MapLifecycleListener[K, V]) {
 	registerLifecycleListener(nc.getBaseClient(), listener)
 }
 
-// AddFilterListener Adds a MapListener that will receive events (inserts, updates, deletes) that occur
-// against the map where entries satisfy the specified filters.Filter, with the key, and optionally,
+// AddFilterListener Adds a [MapListener] that will receive events (inserts, updates, deletes) that occur
+// against the map where entries satisfy the specified [filters.Filter], with the key, and optionally,
 // the old-value and new-value included.
 func (nc *NamedCacheClient[K, V]) AddFilterListener(ctx context.Context, listener MapListener[K, V], filter filters.Filter) error {
 	return nc.getBaseClient().eventManager.addFilterListener(ctx, listener, filter, false)
 }
 
-// AddFilterListenerLite Adds a MapListener that will receive events (inserts, updates, deletes) that occur
-// against the map where entries satisfy the specified filters.Filter, with the key,
+// AddFilterListenerLite Adds a [MapListener] that will receive events (inserts, updates, deletes) that occur
+// against the map where entries satisfy the specified [filters.Filter], with the key,
 // the old-value and new-value included.
 func (nc *NamedCacheClient[K, V]) AddFilterListenerLite(ctx context.Context, listener MapListener[K, V], filter filters.Filter) error {
 	return nc.getBaseClient().eventManager.addFilterListener(ctx, listener, filter, true)
 }
 
-// AddListener Adds a MapListener that will receive events (inserts, updates, deletes) that occur
+// AddListener Adds a [MapListener] that will receive events (inserts, updates, deletes) that occur
 // against the map, with the key, old-value and new-value included.
 // This call is equivalent to calling AddFilterListener with filters.Always as the filter.
 func (nc *NamedCacheClient[K, V]) AddListener(ctx context.Context, listener MapListener[K, V]) error {
 	return nc.getBaseClient().eventManager.addFilterListener(ctx, listener, nil, false)
 }
 
-// AddListenerLite Adds a MapListener that will receive events (inserts, updates, deletes) that occur
+// AddListenerLite Adds a [MapListener] that will receive events (inserts, updates, deletes) that occur
 // against the map, with the key, and optionally, the old-value and new-value included.
-// This call is equivalent to calling AddFilterListenerLite with filters.Always as the filter.
+// This call is equivalent to calling [AddFilterListenerLite] with [filters.Always] as the filter.
 func (nc *NamedCacheClient[K, V]) AddListenerLite(ctx context.Context, listener MapListener[K, V]) error {
 	return nc.getBaseClient().eventManager.addFilterListener(ctx, listener, nil, true)
 }
 
-// AddKeyListener Adds a MapListener that will receive events (inserts, updates, deletes) that occur
+// AddKeyListener Adds a [MapListener] that will receive events (inserts, updates, deletes) that occur
 // against the specified key within the map, with the key, old-value and new-value included.
 func (nc *NamedCacheClient[K, V]) AddKeyListener(ctx context.Context, listener MapListener[K, V], key K) error {
 	return nc.getBaseClient().eventManager.addKeyListener(ctx, listener, key, false)
 }
 
-// AddKeyListenerLite Adds a MapListener that will receive events (inserts, updates, deletes) that occur
+// AddKeyListenerLite Adds a ]MapListener] that will receive events (inserts, updates, deletes) that occur
 // against the specified key within the map, with the key, and optionally, the old-value and new-value included.
 func (nc *NamedCacheClient[K, V]) AddKeyListenerLite(ctx context.Context, listener MapListener[K, V], key K) error {
 	return nc.eventManager.addKeyListener(ctx, listener, key, true)
 }
 
-// Clear removes all mappings from this NamedCache. This operation is observable and will
+// Clear removes all mappings from this [NamedCache]. This operation is observable and will
 // trigger any registered events.
 func (nc *NamedCacheClient[K, V]) Clear(ctx context.Context) error {
 	return executeClear[K, V](ctx, &nc.baseClient)
 }
 
-// Truncate removes all mappings from this NamedCache.
+// Truncate removes all mappings from this [NamedCache].
 // Note: the removal of entries caused by this truncate operation will not be observable.
 func (nc *NamedCacheClient[K, V]) Truncate(ctx context.Context) error {
 	return executeTruncate[K, V](ctx, &nc.baseClient)
 }
 
-// Destroy releases and destroys this instance of NamedCache.
+// Destroy releases and destroys this instance of [NamedCache].
 // Warning This method is used to completely destroy the specified
-// NamedMap across the cluster. All references in the entire cluster to this
+// [NamedCache] across the cluster. All references in the entire cluster to this
 // cache will be invalidated, the data will be cleared, and all
 // internal resources will be released.
 // Note: the removal of entries caused by this operation will not be observable.
@@ -118,9 +118,9 @@ func (nc *NamedCacheClient[K, V]) Destroy(ctx context.Context) error {
 	return nil
 }
 
-// Release releases the instance of NamedCache.
-// This operation does not affect the contents of the NamedCache, but only releases the client
-// resources. To access the NamedCache, you must get a new instance.
+// Release releases the instance of [NamedCache].
+// This operation does not affect the contents of the [NamedCache], but only releases the client
+// resources. To access the [NamedCache], you must get a new instance.
 func (nc *NamedCacheClient[K, V]) Release() {
 	s := nc.session
 
@@ -140,57 +140,57 @@ func (nc *NamedCacheClient[K, V]) Release() {
 	}
 }
 
-// ContainsKey returns true if this NamedCache contains a mapping for the specified key.
+// ContainsKey returns true if this [NamedCache] contains a mapping for the specified key.
 //
-// The example below shows how to check if a NamedCache contains a mapping for the key 1.
+// The example below shows how to check if a [NamedCache] contains a mapping for the key 1.
 //
-//	namedMap, err := coherence.NewNamedCache[int, Person](session, "people")
+//	namedCache, err := coherence.NewNamedCache[int, Person](session, "people")
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
 //
-//	if found, err = namedMap.ContainsKey(ctx, 1); err != nil {
+//	if found, err = namedCache.ContainsKey(ctx, 1); err != nil {
 //	   log.Fatal(err)
 //	}
 func (nc *NamedCacheClient[K, V]) ContainsKey(ctx context.Context, key K) (bool, error) {
 	return executeContainsKey(ctx, &nc.baseClient, key)
 }
 
-// ContainsValue returns true if this NamedCache contains a mapping for the specified value.
+// ContainsValue returns true if this [NamedCache] contains a mapping for the specified value.
 //
-// The example below shows how to check if a NamedCache contains a mapping for the person.
+// The example below shows how to check if a [NamedCache] contains a mapping for the person.
 //
-//	namedMap, err := coherence.NewNamedCache[int, Person](session, "people")
+//	namedCache, err := coherence.NewNamedCache[int, Person](session, "people")
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
 //	person := Person{ID: 1, Name: "Tim"}
 //
-//	if found, err = namedMap.ContainsValue(ctx, person); err != nil {
+//	if found, err = namedCache.ContainsValue(ctx, person); err != nil {
 //	   log.Fatal(err)
 //	}
 func (nc *NamedCacheClient[K, V]) ContainsValue(ctx context.Context, value V) (bool, error) {
 	return executeContainsValue(ctx, &nc.baseClient, value)
 }
 
-// ContainsEntry returns true if this NamedCache contains a mapping for the specified key and value.
+// ContainsEntry returns true if this [NamedCache] contains a mapping for the specified key and value.
 //
-// The example below shows how to check if a NamedCache contains a mapping for the key 1 and person.
+// The example below shows how to check if a [NamedCache] contains a mapping for the key 1 and person.
 //
-//	namedMap, err := coherence.NewNamedCache[int, Person](session, "people")
+//	namedCache, err := coherence.NewNamedCache[int, Person](session, "people")
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
 //	person := Person{ID: 1, Name: "Tim"}
 //
-//	if found, err = namedMap.ContainsEntry(ctx, person.ID, person); err != nil {
+//	if found, err = namedCache.ContainsEntry(ctx, person.ID, person); err != nil {
 //	   log.Fatal(err)
 //	}
 func (nc *NamedCacheClient[K, V]) ContainsEntry(ctx context.Context, key K, value V) (bool, error) {
 	return executeContainsEntry(ctx, &nc.baseClient, key, value)
 }
 
-// IsEmpty returns true if this NamedCache contains no mappings.
+// IsEmpty returns true if this [NamedCache] contains no mappings.
 func (nc *NamedCacheClient[K, V]) IsEmpty(ctx context.Context) (bool, error) {
 	return executeIsEmpty(ctx, &nc.baseClient)
 }
@@ -199,14 +199,14 @@ func (nc *NamedCacheClient[K, V]) IsEmpty(ctx context.Context) (bool, error) {
 // Each entry in the channel is of type *StreamEntry which wraps an error and the result.
 // As always, the result must be accessed (and will be valid) only if the error is nil.
 //
-// The example below shows how to iterate the entries in a NamedMap where the age > 20.
+// The example below shows how to iterate the entries in a [NamedCache] where the age > 20.
 //
-//	namedMap, err := coherence.NewNamedCache[int, Person](session, "people")
+//	namedCache, err := coherence.NewNamedCache[int, Person](session, "people")
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
 //
-//	ch := namedMap.EntrySetFilter(ctx, filters.GreaterEqual(extractors.Extract[int]("age"), 20))
+//	ch := namedCache.EntrySetFilter(ctx, filters.GreaterEqual(extractors.Extract[int]("age"), 20))
 //	for result := range ch {
 //	    if result.Err != nil {
 //	        // process, handle the error
@@ -221,16 +221,16 @@ func (nc *NamedCacheClient[K, V]) EntrySetFilter(ctx context.Context, fltr filte
 // EntrySet returns a channel from which all entries can be obtained.
 //
 // Note: the entries are paged internally to avoid excessive memory usage, but you need to be
-// carefull when running this operation against NamedCaches with large number of entries.
+// careful when running this operation against NamedCaches with large number of entries.
 //
-// The example below shows how to iterate the entries in a NamedCache.
+// The example below shows how to iterate the entries in a [NamedCache].
 //
-//	namedMap, err := coherence.NewNamedCache[int, Person](session, "people")
+//	namedCache, err := coherence.NewNamedCache[int, Person](session, "people")
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
 //
-//	ch := namedMap.EntrySet(ctx)
+//	ch := namedCache.EntrySet(ctx)
 //	for result := range ch {
 //	    if result.Err != nil {
 //	        // process, handle the error
@@ -243,14 +243,14 @@ func (nc *NamedCacheClient[K, V]) EntrySet(ctx context.Context) <-chan *Streamed
 }
 
 // Get returns the value to which the specified key is mapped. V will be nil
-// if this map contains no mapping for the key.
+// if this [NamedCache] contains no mapping for the key.
 //
-//	namedMap, err := coherence.NewNamedCache[int, Person](session, "people")
+//	namedCache, err := coherence.NewNamedCache[int, Person](session, "people")
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
 //
-//	person, err = namedMap.Get(1)
+//	person, err = namedCache.Get(1)
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
@@ -264,17 +264,17 @@ func (nc *NamedCacheClient[K, V]) Get(ctx context.Context, key K) (*V, error) {
 }
 
 // GetAll returns a channel from which entries satisfying the specified filter can be obtained.
-// Each entry in the channel is of type *StreamEntry which wraps an error and the result.
+// Each entry in the channel is of type [*StreamedEntry] which wraps an error and the result.
 // As always, the result must be accessed (and will be valid) only if the error is nil.
 //
 // The example below shows how to get all the entries for keys 1, 3 and 4.
 //
-//	namedMap, err := coherence.NewNamedCache[int, Person](session, "people")
+//	namedCache, err := coherence.NewNamedCache[int, Person](session, "people")
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
 //
-//	ch := namedMap.GetAll(ctx, []int{1, 3, 4})
+//	ch := namedCache.GetAll(ctx, []int{1, 3, 4})
 //	for result := range ch {
 //	    if result.Err != nil {
 //	        // process, handle the error
@@ -296,14 +296,14 @@ func (nc *NamedCacheClient[K, V]) GetOrDefault(ctx context.Context, key K, def V
 // Each entry in the channel is of type *StreamEntry which wraps an error and the key.
 // As always, the result must be accessed (and will be valid) only if the error is nil.
 //
-// The example below shows how to iterate the keys in a NamedCache where the age > 20.
+// The example below shows how to iterate the keys in a [NamedCache] where the age > 20.
 //
-//	namedMap, err := coherence.NewNamedCache[int, Person](session,"people")
+//	namedCache, err := coherence.NewNamedCache[int, Person](session,"people")
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
 //
-//	ch := namedMap.KeySetFilter(ctx, filters.GreaterEqual(extractors.Extract[int]("age"), 20))
+//	ch := namedCache.KeySetFilter(ctx, filters.GreaterEqual(extractors.Extract[int]("age"), 20))
 //	for result := range ch {
 //	    if result.Err != nil {
 //	        // process, handle the error
@@ -318,16 +318,16 @@ func (nc *NamedCacheClient[K, V]) KeySetFilter(ctx context.Context, fltr filters
 // KeySet returns a channel from which keys of all entries can be obtained.
 //
 // Note: the entries are paged internally to avoid excessive memory usage, but you need to be
-// carefull when running this operation against NamedMaps with large number of entries.
+// careful when running this operation against [NamedCache]s with large number of entries.
 //
-// The example below shows how to iterate the keys in a NamedCache.
+// The example below shows how to iterate the keys in a [NamedCache].
 //
-//	namedMap, err := coherence.NewNamedCache[int, Person](session, "people")
+//	namedCache, err := coherence.NewNamedCache[int, Person](session, "people")
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
 //
-//	ch := namedMap.KeySet(ctx)
+//	ch := namedCache.KeySet(ctx)
 //	for result := range ch {
 //	    if result.Err != nil {
 //	        // process, handle the error
@@ -339,13 +339,13 @@ func (nc *NamedCacheClient[K, V]) KeySet(ctx context.Context) <-chan *StreamedKe
 	return executeKeySet[K, V](ctx, &nc.baseClient)
 }
 
-// Name returns the name of the namedMap.
+// Name returns the name of the [NamedCache]].
 func (nc *NamedCacheClient[K, V]) Name() string {
 	return nc.name
 }
 
-// PutAll copies all the mappings from the specified map to this NamedCache.
-// This is the most efficient way to add multiple entries into a NamedCache as it
+// PutAll copies all the mappings from the specified map to this [NamedCache].
+// This is the most efficient way to add multiple entries into a [NamedCache] as it
 // is carried out in parallel and no previous values are returned.
 //
 //	var peopleData = map[int]Person{
@@ -355,19 +355,19 @@ func (nc *NamedCacheClient[K, V]) Name() string {
 //	    4: {ID: 4, Name: "Alexa", Age: 12},
 //	}
 //
-//	namedMap, err := coherence.NewNamedCache[int, Person](session, "people")
+//	namedCache, err := coherence.NewNamedCache[int, Person](session, "people")
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
 //
-//	if err = namedMap.PutAll(ctx, peopleData); err != nil {
+//	if err = namedCache.PutAll(ctx, peopleData); err != nil {
 //	    log.Fatal(err)
 //	}
 func (nc *NamedCacheClient[K, V]) PutAll(ctx context.Context, entries map[K]V) error {
 	return executePutAll(ctx, &nc.baseClient, entries)
 }
 
-// PutIfAbsent adds the specified mapping if the key is not already associated with a value in the NamedCache
+// PutIfAbsent adds the specified mapping if the key is not already associated with a value in the [NamedCache]
 // and returns nil, else returns the current value.
 func (nc *NamedCacheClient[K, V]) PutIfAbsent(ctx context.Context, key K, value V) (*V, error) {
 	return executePutIfAbsent(ctx, &nc.baseClient, key, value)
@@ -379,7 +379,7 @@ func (nc *NamedCacheClient[K, V]) Put(ctx context.Context, key K, value V) (*V, 
 	return executePutWithExpiry(ctx, &nc.baseClient, key, value, time.Duration(0))
 }
 
-// PutWithExpiry associates the specified value with the specified key. If the NamedCache
+// PutWithExpiry associates the specified value with the specified key. If the [NamedCache]
 // previously contained a value for this key, the old value is replaced.
 // This variation of the Put(ctx context.Context, key K, value V)
 // function allows the caller to specify an expiry (or "time to live")
@@ -389,15 +389,15 @@ func (nc *NamedCacheClient[K, V]) PutWithExpiry(ctx context.Context, key K, valu
 	return executePutWithExpiry(ctx, &nc.baseClient, key, value, ttl)
 }
 
-// Remove removes the mapping for a key from this NamedCache if it is present and
+// Remove removes the mapping for a key from this [NamedCache] if it is present and
 // returns the previous value or nil if there wasn't one.
 //
-//	namedMap, err := coherence.NewNamedCache[int, Person](session, "people")
+//	namedCache, err := coherence.NewNamedCache[int, Person](session, "people")
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
 //
-//	oldValue, err = namedMap.Remove(ctx, 1)
+//	oldValue, err = namedCache.Remove(ctx, 1)
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
@@ -417,7 +417,7 @@ func (nc *NamedCacheClient[K, V]) RemoveLifecycleListener(listener MapLifecycleL
 }
 
 // RemoveFilterListener removes the listener that was previously registered to receive events
-// where entries satisfy the specified filters.Filter.
+// where entries satisfy the specified [filters.Filter].
 func (nc *NamedCacheClient[K, V]) RemoveFilterListener(ctx context.Context, listener MapListener[K, V], f filters.Filter) error {
 	return nc.getBaseClient().eventManager.removeFilterListener(ctx, listener, f)
 }
@@ -455,23 +455,23 @@ func (nc *NamedCacheClient[K, V]) GetSession() *Session {
 	return nc.session
 }
 
-// Size returns the number of mappings contained within this NamedCache.
+// Size returns the number of mappings contained within this [NamedCache].
 func (nc *NamedCacheClient[K, V]) Size(ctx context.Context) (int, error) {
 	return executeSize(ctx, &nc.baseClient)
 }
 
-// ValuesFilter returns a view of filtered values contained in this NamedCache.
+// ValuesFilter returns a view of filtered values contained in this [NamedCache].
 // The returned channel will be asynchronously filled with values in the
-// NamedMap that satisfy the filter.
+// [NamedCache] that satisfy the filter.
 //
-// The example below shows how to iterate the values in a NamedCache where the age > 20.
+// The example below shows how to iterate the values in a [NamedCache] where the age > 20.
 //
-//	namedMap, err := coherence.NewNamedCache[int, Person](session, "people")
+//	namedCache, err := coherence.NewNamedCache[int, Person](session, "people")
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
 //
-//	ch := namedMap.ValuesFilter(ctx, filters.GreaterEqual(extractors.Extract[int]("age"), 20))
+//	ch := namedCache.ValuesFilter(ctx, filters.GreaterEqual(extractors.Extract[int]("age"), 20))
 //	for result := range ch {
 //	    if result.Err != nil {
 //	        // process, handle the error
@@ -483,19 +483,19 @@ func (nc *NamedCacheClient[K, V]) ValuesFilter(ctx context.Context, fltr filters
 	return executeValues(ctx, &nc.baseClient, fltr)
 }
 
-// Values returns a view of all values contained in this NamedCache.
+// Values returns a view of all values contained in this [NamedCache].
 //
 // Note: the entries are paged internally to avoid excessive memory usage, but you need to be
-// carefull when running this operation against NamedCaches with large number of entries.
+// careful when running this operation against NamedCaches with large number of entries.
 //
-// The example below shows how to iterate the values in a NamedCache.
+// The example below shows how to iterate the values in a [NamedCache].
 //
-//	namedMap, err := coherence.NewNamedCache[int, Person](session, "people")
+//	namedCache, err := coherence.NewNamedCache[int, Person](session, "people")
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
 //
-//	ch := namedMap.Values(ctx)
+//	ch := namedCache.Values(ctx)
 //	for result := range ch {
 //	    if result.Err != nil {
 //	        // process, handle the error
@@ -507,13 +507,13 @@ func (nc *NamedCacheClient[K, V]) Values(ctx context.Context) <-chan *StreamedVa
 	return executeValuesNoFilter[K, V](ctx, &nc.baseClient)
 }
 
-// String returns a string representation of a NamedCacheClient.
+// String returns a string representation of a [NamedCacheClient].
 func (nc *NamedCacheClient[K, V]) String() string {
 	return fmt.Sprintf("NamedCache{name=%s, format=%s, destroyed=%v, released=%v}",
 		nc.Name(), nc.format, nc.destroyed, nc.released)
 }
 
-// newNamedCache creates a new NamedCache of the generic type specified.
+// newNamedCache creates a new [NamedCache] of the generic type specified.
 func newNamedCache[K comparable, V any](session *Session, name string, sOpts *SessionOptions) (*NamedCacheClient[K, V], error) {
 	var (
 		format        = sOpts.Format
@@ -576,7 +576,7 @@ func newNamedCache[K comparable, V any](session *Session, name string, sOpts *Se
 	return newCache, nil
 }
 
-// namedCacheReconnectListener is a session listener to be called on reconnect for a specific NamedCache.
+// namedCacheReconnectListener is a session listener to be called on reconnect for a specific [NamedCache].
 type namedCacheReconnectListener[K comparable, V any] struct {
 	listener SessionLifecycleListener
 }

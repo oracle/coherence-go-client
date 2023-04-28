@@ -52,13 +52,25 @@ func main() {
 	}
 
 	// Create a listener and add to the cache
-	listener := NewInsertEventsListener[int, Person]()
-	if err = namedMap.AddListener(ctx, listener.listener); err != nil {
+	listener := coherence.NewMapListener[int, Person]().OnInserted(func(e coherence.MapEvent[int, Person]) {
+		key, err1 := e.Key()
+		if err1 != nil {
+			panic(err)
+		}
+		newValue, err1 := e.NewValue()
+		if err1 != nil {
+			panic(err)
+		}
+
+		fmt.Printf("**EVENT=Inserted: key=%v, value=%v\n", *key, newValue)
+	})
+
+	if err = namedMap.AddListener(ctx, listener); err != nil {
 		panic(err)
 	}
 
-	defer func(ctx context.Context, namedMap coherence.NamedMap[int, Person], listener *InsertEventsListener[int, Person]) {
-		if err := namedMap.RemoveListener(ctx, listener.listener); err != nil {
+	defer func(ctx context.Context, namedMap coherence.NamedMap[int, Person], listener coherence.MapListener[int, Person]) {
+		if err := namedMap.RemoveListener(ctx, listener); err != nil {
 			panic(err)
 		}
 	}(ctx, namedMap, listener)
@@ -96,29 +108,4 @@ func main() {
 	}
 
 	fmt.Println("Cache truncated")
-}
-
-type InsertEventsListener[K comparable, V any] struct {
-	listener coherence.MapListener[K, V]
-}
-
-func NewInsertEventsListener[K comparable, V any]() *InsertEventsListener[K, V] {
-	exampleListener := InsertEventsListener[K, V]{
-		listener: coherence.NewMapListener[K, V](),
-	}
-
-	exampleListener.listener.OnInserted(func(e coherence.MapEvent[K, V]) {
-		key, err := e.Key()
-		if err != nil {
-			panic(err)
-		}
-		newValue, err := e.NewValue()
-		if err != nil {
-			panic(err)
-		}
-
-		fmt.Printf("**EVENT=Inserted: key=%v, value=%v\n", *key, newValue)
-	})
-
-	return &exampleListener
 }

@@ -192,7 +192,7 @@ type MapEvent[K comparable, V any] interface {
 	Type() MapEventType
 }
 
-// mapEvent struct containing data members to satisfy the MapEvent contract.
+// mapEvent struct containing data members to satisfy the [MapEvent] contract.
 type mapEvent[K comparable, V any] struct {
 	// source the source of the event
 	source NamedMap[K, V]
@@ -219,7 +219,7 @@ type mapEvent[K comparable, V any] struct {
 	newValue *V
 }
 
-// newMapEvent creates and returns a pointer to a new mapEvent.
+// newMapEvent creates and returns a pointer to a new [M apEvent].
 func newMapEvent[K comparable, V any](source NamedMap[K, V], response *proto.MapEventResponse) *mapEvent[K, V] {
 	return &mapEvent[K, V]{
 		source:        source,
@@ -280,17 +280,17 @@ func (e *mapEvent[K, V]) NewValue() (*V, error) {
 	return e.newValue, nil
 }
 
-// Type returns the MapEventType for this MapEvent.
+// Type returns the MapEventType for this [MapEvent].
 func (e *mapEvent[K, V]) Type() MapEventType {
 	return e.eventType
 }
 
-// Source returns the source of this MapEvent.
+// Source returns the source of this [MapEvent].
 func (e *mapEvent[K, V]) Source() NamedMap[K, V] {
 	return e.source
 }
 
-// String returns the string representation of this MapEvent.
+// String returns the string representation of this [MapEvent].
 func (e *mapEvent[K, V]) String() string {
 	source := e.source
 	key, keyErr := e.Key()
@@ -334,44 +334,44 @@ func (sl *sessionLifecycleListener) getEmitter() *eventEmitter[SessionLifecycleE
 	return sl.emitter
 }
 
-// NewSessionLifecycleListener creates and returns a pointer to a new SessionLifecycleListener instance.
+// NewSessionLifecycleListener creates and returns a pointer to a new [SessionLifecycleListener] instance.
 func NewSessionLifecycleListener() SessionLifecycleListener {
 	return &sessionLifecycleListener{newEventEmitter[SessionLifecycleEventType, SessionLifecycleEvent]()}
 }
 
-// on registers a callback for the specified MapEventType
+// on registers a callback for the specified [MapEventType].
 func (sl *sessionLifecycleListener) on(event SessionLifecycleEventType, callback func(SessionLifecycleEvent)) SessionLifecycleListener {
 	sl.emitter.on(event, callback)
 	return sl
 }
 
-// OnConnected registers a callback that will be notified when a Session is connected.
+// OnConnected registers a callback that will be notified when a [Session] is connected.
 func (sl *sessionLifecycleListener) OnConnected(callback func(SessionLifecycleEvent)) SessionLifecycleListener {
 	return sl.on(Connected, callback)
 }
 
-// OnDisconnected registers a callback that will be notified when a Session is disconnected.
+// OnDisconnected registers a callback that will be notified when a [Session] is disconnected.
 func (sl *sessionLifecycleListener) OnDisconnected(callback func(SessionLifecycleEvent)) SessionLifecycleListener {
 	return sl.on(Disconnected, callback)
 }
 
-// OnReconnected registers a callback that will be notified when a Session is reconnected.
+// OnReconnected registers a callback that will be notified when a [Session] is reconnected.
 func (sl *sessionLifecycleListener) OnReconnected(callback func(SessionLifecycleEvent)) SessionLifecycleListener {
 	return sl.on(Reconnected, callback)
 }
 
-// OnClosed registers a callback that will be notified when a Session is closed.
+// OnClosed registers a callback that will be notified when a [Session] is closed.
 func (sl *sessionLifecycleListener) OnClosed(callback func(SessionLifecycleEvent)) SessionLifecycleListener {
 	return sl.on(Closed, callback)
 }
 
-// OnAny registers a callback that will be notified when a Session is connected, disconnected, reconnected or closed.
+// OnAny registers a callback that will be notified when a [Session] is connected, disconnected, reconnected or closed.
 func (sl *sessionLifecycleListener) OnAny(callback func(SessionLifecycleEvent)) SessionLifecycleListener {
 	return sl.on(Closed, callback).OnConnected(callback).OnDisconnected(callback).OnReconnected(callback)
 }
 
 // MapLifecycleListener allows registering callbacks to be notified when lifecycle events
-// (truncated or released) occur against a NamedMap or NamedCache.
+// (truncated or released) occur against a [NamedMap] or [NamedCache].
 type MapLifecycleListener[K comparable, V any] interface {
 	OnAny(callback func(MapLifecycleEvent[K, V])) MapLifecycleListener[K, V]
 	OnDestroyed(callback func(MapLifecycleEvent[K, V])) MapLifecycleListener[K, V]
@@ -388,7 +388,7 @@ func (l *mapLifecycleListener[K, V]) getEmitter() *eventEmitter[MapLifecycleEven
 	return l.emitter
 }
 
-// NewMapLifecycleListener creates and returns a pointer to a new MapLifecycleListener instance.
+// NewMapLifecycleListener creates and returns a pointer to a new [MapLifecycleListener] instance.
 func NewMapLifecycleListener[K comparable, V any]() MapLifecycleListener[K, V] {
 	return &mapLifecycleListener[K, V]{newEventEmitter[MapLifecycleEventType, MapLifecycleEvent[K, V]]()}
 }
@@ -399,28 +399,28 @@ func (l *mapLifecycleListener[K, V]) on(event MapLifecycleEventType, callback fu
 	return l
 }
 
-// OnDestroyed registers a callback that will be notified when a NamedMap is destroyed.
+// OnDestroyed registers a callback that will be notified when a [NamedMap] is destroyed.
 func (l *mapLifecycleListener[K, V]) OnDestroyed(callback func(MapLifecycleEvent[K, V])) MapLifecycleListener[K, V] {
 	return l.on(Destroyed, callback)
 }
 
-// OnTruncated registers a callback that will be notified when a NamedMap is truncated.
+// OnTruncated registers a callback that will be notified when a [NamedMap] is truncated.
 func (l *mapLifecycleListener[K, V]) OnTruncated(callback func(MapLifecycleEvent[K, V])) MapLifecycleListener[K, V] {
 	return l.on(Truncated, callback)
 }
 
-// OnReleased registers a callback that will be notified when a NamedMap is released.
+// OnReleased registers a callback that will be notified when a [NamedMap] is released.
 func (l *mapLifecycleListener[K, V]) OnReleased(callback func(MapLifecycleEvent[K, V])) MapLifecycleListener[K, V] {
 	return l.on(Released, callback)
 }
 
-// OnAny registers a callback that will be notified when any NamedMap event occurs.
+// OnAny registers a callback that will be notified when any [NamedMap] event occurs.
 func (l *mapLifecycleListener[K, V]) OnAny(callback func(MapLifecycleEvent[K, V])) MapLifecycleListener[K, V] {
 	return l.OnTruncated(callback).OnDestroyed(callback).OnReleased(callback)
 }
 
 // MapListener allows registering callbacks to be notified when mutations events
-// occur within a NamedMap or NamedCache.
+// occur within a [NamedMap] or [NamedCache].
 type MapListener[K comparable, V any] interface {
 	OnInserted(callback func(MapEvent[K, V])) MapListener[K, V]
 	OnUpdated(callback func(MapEvent[K, V])) MapListener[K, V]
@@ -429,12 +429,12 @@ type MapListener[K comparable, V any] interface {
 	dispatch(event MapEvent[K, V])
 }
 
-// mapListener struct containing data members to satisfy the MapListener contract.
+// mapListener struct containing data members to satisfy the [MapListener] contract.
 type mapListener[K comparable, V any] struct {
 	emitter *eventEmitter[MapEventType, MapEvent[K, V]]
 }
 
-// NewMapListener creates and returns a pointer to a new MapListener instance.
+// NewMapListener creates and returns a pointer to a new [MapListener] instance.
 func NewMapListener[K comparable, V any]() MapListener[K, V] {
 	return &mapListener[K, V]{newEventEmitter[MapEventType, MapEvent[K, V]]()}
 }
@@ -444,7 +444,7 @@ func (l *mapListener[K, V]) dispatch(event MapEvent[K, V]) { //nolint
 	l.emitter.emit(event.Type(), event)
 }
 
-// on registers a callback for the specified MapEventType
+// on registers a callback for the specified [MapEventType].
 func (l *mapListener[K, V]) on(event MapEventType, callback func(MapEvent[K, V])) MapListener[K, V] {
 	l.emitter.on(event, callback)
 	return l
@@ -483,9 +483,9 @@ type listenerGroup[K comparable, V any] struct {
 	postUnsubscribe func()
 }
 
-// addListener registers the specified MapListener to this group.  The lite
+// addListener registers the specified [MapListener] to this group.  The lite
 // flag is a hint to the Coherence cluster that an event may omit the old
-// and new values when emitting a MapEvent.
+// and new values when emitting a [MapEvent].
 func (lg *listenerGroup[K, V]) addListener(ctx context.Context, listener MapListener[K, V], lite bool) error {
 	prevLiteStatus, hasKey := lg.listeners[listener]
 	if hasKey && prevLiteStatus == lite {
@@ -541,7 +541,7 @@ func (lg *listenerGroup[K, V]) removeListener(ctx context.Context, listener MapL
 	return nil
 }
 
-// notify notifies all listeners of the provided MapEvent.
+// notify notifies all listeners of the provided [MapEvent].
 func (lg *listenerGroup[K, V]) notify(event MapEvent[K, V]) {
 	if len(lg.listeners) > 0 {
 		for l := range lg.listeners {
@@ -566,7 +566,7 @@ func (lg *listenerGroup[K, V]) write(request *proto.MapListenerRequest) error {
 }
 
 // subscribe this group.  The lite flag is a hint to the Coherence cluster
-// that an event may omit the old and new values when emitting a MapEvent.
+// that an event may omit the old and new values when emitting a [MapEvent].
 func (lg *listenerGroup[K, V]) subscribe(ctx context.Context, lite bool) error {
 	lg.request.Lite = lite
 	lg.request.Subscribe = true
@@ -708,7 +708,7 @@ type pendingListenerOp[K comparable, V any] struct {
 }
 
 // newMapEventManager creates/initializes and returns a pointer to a new
-// mapEventManager
+// mapEventManager.
 func newMapEventManager[K comparable, V any](namedMap *NamedMap[K, V], bc baseClient[K, V], session *Session) (*mapEventManager[K, V], error) {
 	manager := mapEventManager[K, V]{
 		bc:                   bc,
@@ -744,7 +744,7 @@ func (m *mapEventManager[K, V]) close() {
 	m.namedMap = nil
 }
 
-// addLifecycleListener adds the specified MapLifecycleListener.
+// addLifecycleListener adds the specified [MapLifecycleListener].
 func (m *mapEventManager[K, V]) addLifecycleListener(listener MapLifecycleListener[K, V]) {
 	for _, e := range m.lifecycleListeners {
 		if *e == listener {
@@ -754,7 +754,7 @@ func (m *mapEventManager[K, V]) addLifecycleListener(listener MapLifecycleListen
 	m.lifecycleListeners = append(m.lifecycleListeners, &listener)
 }
 
-// removeLifecycleListener removes the specified MapLifecycleListener.
+// removeLifecycleListener removes the specified [MapLifecycleListener].
 func (m *mapEventManager[K, V]) removeLifecycleListener(listener MapLifecycleListener[K, V]) {
 	idx := -1
 	listeners := m.lifecycleListeners
@@ -770,7 +770,7 @@ func (m *mapEventManager[K, V]) removeLifecycleListener(listener MapLifecycleLis
 	}
 }
 
-// addKeyListener adds a new key-based MapListener.  The lite flag is a hint
+// addKeyListener adds a new key-based [MapListener].  The lite flag is a hint
 // to the Coherence cluster that an event may omit the old and new
 // values when emitting a MapEvent.
 func (m *mapEventManager[K, V]) addKeyListener(ctx context.Context, listener MapListener[K, V], key K, lite bool) error {
@@ -796,7 +796,7 @@ func (m *mapEventManager[K, V]) removeKeyListener(ctx context.Context, listener 
 	return nil
 }
 
-// addFilterListener adds a new filter-based MapListener.  The lite flag is a hint
+// addFilterListener adds a new filter-based [MapListener].  The lite flag is a hint
 // to the Coherence cluster that an event may omit the old and new
 // values when emitting a MapEvent.
 func (m *mapEventManager[K, V]) addFilterListener(ctx context.Context, listener MapListener[K, V], filter filters.Filter, lite bool) error {
@@ -946,7 +946,7 @@ func (m *mapEventManager[K, V]) ensureStream() (*eventStream, error) {
 	return m.eventStream, nil
 }
 
-// newSubscribeRequest creates/initializes and returns a proto.MapListenerRequest.
+// newSubscribeRequest creates/initializes and returns a [proto.MapListenerRequest].
 func (m *mapEventManager[K, V]) newSubscribeRequest(requestType string) proto.MapListenerRequest {
 	return proto.MapListenerRequest{
 		Subscribe: true,

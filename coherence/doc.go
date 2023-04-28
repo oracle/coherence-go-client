@@ -11,44 +11,23 @@ Coherence Cluster using Google's gRPC framework for the network transport.
 Your cluster must be running Coherence Community Edition (CE) 22.06.4+ or Coherence commercial
 version 14.1.1.2206.4+ and must be running a gRPC Proxy.
 
-This API provides two types of caches, NamedMap and NamedCache. NamedCache is syntactically identical in behaviour to a NamedMap,
+This API provides two types of caches, [NamedMap] and [NamedCache]. [NamedCache] is syntactically identical in behaviour to a [NamedMap],
 but additionally implements the PutWithExpiry operation.
 
-# NamedMap
+# Introduction
 
-NamedMap is an externally managed map-like (Java) data-structure,
-mapping keys to values, supporting full concurrency of retrievals and high expected concurrency
-for updates. Like traditional maps, this object cannot contain duplicate keys;
-each key can map to at most one value.
+The Coherence Go client provides the following features:
 
-Unlike traditional on-heap map implementations, objects of this interface will typically
-maintain their keys and values off-heap, possibly in external processes.  Programs using
-these objects may thus experience increased latency when accessing keys and values
-compared to traditional on-heap map implementations as access may entail remote
-network requests, together with object serialization and deserialization to and from JSON.
+  - Familiar Map-like interface for manipulating cache entries including but not limited to Put, PutWithExpiry, PutIfAbsent, PutAll, Get, GetAll, Remove, Clear, GetOrDefault, Replace, ReplaceMapping, Size, IsEmpty, ContainsKey, ContainsValue, ContainsEntry
+  - Cluster-side querying, aggregation and filtering of map entries
+  - Cluster-side manipulation of map entries using EntryProcessors
+  - Registration of listeners to be notified of mutations such as
+  - insert, update and delete on Maps, map lifecycle events such as truncated, released or destroyed
+    and session lifecycle events such as connected, disconnected, reconnected and closed
+  - Support for storing Go structs as JSON as well as the ability to serialize to Java objects on the server for access from other Coherence language API's
+  - Full support for Go generics in all Coherence API's
 
-Great care must be exercised if mutable objects are used as map keys.  The behavior of a map
-is not specified if the value of a key is changed in a manner that affects comparisons when
-the key is placed in a map.  A NamedMap must not contain itself as a key or value.
-
-Although all operations are thread-safe, retrieval operations do not entail locking, and there
-is no support for locking an entire map in a way to prevent all access.  Retrievals reflect
-the results of the most recently completed update operations holding upon their onset. More
-formally, an update operation for a given key bears a happens-before relation with any
-(non-nil) retrieval for that key reporting the updated value.
-
-For aggregate operations such as Size, PutAll and Clear, concurrent retrievals may reflect
-insertion or removal of only some entries. Similarly, values returned by streams may only reflect
-the state of the elements at some point or since the creation of the stream, which are designed to
-be used by only one thread at a time. Bear in mind that the results of aggregate status methods
-including Size and IsEmpty are typically useful only when a map is not undergoing concurrent updates
-in other threads or programs. Otherwise, the results of these methods reflect transient states that
-may be adequate for monitoring or estimation purposes, but not for program control.
-
-In addition to basic key/value store functionality NamedMap offers a rich set of primitives in order
-to query, mutate, and aggregate values in the remote store. Filters offer the ability to filter and
-reduce the operational result set.  Processors allow invocation of operations against a result set,
-possibly mutating the values.  Lastly, Aggregators allow summarizing a result set.
+For more information on Coherence caches, please see the [Coherence Documentation].
 
 # Supported Go Versions
 
@@ -56,7 +35,7 @@ This API fully supports Go Generics and is only supported for use with Go versio
 
 # Obtaining an instance of a NamedMap
 
-New NamedMap instances are constructed using the Session APIs.
+New [NamedMap] instances are constructed using the Session APIs.
 
 Example:
 
@@ -75,33 +54,34 @@ Example:
 	    log.Fatal(err)
 	}
 
-The NewSession() method creates a new session that will connect to a gRPC proxy server on "localhost:1408" by default.
+The [NewSession] method creates a new session that will connect to a gRPC proxy server on "localhost:1408" by default.
 
-You can specify the host and port to connect to by specifying the environment variables COHERENCE_SERVER_HOST_NAME
-and COHERENCE_SERVER_GRPC_PORT. You can also pass coherence.WithAddress("host:port") to specify the gRPC host and
-port to connect to. The default connection mode is with SSL enabled, but you can use plan-text via using coherence.WithPlainText().
+You can specify the host and port to connect to by specifying the environment variable COHERENCE_SERVER_ADDRESS.
+See [gRPC Naming] for information on values for this.
+You can also pass [coherence.WithAddress]("host:port") to specify the gRPC host and
+port to connect to. The default connection mode is with SSL enabled, but you can use plan-text via using [coherence.WithPlainText]().
 
-To Configure SSL, you must first enable SSL on the gRPC Proxy, see https://docs.oracle.com/en/middleware/standalone/coherence/14.1.1.2206/develop-remote-clients/using-coherence-grpc-server.html for details.
-Refer to the section on Session for more information on setting up a SSL connection on the client.
+To Configure SSL, you must first enable SSL on the gRPC Proxy, see [gRPC Proxy documentation] for details.
+Refer to the section on [Session] for more information on setting up a SSL connection on the client.
 
-Once a session has been created, the NewNamedMap(session, name) can be used to obtain
-an instance of a NamedMap. The key and value types must be provided as generic type arguments.
-This identifier may be shared across clients.  It's also possible to have many NamedMap's simultaneously.
+Once a session has been created, the [NewNamedMap](session, name) can be used to obtain
+an instance of a [NamedMap]. The key and value types must be provided as generic type arguments.
+This identifier may be shared across clients.  It's also possible to have many [NamedMap]'s defined and in use simultaneously.
 
-If you wish to create a NamedCache, which supports expiry, you can use the following:
+If you wish to create a [NamedCache], which supports expiry, you can use the following:
 
 	namedMap, err := coherence.NewNamedCache[int, string](session, "customers")
 	if err != nil {
 	    log.Fatal(err)
 	}
 
-See session.go which lists all the options supported by the Session APIs.
+See [SessionOptions] which lists all the options supported by the [Session] API.
 
-# Examples using a NamedMap
+# Storing/retrieving/removing a value to/from a NamedMap
 
-Note: See https://github.com/oracle/coherence-go-client/examples for more detailed examples.
+Note: See the [examples] on GitHub for detailed examples.
 
-Assuming a very trivial NamedMap with integer keys and string values.
+Assuming a very trivial [NamedMap] with integer keys and string values.
 
 	session, err := coherence.NewSession(coherence.WithPlainText())
 	if err != nil {
@@ -112,8 +92,6 @@ Assuming a very trivial NamedMap with integer keys and string values.
 	if err != nil {
 	    log.Fatal(err)
 	}
-
-Ex. 1 - Storing/retrieving/removing a value to/from the NamedMap
 
 	ctx := context.Background()
 
@@ -146,7 +124,7 @@ Ex. 1 - Storing/retrieving/removing a value to/from the NamedMap
 Note: Keys and values are serialized to JSON and stored in Coherence as a com.oracle.coherence.io.json.JsonObject.
 if you wish to store structs as native Java objects, then please see the section further down on "Serializing to Java Objects on the Server".
 
-Ex. 2 - Working with structs
+# Working with structs
 
 	type Person struct {
 	    ID   int    `json:"id"`
@@ -189,16 +167,15 @@ Ex. 2 - Working with structs
 	}
 	fmt.Println("Person is", *person)
 
-Ex. 3 - Working with streaming filtered and un-filtered results using channels
+# Working with streaming filtered and un-filtered results using channels
 
-	// Channels are used to deal with individual keys, values or entries
-	// streamed from the backend using a filter or an open query.  Depending
-	// upon the operation, each result element is wrapped in one of the structs
-	// StreamedEntry, StreamedValue or StreamedKey which wraps an error and a
-	// Key and/or a Value. As always, the Err object must be
-	// checked for errors before accessing the Key or Value fields.
-	// All functions that return channels are EntrySetFilter(), KeySetFilter(), ValuesFilter(),
-	// EntrySet(), KeySet(), Values(), InvokeAll() and InvokeAllFilter().
+Channels are used to deal with individual keys, values or entries
+streamed from the backend using a filter or an open query.  Depending
+upon the operation, each result element is wrapped in one of the structs
+[StreamedEntry], [StreamedValue] or [StreamedKey] which wraps an error and a
+Key and/or a Value. As always, the Err object must be checked for errors before accessing the Key or Value fields.
+All functions that return channels are EntrySetFilter, KeySetFilter, ValuesFilter,
+EntrySet, KeySet, Values, InvokeAll and InvokeAllFilter.
 
 	namedMap, err := coherence.NewNamedMap[int, Person](session, "people")
 	if err != nil {
@@ -221,15 +198,15 @@ Ex. 3 - Working with streaming filtered and un-filtered results using channels
 	// we can also do more complex filtering such as looking for people > 30 and where there name begins with 'T'
 	ch := namedMap.EntrySetFilter(ctx, filters.Greater(age, 20).And(filters.Like(name, "T%", true)))
 
-Ex. 4 Using entry processors for in-place processing
+# Using entry processors for in-place processing
 
-	// A Processor is an object that allows you to process (update) one or more NamedMap entries on the NamedMap itself,
-	// instead of moving the entries to the client across the network. In other words, using processors we send
-	// the processing to where the data resides thus avoiding massive data movement across the network. Processors can be
-	// executed against all entries, a single key or against a set of entries that match a Filter.
+A Processor is an object that allows you to process (update) one or more [NamedMap] entries on the [NamedMap] itself,
+instead of moving the entries to the client across the network. In other words, using processors we send
+the processing to where the data resides thus avoiding massive data movement across the network. Processors can be
+executed against all entries, a single key or against a set of entries that match a Filter.
 
-	// To demonstrate this, lets assume we have a NamedMap populated with Person struct below, and we want to
-	// run various scenarios to increase peoples salary by using a Multiply processor.
+To demonstrate this, lets assume we have a [NamedMap] populated with Person struct below, and we want to
+run various scenarios to increase peoples salary by using a [processors.Multiply] processor.
 
 	type Person struct {
 	    Id     int     `json:"id"`
@@ -262,14 +239,14 @@ Ex. 4 Using entry processors for in-place processing
 	    }
 	}
 
-Ex. 5 Aggregating results
+# Aggregating results
 
-	// Aggregators can be used to perform operations against a subset of entries to obtain a single result.
-	// Entry aggregation occurs in parallel across the grid to provide map-reduce support when working with
-	// large amounts of data.
+Aggregators can be used to perform operations against a subset of entries to obtain a single result.
+Entry aggregation occurs in parallel across the grid to provide map-reduce support when working with
+large amounts of data.
 
-	// To demonstrate this, lets assume we have a NamedMap populated with Person struct as per example 5, and we want to
-	// run various scenarios to perform aggregations.
+To demonstrate this, lets assume we have a [NamedMap] populated with Person struct as per the previous example, and we want to
+run various scenarios to perform aggregations.
 
 	namedMap, err := coherence.NewNamedMap[int, Person](session, "people")
 	if err != nil {
@@ -294,46 +271,11 @@ Ex. 5 Aggregating results
 	salaryResult, err = coherence.AggregateFilter[int, Person, []Person](ctx, namedMap, filters.Greater(age, 40),
 	    aggregators.TopN[float32, Person](extractors.Extract[float32]("salary"), false, 2))
 
-Ex. 6 Responding to Map events
+# Responding to Map events
 
-	// The Coherence Go Client provides the ability to add a MapListener that will receive events (inserts, updates, deletes)
-	// that occur against a NamedMap or NamedCache. You can listen for all events, events based upon a filter or
-	// events based upon a key.
-
-	// consider the example below where we want to listen for all 'update' events for a NamedMap.
-	// We define the following type and specify it comprises a coherence.MapListener.
-
-	type UpdateEventsListener[K comparable, V any] struct {
-	    listener coherence.MapListener[K, V]
-	}
-
-	// we then define a function to return this type and register for the OnUpdated event.
-	// There are also OnInserted, OnDeleted and OnAny functions.
-
-	func NewUpdateEventsListener[K comparable, V any]() *UpdateEventsListener[K, V] {
-	    exampleListener := UpdateEventsListener[K, V]{
-	    listener: coherence.NewMapListener[K, V](),
-	    }
-
-	    exampleListener.listener.OnUpdated(func(e coherence.MapEvent[K, V]) {
-	        key, err := e.Key()
-	        if err != nil {
-	            log.Fatal("unable to deserialize key")
-	        }
-
-	        newValue, err := e.NewValue()
-	        if err != nil {
-	            log.Fatal("unable to deserialize new value")
-	        }
-
-	        oldValue, err := e.OldValue()
-	        if err != nil {
-	            log.Fatal("unable to deserialize old value")
-	        }
-	        fmt.Printf("**EVENT=Updated: key=%v, oldValue=%v, newValue=%v\n", *key, *oldValue, *newValue)
-	    })
-	    return &exampleListener
-	}
+he Coherence Go Client provides the ability to add a [MapListener] that will receive events (inserts, updates, deletes)
+that occur against a [NamedMap] or [NamedCache]. You can listen for all events, events based upon a filter or
+vents based upon a key.
 
 	// in your main code, create a new NamedMap and register the listener
 	namedMap, err := coherence.NewNamedMap[int, Person](session, "people")
@@ -341,14 +283,33 @@ Ex. 6 Responding to Map events
 	    log.Fatal(err)
 	}
 
-	listener := NewUpdateEventsListener[int, Person]()
-	if err = namedMap.AddListener(ctx, listener.listener); err != nil {
-	    log.Fatal("unable to add listener", listener)
+	listener := coherence.NewMapListener[int, Person]().OnUpdated(
+	func(e coherence.MapEvent[int, Person]) {
+	    key, err := e.Key()
+	    if err != nil {
+	        panic("unable to deserialize key")
+	    }
+
+	    newValue, err := e.NewValue()
+	    if err != nil {
+	        panic("unable to deserialize new value")
+	    }
+
+	    oldValue, err := e.OldValue()
+	    if err != nil {
+	        panic("unable to deserialize old value")
+	    }
+
+	    fmt.Printf("**EVENT=Updated: key=%v, oldValue=%v, newValue=%v\n", *key, *oldValue, *newValue)
+	})
+
+	if err = namedMap.AddListener(ctx, listener); err != nil {
+	    panic(err)
 	}
 
 	// ensure we unregister the listener
-	defer func(ctx context.Context, namedMap coherence.NamedMap[int, Person], listener *UpdateEventsListener[int, Person]) {
-	    _ = namedMap.RemoveListener(ctx, listener.listener)
+	defer func(ctx context.Context, namedMap coherence.NamedMap[int, Person], listener coherence.MapListener[int, Person]) {
+	    _ = namedMap.RemoveListener(ctx, listener)
 	}(ctx, namedMap, listener)
 
 	// As you carry out operations that will mutate the cache entries, update the age to 56, you will see the events printed
@@ -362,44 +323,23 @@ Ex. 6 Responding to Map events
 
 	// you can also listen based upon filters, for example the following would create a
 	// listener for all entries where the salary is > 17000
-	if err = namedMap.AddFilterListener(ctx, listener.listener,
+	if err = namedMap.AddFilterListener(ctx, listener,
 	    filters.Greater(extractors.Extract[int]("salary"), 17000)); err != nil {
-	    log.Fatal("unable to add listener", listener)
+	    log.Fatal("unable to add listener", listener, err)
 	}
 
 	// You can also listen on a specific key, e.g. list on key 1.
 	listener := NewUpdateEventsListener[int, Person]()
-	if err = namedMap.AddKeyListener(ctx, listener.listener, 1); err != nil {
-	    log.Fatal("unable to add listener", listener)
+	if err = namedMap.AddKeyListener(ctx, listener, 1); err != nil {
+	    log.Fatal("unable to add listener", listener, err)
 	}
 
-Ex. 7 Responding to Cache Lifecycle events
+# Responding to Cache Lifecycle events
 
-	// The Coherence Go Client provides the ability to add a MapLifecycleListener that will receive events (truncated and destroyed)
-	// that occur against a NamedMap or NamedCache.
+The Coherence Go Client provides the ability to add a [MapLifecycleListener] that will receive events (truncated and destroyed)
+that occur against a [NamedMap] or [NamedCache].
 
 	// consider the example below where we want to listen for all 'truncate' events for a NamedMap.
-	// We define the following type and specify it comprises a coherence.MapLifecycleListener.
-
-	type TruncateEventsListener[K comparable, V any] struct {
-	    listener coherence.MapLifecycleListener[K, V]
-	}
-
-	// we then define a function to return this type and register for the OnTruncated event.
-	// There are also OnDestroyed and OnAny functions.
-
-	func NewTruncateEventsListener[K comparable, V any]() *TruncateEventsListener[K, V] {
-	    exampleListener := TruncateEventsListener[K, V]{
-	        listener: coherence.NewMapLifecycleListener[K, V](),
-	    }
-
-	    exampleListener.listener.OnTruncated(func(e coherence.MapLifecycleEvent[K, V]) {
-	        fmt.Printf("**EVENT=Truncated: value=%v\n", e.Source())
-	    })
-
-	    return &exampleListener
-	}
-
 	// in your main code, create a new NamedMap and register the listener
 	namedMap, err := coherence.NewNamedMap[int, Person](session, "people")
 	if err != nil {
@@ -407,10 +347,13 @@ Ex. 7 Responding to Cache Lifecycle events
 	}
 
 	// Create a listener and add to the cache
-	listener := NewTruncateEventsListener[int, Person]()
+	listener := coherence.NewMapLifecycleListener[int, Person]().
+	    OnTruncated(func(e coherence.MapLifecycleEvent[int, Person]) {
+	        fmt.Printf("**EVENT=%s: source=%v\n", e.Type(), e.Source())
+	    })
 
-	namedMap.AddLifecycleListener(listener.listener)
-	defer namedMap.RemoveLifecycleListener(listener.listener)
+	namedMap.AddLifecycleListener(listener)
+	defer namedMap.RemoveLifecycleListener(listener)
 
 	newPerson := Person{ID: 1, Name: "Tim", Age: 53}
 	fmt.Println("Add new Person", newPerson)
@@ -434,32 +377,15 @@ Ex. 7 Responding to Cache Lifecycle events
 	// Cache size is 1 truncating cache
 	// **EVENT=Truncated: value=NamedMap{name=people, format=json}
 
-Ex. 8 Responding to Session Lifecycle events
+# Responding to Session Lifecycle events
 
-	// The Coherence Go Client provides the ability to add a SessionLifecycleListener that will receive events (connected, closed,
-	// disconnected or reconnected) that occur against the session.
-	// Note: These events use and experimental gRPC API so may not be reliable or may change in the future.
+The Coherence Go Client provides the ability to add a [SessionLifecycleListener] that will receive events (connected, closed,
+disconnected or reconnected) that occur against the [Session].
+Note: These events use and experimental gRPC API so may not be reliable or may change in the future. This is due to the
+experimental nature of the underlying gRPC API.
 
-	// consider the example below where we want to listen for all 'All' events for a Session.
-	// We define the following type and specify it comprises a coherence.SessionLifecycleListener.
-
-	type AllSessionLifecycleEventsListener struct {
-	    listener coherence.SessionLifecycleListener
-	}
-
-	func NewAllLifecycleEventsListener() *AllSessionLifecycleEventsListener {
-	    exampleListener := AllSessionLifecycleEventsListener{
-		    listener: coherence.NewSessionLifecycleListener(),
-	    }
-
-	    exampleListener.listener.OnAny(func(e coherence.SessionLifecycleEvent) {
-	        fmt.Printf("**EVENT=%s: source=%v\n", e.Type(), e.Source())
-	    })
-
-	    return &exampleListener
-	}
-
-	// in your main code, create a new Session and register the listener
+Consider the example below where we want to listen for all 'All' events for a [Session].
+in your main code, create a new [Session] and register the listener
 
 	// create a new Session
 	session, err := coherence.NewSession(ctx, coherence.WithPlainText())
@@ -468,10 +394,13 @@ Ex. 8 Responding to Session Lifecycle events
 	}
 
 	// Create a listener to listen for session events
-	listener := NewAllLifecycleEventsListener()
+	listener := coherence.NewSessionLifecycleListener().
+	    OnAny(func(e coherence.SessionLifecycleEvent) {
+	        fmt.Printf("**EVENT=%s: source=%v\n", e.Type(), e.Source())
+	})
 
-	session.AddSessionLifecycleListener(listener.listener)
-	defer session.RemoveSessionLifecycleListener(listener.listener)
+	session.AddSessionLifecycleListener(listener)
+	defer session.RemoveSessionLifecycleListener(listener)
 
 	// create a new NamedMap of Person with key int
 	namedMap, err := coherence.NewNamedMap[int, Person](session, "people")
@@ -563,5 +492,10 @@ Lastly, when you create a Customer object you must set the Class value matching 
 	if err != nil {
 	    log.Fatal(err)
 	}
+
+[Coherence Documentation]: https://docs.oracle.com/en/middleware/standalone/coherence/14.1.1.2206/develop-applications/introduction-coherence-caches.html
+[examples]: https://github.com/oracle/coherence-go-client/tree/main/examples
+[gRPC Proxy documentation]: https://docs.oracle.com/en/middleware/standalone/coherence/14.1.1.2206/develop-remote-clients/using-coherence-grpc-server.html
+[gRPC Naming]: https://github.com/grpc/grpc/blob/master/doc/naming.md
 */
 package coherence

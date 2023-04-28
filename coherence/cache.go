@@ -98,7 +98,7 @@ type NamedMap[K comparable, V any] interface {
 
 	// EntrySet returns a channel from which all entries can be obtained.
 	// Note: the entries are paged internally to avoid excessive memory usage, but you need to be
-	// carefull when running this operation against NamedMaps with large number of entries.
+	// careful when running this operation against NamedMaps with large number of entries.
 	EntrySet(ctx context.Context) <-chan *StreamedEntry[K, V]
 
 	// Get returns the value to which the specified key is mapped. V will be nil if there was no previous value.
@@ -125,7 +125,7 @@ type NamedMap[K comparable, V any] interface {
 
 	// KeySet returns a channel from which keys of all entries can be obtained.
 	// Note: the entries are paged internally to avoid excessive memory usage, but you need to be
-	// carefull when running this operation against NamedMaps with large number of entries.
+	// careful when running this operation against NamedMaps with large number of entries.
 	KeySet(ctx context.Context) <-chan *StreamedKey[K]
 
 	// Name returns the name of the NamedMap.
@@ -183,7 +183,7 @@ type NamedMap[K comparable, V any] interface {
 
 	// Values return a view of all values contained in this NamedMap.
 	// Note: the entries are paged internally to avoid excessive memory usage, but you need to be
-	// carefull when running this operation against NamedMaps with large number of entries.
+	// careful when running this operation against NamedMaps with large number of entries.
 	Values(ctx context.Context) <-chan *StreamedValue[V]
 
 	getBaseClient() *baseClient[K, V]
