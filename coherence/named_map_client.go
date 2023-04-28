@@ -293,13 +293,13 @@ func (nm *NamedMapClient[K, V]) AddKeyListenerLite(ctx context.Context, listener
 	return nm.getBaseClient().eventManager.addKeyListener(ctx, listener, key, true)
 }
 
-// Clear removes all mappings from this [NamedMap]. This operation is observable and will
+// Clear removes all mappings from the [NamedMap]. This operation is observable and will
 // trigger any registered events.
 func (nm *NamedMapClient[K, V]) Clear(ctx context.Context) error {
 	return executeClear[K, V](ctx, &nm.baseClient)
 }
 
-// Truncate removes all mappings from this [NamedMap].
+// Truncate removes all mappings from the [NamedMap].
 // Note: the removal of entries caused by this truncate operation will not be observable.
 func (nm *NamedMapClient[K, V]) Truncate(ctx context.Context) error {
 	return executeTruncate[K, V](ctx, &nm.baseClient)
@@ -359,7 +359,7 @@ func (nm *NamedMapClient[K, V]) Release() {
 	}
 }
 
-// ContainsKey returns true if this [NamedMap] contains a mapping for the specified key.
+// ContainsKey returns true if the [NamedMap] contains a mapping for the specified key.
 //
 // The example below shows how to check if a [NamedMap] contains a mapping for the key 1.
 //
@@ -375,7 +375,7 @@ func (nm *NamedMapClient[K, V]) ContainsKey(ctx context.Context, key K) (bool, e
 	return executeContainsKey(ctx, &nm.baseClient, key)
 }
 
-// ContainsValue returns true if this [NamedMap] contains a mapping for the specified value.
+// ContainsValue returns true if the [NamedMap] contains a mapping for the specified value.
 //
 // The example below shows how to check if a [NamedMap] contains a mapping for the person.
 //
@@ -392,7 +392,7 @@ func (nm *NamedMapClient[K, V]) ContainsValue(ctx context.Context, value V) (boo
 	return executeContainsValue(ctx, &nm.baseClient, value)
 }
 
-// ContainsEntry returns true if this [NamedMap] contains a mapping for the specified key and value.
+// ContainsEntry returns true if the [NamedMap] contains a mapping for the specified key and value.
 //
 // The example below shows how to check if a [NamedMap] contains a mapping for the key 1 and person.
 //
@@ -409,7 +409,7 @@ func (nm *NamedMapClient[K, V]) ContainsEntry(ctx context.Context, key K, value 
 	return executeContainsEntry(ctx, &nm.baseClient, key, value)
 }
 
-// IsEmpty returns true if this [NamedMap] contains no mappings.
+// IsEmpty returns true if the [NamedMap] contains no mappings.
 func (nm *NamedMapClient[K, V]) IsEmpty(ctx context.Context) (bool, error) {
 	return executeIsEmpty(ctx, &nm.baseClient)
 }
@@ -462,7 +462,7 @@ func (nm *NamedMapClient[K, V]) EntrySet(ctx context.Context) <-chan *StreamedEn
 }
 
 // Get returns the value to which the specified key is mapped. V will be nil
-// if this [NamedMap] contains no mapping for the key.
+// if the [NamedMap] contains no mapping for the key.
 //
 //	namedMap, err := coherence.NewNamedMap[int, Person](session, "people")
 //	if err != nil {
@@ -565,7 +565,7 @@ func (nm *NamedMapClient[K, V]) Name() string {
 	return nm.name
 }
 
-// PutAll copies all the mappings from the specified map to this [NamedMap].
+// PutAll copies all the mappings from the specified map to the [NamedMap].
 // This is the most efficient way to add multiple entries into a [NamedMap] as it
 // is carried out in parallel and no previous values are returned.
 //
@@ -600,7 +600,7 @@ func (nm *NamedMapClient[K, V]) Put(ctx context.Context, key K, value V) (*V, er
 	return executePutWithExpiry(ctx, &nm.baseClient, key, value, time.Duration(0))
 }
 
-// Remove removes the mapping for a key from this [NamedMap] if it is present and
+// Remove removes the mapping for a key from the [NamedMap] if it is present and
 // returns the previous value or nil if there wasn't one.
 //
 //	namedMap, err := coherence.NewNamedMap[int, Person](session, "people")
@@ -666,12 +666,12 @@ func (nm *NamedMapClient[K, V]) GetSession() *Session {
 	return nm.session
 }
 
-// Size returns the number of mappings contained within this [NamedMap].
+// Size returns the number of mappings contained within the [NamedMap].
 func (nm *NamedMapClient[K, V]) Size(ctx context.Context) (int, error) {
 	return executeSize(ctx, &nm.baseClient)
 }
 
-// ValuesFilter returns a view of filtered values contained in this [NamedMap].
+// ValuesFilter returns a view of filtered values contained in the [NamedMap].
 // The returned channel will be asynchronously filled with values in the
 // [NamedMap] that satisfy the filter.
 //
@@ -694,7 +694,7 @@ func (nm *NamedMapClient[K, V]) ValuesFilter(ctx context.Context, fltr filters.F
 	return executeValues(ctx, &nm.baseClient, fltr)
 }
 
-// Values returns a view of all values contained in this [NamedMap].
+// Values returns a view of all values contained in the [NamedMap].
 //
 // Note: the entries are paged internally to avoid excessive memory usage, but you need to be
 // careful when running this operation against [NamedMap]s with large number of entries.
