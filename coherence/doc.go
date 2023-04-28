@@ -11,7 +11,7 @@ Coherence Cluster using Google's gRPC framework for the network transport.
 Your cluster must be running Coherence Community Edition (CE) 22.06.4+ or Coherence commercial
 version 14.1.1.2206.4+ and must be running a gRPC Proxy.
 
-This API provides two types of caches, [NamedMap] and [NamedCache]. [NamedCache] is syntactically identical in behaviour to a [NamedMap],
+Two interfaces, [NamedMap] and [NamedCache], are available to access Coherence caches. [NamedCache] is syntactically identical in behaviour to a [NamedMap],
 but additionally implements the PutWithExpiry operation.
 
 # Introduction
@@ -29,11 +29,11 @@ The Coherence Go client provides the following features:
 
 For more information on Coherence caches, please see the [Coherence Documentation].
 
-# Supported Go Versions
+# Supported Go versions
 
 This API fully supports Go Generics and is only supported for use with Go versions 1.19 and above.
 
-# Obtaining an instance of a NamedMap
+# Obtaining a NamedMap or NamedCache
 
 New [NamedMap] instances are constructed using the Session APIs.
 
@@ -77,7 +77,7 @@ If you wish to create a [NamedCache], which supports expiry, you can use the fol
 
 See [SessionOptions] which lists all the options supported by the [Session] API.
 
-# Storing/retrieving/removing a value to/from a NamedMap
+# Basic CRUD operations
 
 Note: See the [examples] on GitHub for detailed examples.
 
@@ -167,7 +167,7 @@ if you wish to store structs as native Java objects, then please see the section
 	}
 	fmt.Println("Person is", *person)
 
-# Working with streaming filtered and un-filtered results using channels
+# Querying and filtering using channels
 
 Channels are used to deal with individual keys, values or entries
 streamed from the backend using a filter or an open query.  Depending
@@ -239,7 +239,7 @@ run various scenarios to increase peoples salary by using a [processors.Multiply
 	    }
 	}
 
-# Aggregating results
+# Aggregating cache data
 
 Aggregators can be used to perform operations against a subset of entries to obtain a single result.
 Entry aggregation occurs in parallel across the grid to provide map-reduce support when working with
@@ -271,7 +271,7 @@ run various scenarios to perform aggregations.
 	salaryResult, err = coherence.AggregateFilter[int, Person, []Person](ctx, namedMap, filters.Greater(age, 40),
 	    aggregators.TopN[float32, Person](extractors.Extract[float32]("salary"), false, 2))
 
-# Responding to Map events
+# Responding to cache events
 
 he Coherence Go Client provides the ability to add a [MapListener] that will receive events (inserts, updates, deletes)
 that occur against a [NamedMap] or [NamedCache]. You can listen for all events, events based upon a filter or
@@ -334,7 +334,7 @@ vents based upon a key.
 	    log.Fatal("unable to add listener", listener, err)
 	}
 
-# Responding to Cache Lifecycle events
+# Responding to cache lifecycle events
 
 The Coherence Go Client provides the ability to add a [MapLifecycleListener] that will receive events (truncated and destroyed)
 that occur against a [NamedMap] or [NamedCache].
@@ -377,7 +377,7 @@ that occur against a [NamedMap] or [NamedCache].
 	// Cache size is 1 truncating cache
 	// **EVENT=Truncated: value=NamedMap{name=people, format=json}
 
-# Responding to Session Lifecycle events
+# Responding to session lifecycle events
 
 The Coherence Go Client provides the ability to add a [SessionLifecycleListener] that will receive events (connected, closed,
 disconnected or reconnected) that occur against the [Session].
@@ -422,7 +422,7 @@ in your main code, create a new [Session] and register the listener
 	// 2023/01/31 11:15:38 closed session 59f3ec81-dda1-41b7-92de-70aad3d26615
 	// **EVENT=session_closed: source=SessionID=59f3ec81-dda1-41b7-92de-70aad3d26615, closed=true, caches=0, maps=0
 
-# Serializing to Java Objects on the Server
+# Serializing to Java objects on the server
 
 By default, the Coherence Go client serializes any keys and values to JSON and then stores them as JsonObjects in Coherence.
 This is usually sufficient for most applications where you are only accessing your data via the Go Client.
