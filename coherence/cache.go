@@ -59,10 +59,10 @@ type NamedMap[K comparable, V any] interface {
 	// This call is equivalent to calling AddFilterListenerLite with filters.Always as the filter.
 	AddListenerLite(ctx context.Context, listener MapListener[K, V]) error
 
-	// Clear removes all mappings from this NamedMap.
+	// Clear removes all mappings from the NamedMap.
 	Clear(ctx context.Context) error
 
-	// Truncate removes all mappings from this NamedMap.
+	// Truncate removes all mappings from the NamedMap.
 	// Note: the removal of entries caused by this truncate operation will not be observable.
 	Truncate(ctx context.Context) error
 
@@ -79,16 +79,16 @@ type NamedMap[K comparable, V any] interface {
 	// resources. To access the NamedMap, you must get a new instance.
 	Release()
 
-	// ContainsKey returns true if this NamedMap contains a mapping for the specified key.
+	// ContainsKey returns true if the NamedMap contains a mapping for the specified key.
 	ContainsKey(ctx context.Context, key K) (bool, error)
 
-	// ContainsValue returns true if this NamedMap maps one or more keys to the specified value
+	// ContainsValue returns true if the NamedMap maps one or more keys to the specified value
 	ContainsValue(ctx context.Context, value V) (bool, error)
 
-	// ContainsEntry returns true if this NamedMap contains a mapping for the specified key and value.
+	// ContainsEntry returns true if the NamedMap contains a mapping for the specified key and value.
 	ContainsEntry(ctx context.Context, key K, value V) (bool, error)
 
-	// IsEmpty returns true if this NamedMap contains no mappings.
+	// IsEmpty returns true if the NamedMap contains no mappings.
 	IsEmpty(ctx context.Context) (bool, error)
 
 	// EntrySetFilter returns a channel from which entries satisfying the specified filter can be obtained.
@@ -142,7 +142,7 @@ type NamedMap[K comparable, V any] interface {
 	// Error will be equal to coherence. V will be nil if there was no previous value.
 	PutIfAbsent(ctx context.Context, key K, value V) (*V, error)
 
-	// Remove removes the mapping for a key from this NamedMap if it is present and returns the previously
+	// Remove removes the mapping for a key from the NamedMap if it is present and returns the previously
 	// mapped value, if any. V will be nil if there was no previous value.
 	Remove(ctx context.Context, key K) (*V, error)
 
@@ -170,18 +170,18 @@ type NamedMap[K comparable, V any] interface {
 	// currently mapped to some value. Returns true if the value was replaced
 	ReplaceMapping(ctx context.Context, key K, prevValue V, newValue V) (bool, error)
 
-	// Size returns the number of mappings contained within this NamedMap.
+	// Size returns the number of mappings contained within the NamedMap.
 	Size(ctx context.Context) (int, error)
 
-	// GetSession returns the Session associated with this Map.
+	// GetSession returns the Session associated with the NamedMap.
 	GetSession() *Session
 
-	// ValuesFilter return a view of filtered values contained in this NamedMap.
+	// ValuesFilter return a view of filtered values contained in the NamedMap.
 	// The returned channel will be asynchronously filled with values in the
 	// NamedMap that satisfy the filter.
 	ValuesFilter(ctx context.Context, filter filters.Filter) <-chan *StreamedValue[V]
 
-	// Values return a view of all values contained in this NamedMap.
+	// Values return a view of all values contained in the NamedMap.
 	// Note: the entries are paged internally to avoid excessive memory usage, but you need to be
 	// careful when running this operation against NamedMaps with large number of entries.
 	Values(ctx context.Context) <-chan *StreamedValue[V]
