@@ -46,51 +46,25 @@ func main() {
 	}
 
 	fmt.Println("Adding listener for all events")
-	// Create a listener and add to the cache
-	listener := NewAllEventsListener[int, Person]()
-	if err = namedMap.AddListener(ctx, listener.listener); err != nil {
-		panic(err)
-	}
-
-	defer func(ctx context.Context, namedMap coherence.NamedMap[int, Person], listener *AllEventsListener[int, Person]) {
-		if err := namedMap.RemoveListener(ctx, listener.listener); err != nil {
-			panic(fmt.Sprintf("cannot remove listener %v, %v", listener.listener, err))
-		}
-	}(ctx, namedMap, listener)
-
-	time.Sleep(time.Duration(10000000) * time.Second)
-}
-
-type AllEventsListener[K comparable, V any] struct {
-	listener coherence.MapListener[K, V]
-}
-
-func NewAllEventsListener[K comparable, V any]() *AllEventsListener[K, V] {
-	exampleListener := AllEventsListener[K, V]{
-		listener: coherence.NewMapListener[K, V](),
-	}
-
-	exampleListener.listener.OnAny(func(e coherence.MapEvent[K, V]) {
+	listener := coherence.NewMapListener[int, Person]().OnAny(func(e coherence.MapEvent[int, Person]) {
 		var (
-			newValue *V
-			oldValue *V
-			key      *K
-			err      error
+			newValue *Person
+			oldValue *Person
 		)
-		key, err = e.Key()
-		if err != nil {
+		key, err1 := e.Key()
+		if err1 != nil {
 			panic("unable to deserialize key")
 		}
 
 		if e.Type() == coherence.EntryInserted || e.Type() == coherence.EntryUpdated {
-			newValue, err = e.NewValue()
-			if err != nil {
+			newValue, err1 = e.NewValue()
+			if err1 != nil {
 				panic("unable to deserialize new value")
 			}
 		}
 		if e.Type() == coherence.EntryDeleted || e.Type() == coherence.EntryUpdated {
-			oldValue, err = e.OldValue()
-			if err != nil {
+			oldValue, err1 = e.OldValue()
+			if err1 != nil {
 				panic("unable to deserialize old value")
 			}
 		}
@@ -98,5 +72,15 @@ func NewAllEventsListener[K comparable, V any]() *AllEventsListener[K, V] {
 		log.Printf("***EVENT=%v: key=%v, oldValue=%v, newValue=%v\n", e.Type(), *key, oldValue, newValue)
 	})
 
-	return &exampleListener
+	if err = namedMap.AddListener(ctx, listener); err != nil {
+		panic(err)
+	}
+
+	defer func(ctx context.Context, namedMap coherence.NamedMap[int, Person], listener coherence.MapListener[int, Person]) {
+		if err := namedMap.RemoveListener(ctx, listener); err != nil {
+			panic(fmt.Sprintf("cannot remove listener %v, %v", listener, err))
+		}
+	}(ctx, namedMap, listener)
+
+	time.Sleep(time.Duration(10000000) * time.Second)
 }

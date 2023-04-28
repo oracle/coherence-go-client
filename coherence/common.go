@@ -22,8 +22,7 @@ import (
 )
 
 const (
-	envHostName           = "COHERENCE_SERVER_HOST_NAME"
-	envGRPCPort           = "COHERENCE_SERVER_GRPC_PORT"
+	envHostName           = "COHERENCE_SERVER_ADDRESS"
 	envTLSCertPath        = "COHERENCE_TLS_CERTS_PATH"
 	envTLSClientCert      = "COHERENCE_TLS_CLIENT_CERT"
 	envTLSClientKey       = "COHERENCE_TLS_CLIENT_KEY"

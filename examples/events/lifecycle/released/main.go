@@ -52,10 +52,13 @@ func main() {
 	}
 
 	// Create a listener and add to the cache
-	listener := NewReleaseEventsListener[int, Person]()
+	listener := coherence.NewMapLifecycleListener[int, Person]().
+		OnReleased(func(e coherence.MapLifecycleEvent[int, Person]) {
+			fmt.Printf("**EVENT=%s: source=%v\n", e.Type(), e.Source())
+		})
 
-	namedMap.AddLifecycleListener(listener.listener)
-	defer namedMap.RemoveLifecycleListener(listener.listener)
+	namedMap.AddLifecycleListener(listener)
+	defer namedMap.RemoveLifecycleListener(listener)
 
 	newPerson := Person{ID: 1, Name: "Tim", Age: 53}
 	fmt.Println("Add new Person", newPerson)
@@ -83,20 +86,4 @@ func main() {
 func sleep(msg string) {
 	fmt.Println(msg)
 	time.Sleep(time.Duration(5) * time.Second)
-}
-
-type ReleaseEventsListener[K comparable, V any] struct {
-	listener coherence.MapLifecycleListener[K, V]
-}
-
-func NewReleaseEventsListener[K comparable, V any]() *ReleaseEventsListener[K, V] {
-	exampleListener := ReleaseEventsListener[K, V]{
-		listener: coherence.NewMapLifecycleListener[K, V](),
-	}
-
-	exampleListener.listener.OnReleased(func(e coherence.MapLifecycleEvent[K, V]) {
-		fmt.Printf("**EVENT=%s: source=%v\n", e.Type(), e.Source())
-	})
-
-	return &exampleListener
 }

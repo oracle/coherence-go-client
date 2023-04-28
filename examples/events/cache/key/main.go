@@ -49,14 +49,31 @@ func main() {
 	}
 
 	// Create a listener and add to the cache for key 1
-	listener := NewUpdateEventsListener[int, Person]()
-	if err = namedMap.AddKeyListener(ctx, listener.listener, 1); err != nil {
+	listener := coherence.NewMapListener[int, Person]().OnUpdated(func(e coherence.MapEvent[int, Person]) {
+		key, err1 := e.Key()
+		if err1 != nil {
+			panic("unable to deserialize key")
+		}
+
+		newValue, err1 := e.NewValue()
+		if err1 != nil {
+			panic("unable to deserialize new value")
+		}
+
+		oldValue, err1 := e.OldValue()
+		if err1 != nil {
+			panic("unable to deserialize old value")
+		}
+
+		fmt.Printf("**EVENT=Updated: key=%v, oldValue=%v, newValue=%v\n", *key, *oldValue, *newValue)
+	})
+	if err = namedMap.AddKeyListener(ctx, listener, 1); err != nil {
 		panic(err)
 	}
 
-	defer func(ctx context.Context, namedMap coherence.NamedMap[int, Person], listener *UpdateEventsListener[int, Person]) {
-		if err := namedMap.RemoveListener(ctx, listener.listener); err != nil {
-			panic(fmt.Sprintf("cannot remove listener %v", listener.listener))
+	defer func(ctx context.Context, namedMap coherence.NamedMap[int, Person], listener coherence.MapListener[int, Person]) {
+		if err := namedMap.RemoveListener(ctx, listener); err != nil {
+			panic(fmt.Sprintf("cannot remove listener %v", listener))
 		}
 	}(ctx, namedMap, listener)
 
@@ -72,35 +89,4 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-}
-
-type UpdateEventsListener[K comparable, V any] struct {
-	listener coherence.MapListener[K, V]
-}
-
-func NewUpdateEventsListener[K comparable, V any]() *UpdateEventsListener[K, V] {
-	exampleListener := UpdateEventsListener[K, V]{
-		listener: coherence.NewMapListener[K, V](),
-	}
-
-	exampleListener.listener.OnUpdated(func(e coherence.MapEvent[K, V]) {
-		key, err := e.Key()
-		if err != nil {
-			panic("unable to deserialize key")
-		}
-
-		newValue, err := e.NewValue()
-		if err != nil {
-			panic("unable to deserialize new value")
-		}
-
-		oldValue, err := e.OldValue()
-		if err != nil {
-			panic("unable to deserialize old value")
-		}
-
-		fmt.Printf("**EVENT=Updated: key=%v, oldValue=%v, newValue=%v\n", *key, *oldValue, *newValue)
-	})
-
-	return &exampleListener
 }

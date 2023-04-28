@@ -21,7 +21,7 @@ var (
 	conversions                    = [2]string{"\"@class\":\"math.BigDec\",", "\"@class\":\"math.BigInt\","}
 )
 
-// mathValue is used to extract the value of math.BigDec or math.BigInt
+// mathValue is used to extract the value of math.BigDec or math.BigInt.
 type mathValue[T any] struct {
 	Value T `json:"value"`
 }
@@ -33,7 +33,7 @@ type Serializer[T any] interface {
 	Format() string
 }
 
-// NewSerializer returns a new Serializer based upon the format and the type.
+// NewSerializer returns a new [Serializer] based upon the format and the type.
 func NewSerializer[T any](format string) Serializer[T] {
 	// currently only "json" serialization is supported. If another
 	// serialization format is used, it will default to "json".

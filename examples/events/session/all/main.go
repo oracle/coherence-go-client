@@ -47,10 +47,13 @@ func main() {
 	}
 
 	// Create a listener to listen for session events
-	listener := NewAllLifecycleEventsListener()
+	listener := coherence.NewSessionLifecycleListener().
+		OnAny(func(e coherence.SessionLifecycleEvent) {
+			fmt.Printf("**EVENT=%s: source=%v\n", e.Type(), e.Source())
+		})
 
-	session.AddSessionLifecycleListener(listener.listener)
-	defer session.RemoveSessionLifecycleListener(listener.listener)
+	session.AddSessionLifecycleListener(listener)
+	defer session.RemoveSessionLifecycleListener(listener)
 
 	session.Close()
 
@@ -60,20 +63,4 @@ func main() {
 func sleep(msg string) {
 	fmt.Println(msg)
 	time.Sleep(time.Duration(5) * time.Second)
-}
-
-type AllSessionLifecycleEventsListener struct {
-	listener coherence.SessionLifecycleListener
-}
-
-func NewAllLifecycleEventsListener() *AllSessionLifecycleEventsListener {
-	exampleListener := AllSessionLifecycleEventsListener{
-		listener: coherence.NewSessionLifecycleListener(),
-	}
-
-	exampleListener.listener.OnAny(func(e coherence.SessionLifecycleEvent) {
-		fmt.Printf("**EVENT=%s: source=%v\n", e.Type(), e.Source())
-	})
-
-	return &exampleListener
 }

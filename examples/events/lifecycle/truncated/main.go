@@ -52,11 +52,14 @@ func main() {
 	}
 
 	// Create a listener and add to the cache
-	listener := NewTruncateEventsListener[int, Person]()
+	listener := coherence.NewMapLifecycleListener[int, Person]().
+		OnTruncated(func(e coherence.MapLifecycleEvent[int, Person]) {
+			fmt.Printf("**EVENT=%s: source=%v\n", e.Type(), e.Source())
+		})
 
-	namedMap.AddLifecycleListener(listener.listener)
+	namedMap.AddLifecycleListener(listener)
 
-	defer namedMap.RemoveLifecycleListener(listener.listener)
+	defer namedMap.RemoveLifecycleListener(listener)
 
 	newPerson := Person{ID: 1, Name: "Tim", Age: 53}
 	fmt.Println("Add new Person", newPerson)
@@ -76,7 +79,7 @@ func main() {
 	sleep("sleep")
 
 	fmt.Println("Removing lifecycle listener, we should not see truncate event again")
-	namedMap.RemoveLifecycleListener(listener.listener)
+	namedMap.RemoveLifecycleListener(listener)
 
 	fmt.Println("Truncate cache again")
 	if err = namedMap.Truncate(ctx); err != nil {
@@ -90,20 +93,4 @@ func main() {
 func sleep(msg string) {
 	fmt.Println(msg)
 	time.Sleep(time.Duration(5) * time.Second)
-}
-
-type TruncateEventsListener[K comparable, V any] struct {
-	listener coherence.MapLifecycleListener[K, V]
-}
-
-func NewTruncateEventsListener[K comparable, V any]() *TruncateEventsListener[K, V] {
-	exampleListener := TruncateEventsListener[K, V]{
-		listener: coherence.NewMapLifecycleListener[K, V](),
-	}
-
-	exampleListener.listener.OnTruncated(func(e coherence.MapLifecycleEvent[K, V]) {
-		fmt.Printf("**EVENT=%s: source=%v\n", e.Type(), e.Source())
-	})
-
-	return &exampleListener
 }

@@ -41,72 +41,64 @@ func main() {
 	defer session.Close()
 
 	// create a new NamedMap of Person with key int
-	namedCache, err := coherence.NewNamedMap[int, Person](session, "people")
+	namedMap, err := coherence.NewNamedMap[int, Person](session, "people")
 	if err != nil {
 		panic(err)
 	}
 
 	// clear the Map
-	if err = namedCache.Clear(ctx); err != nil {
+	if err = namedMap.Clear(ctx); err != nil {
 		panic(err)
 	}
 
 	// Create a listener and add to the cache
-	listener := NewInsertEventsListener[int, Person]()
-	if err = namedCache.AddListener(ctx, listener.listener); err != nil {
-		panic(err)
-	}
-
-	newPerson := Person{ID: 1, Name: "Tim", Age: 53}
-	fmt.Println("Add new Person", newPerson)
-	if _, err = namedCache.Put(ctx, newPerson.ID, newPerson); err != nil {
-		panic(err)
-	}
-
-	if size, err = namedCache.Size(ctx); err != nil {
-		panic(err)
-	}
-	fmt.Println("Cache size is", size)
-
-	fmt.Println("Update person age using processor")
-	// Update the age
-	_, err = coherence.Invoke[int, Person, bool](ctx, namedCache, 1, processors.Update("age", 56))
-	if err != nil {
-		panic(err)
-	}
-
-	_, err = namedCache.Remove(ctx, 1)
-	if err != nil {
-		panic(err)
-	}
-
-	if size, err = namedCache.Size(ctx); err != nil {
-		panic(err)
-	}
-	fmt.Println("Cache size is", size)
-}
-
-type InsertEventsListener[K comparable, V any] struct {
-	listener coherence.MapListener[K, V]
-}
-
-func NewInsertEventsListener[K comparable, V any]() *InsertEventsListener[K, V] {
-	exampleListener := InsertEventsListener[K, V]{
-		listener: coherence.NewMapListener[K, V](),
-	}
-
-	exampleListener.listener.OnDeleted(func(e coherence.MapEvent[K, V]) {
-		key, err := e.Key()
-		if err != nil {
+	listener := coherence.NewMapListener[int, Person]().OnDeleted(func(e coherence.MapEvent[int, Person]) {
+		key, err1 := e.Key()
+		if err1 != nil {
 			panic("unable to deserialize key")
 		}
-		oldValue, err := e.OldValue()
-		if err != nil {
+		oldValue, err1 := e.OldValue()
+		if err1 != nil {
 			panic("unable to deserialize old value")
 		}
 
 		fmt.Printf("**EVENT=Deleted: key=%v, value=%v\n", *key, oldValue)
 	})
 
-	return &exampleListener
+	if err = namedMap.AddListener(ctx, listener); err != nil {
+		panic(err)
+	}
+	defer func(ctx context.Context, namedMap coherence.NamedMap[int, Person], listener coherence.MapListener[int, Person]) {
+		if err := namedMap.RemoveListener(ctx, listener); err != nil {
+			panic(fmt.Sprintf("cannot remove listener %v", listener))
+		}
+	}(ctx, namedMap, listener)
+
+	newPerson := Person{ID: 1, Name: "Tim", Age: 53}
+	fmt.Println("Add new Person", newPerson)
+	if _, err = namedMap.Put(ctx, newPerson.ID, newPerson); err != nil {
+		panic(err)
+	}
+
+	if size, err = namedMap.Size(ctx); err != nil {
+		panic(err)
+	}
+	fmt.Println("Cache size is", size)
+
+	fmt.Println("Update person age using processor")
+	// Update the age
+	_, err = coherence.Invoke[int, Person, bool](ctx, namedMap, 1, processors.Update("age", 56))
+	if err != nil {
+		panic(err)
+	}
+
+	_, err = namedMap.Remove(ctx, 1)
+	if err != nil {
+		panic(err)
+	}
+
+	if size, err = namedMap.Size(ctx); err != nil {
+		panic(err)
+	}
+	fmt.Println("Cache size is", size)
 }
