@@ -6,7 +6,7 @@
 
 /*
 Package coherence provides a set of functions and interfaces for Go programs to act as cache clients to a
-Coherence Cluster using Google's gRPC framework for the network transport.
+Coherence Cluster using gRPC for the network transport.
 
 Your cluster must be running Coherence Community Edition (CE) 22.06.4+ or Coherence commercial
 version 14.1.1.2206.4+ and must be running a gRPC Proxy.
