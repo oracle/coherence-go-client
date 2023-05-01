@@ -38,16 +38,10 @@ func main() {
 	}
 
 	fmt.Println("Put key 1, value \"one\" with using Put, default expiry will apply")
-	// put a new key / value with expiry of 5 seconds
+	// put a new key / value without specifying expiry
 	if _, err = namedCache.Put(ctx, 1, "one"); err != nil {
 		panic(err)
 	}
-
-	// get the value for the given key
-	if value, err = namedCache.Get(ctx, 1); err != nil {
-		panic(err)
-	}
-	fmt.Printf("Value for key 1 is %v, sleep 6 seconds and cache size should be zero as default expiry is used\n", *value)
 
 	time.Sleep(time.Duration(6) * time.Second)
 
