@@ -51,6 +51,7 @@ type baseClient[K comparable, V any] struct {
 	session         *Session
 	name            string          // Name of the NamedMap or NamedCache
 	sessionOpts     *SessionOptions // Options for the sessions
+	cacheOpts       *CacheOptions   // Options for the cache of map
 	client          pb.NamedCacheServiceClient
 	format          string
 	keySerializer   Serializer[K]
@@ -59,6 +60,18 @@ type baseClient[K comparable, V any] struct {
 	destroyed       bool
 	released        bool
 	mutex           *sync.RWMutex
+}
+
+// CacheOptions holds various cache options.
+type CacheOptions struct {
+	DefaultExpiry time.Duration
+}
+
+// WithExpiry returns a function to set the default expiry for a [NamedCache]. This option is not valid on [NamedMap].
+func WithExpiry(ttl time.Duration) func(cacheOptions *CacheOptions) {
+	return func(s *CacheOptions) {
+		s.DefaultExpiry = ttl
+	}
 }
 
 // executeClear executes the clear operation against a baseClient.

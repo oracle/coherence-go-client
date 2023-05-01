@@ -18,6 +18,7 @@ import (
 	"log"
 	"os"
 	"testing"
+	"time"
 )
 
 // includeLongRunning indicates if to include long-running tests
@@ -194,6 +195,16 @@ func TestBasicOperationsAgainstMapAndCache(t *testing.T) {
 			tc.test(t, tc.nameMap)
 		})
 	}
+}
+
+func TestCantSetDefaultExpiryForNamedMap(t *testing.T) {
+	g := gomega.NewWithT(t)
+	session, err := GetSession()
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	defer session.Close()
+
+	_, err = coherence.NewNamedMap[int, Person](session, "cache-expiry", coherence.WithExpiry(time.Duration(5)*time.Second))
+	g.Expect(err).Should(gomega.HaveOccurred())
 }
 
 func RunTestBasicCrudOperations(t *testing.T, namedMap coherence.NamedMap[int, Person]) {

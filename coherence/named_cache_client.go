@@ -376,7 +376,7 @@ func (nc *NamedCacheClient[K, V]) PutIfAbsent(ctx context.Context, key K, value 
 // Put associates the specified value with the specified key returning the previously
 // mapped value, if any. V will be nil if there was no previous value.
 func (nc *NamedCacheClient[K, V]) Put(ctx context.Context, key K, value V) (*V, error) {
-	return executePutWithExpiry(ctx, &nc.baseClient, key, value, time.Duration(0))
+	return executePutWithExpiry(ctx, &nc.baseClient, key, value, nc.baseClient.cacheOpts.DefaultExpiry)
 }
 
 // PutWithExpiry associates the specified value with the specified key. If the [NamedCache]
@@ -514,7 +514,7 @@ func (nc *NamedCacheClient[K, V]) String() string {
 }
 
 // newNamedCache creates a new [NamedCache] of the generic type specified.
-func newNamedCache[K comparable, V any](session *Session, name string, sOpts *SessionOptions) (*NamedCacheClient[K, V], error) {
+func newNamedCache[K comparable, V any](session *Session, name string, sOpts *SessionOptions, options ...func(session *CacheOptions)) (*NamedCacheClient[K, V], error) {
 	var (
 		format        = sOpts.Format
 		existingCache interface{}
@@ -545,8 +545,17 @@ func newNamedCache[K comparable, V any](session *Session, name string, sOpts *Se
 		return existing, nil
 	}
 
+	cacheOptions := &CacheOptions{
+		DefaultExpiry: time.Duration(0),
+	}
+
+	// apply any cache options
+	for _, f := range options {
+		f(cacheOptions)
+	}
+
 	newCache := &NamedCacheClient[K, V]{
-		baseClient: newBaseClient[K, V](session, name, format, sOpts),
+		baseClient: newBaseClient[K, V](session, name, format, sOpts, cacheOptions),
 	}
 	if err := newCache.baseClient.ensureClientConnection(); err != nil {
 		return nil, err

@@ -5,7 +5,7 @@
  */
 
 /*
-Package main shows how to put entries that expire in a NamedCache.
+Package main shows how to put entries that expire in a NamedCache using the coherence.WithExpiry option.
 */
 package main
 
@@ -32,14 +32,14 @@ func main() {
 
 	// create a new NamedCache with key of int and value of string.
 	// NOTE: A NamedCache is required to call the PutWithExpiry function.
-	namedCache, err := coherence.NewNamedCache[int, string](session, "my-cache")
+	namedCache, err := coherence.NewNamedCache[int, string](session, "my-cache", coherence.WithExpiry(time.Duration(5)*time.Second))
 	if err != nil {
 		panic(err)
 	}
 
-	fmt.Println("Put key 1, value \"one\" with expiry 5 seconds")
+	fmt.Println("Put key 1, value \"one\" with using Put, default expiry will apply")
 	// put a new key / value with expiry of 5 seconds
-	if _, err = namedCache.PutWithExpiry(ctx, 1, "one", time.Duration(5)*time.Second); err != nil {
+	if _, err = namedCache.Put(ctx, 1, "one"); err != nil {
 		panic(err)
 	}
 
@@ -60,4 +60,23 @@ func main() {
 		panic(err)
 	}
 	fmt.Printf("Value for key 1 is %v, should be nil pointer as entry longer exists\n", value)
+
+	// If we do call PutWithExpiry, this expiry value will override the default
+	fmt.Println("Issue PutWithExpiry key 1, value \"one\" with expiry 10 seconds")
+	// put a new key / value with expiry of 5 seconds
+	if _, err = namedCache.PutWithExpiry(ctx, 1, "one", time.Duration(10)*time.Second); err != nil {
+		panic(err)
+	}
+
+	time.Sleep(time.Duration(6) * time.Second)
+	if size, err = namedCache.Size(ctx); err != nil {
+		panic(err)
+	}
+	fmt.Printf("After 6 seconds cache size is size = %d, wait another 6 seconds\n", size)
+
+	time.Sleep(time.Duration(6) * time.Second)
+	if size, err = namedCache.Size(ctx); err != nil {
+		panic(err)
+	}
+	fmt.Printf("After another 6 seconds cache size is size = %d\n", size)
 }

@@ -85,6 +85,17 @@ Source code: [basic/expiry/main.go](basic/expiry/main.go)
 go run basic/expiry/main.go
 ```
 
+#### Setting expiry on cache creation
+
+This example uses a `NamedMap` that has been created using `coherence.WithExpiry` option, which 
+will expire **all** cache entries after the specified time without the need ot use `PutWithExpiry`.
+
+Source code: [basic/expiry_cache/main.go](basic/expiry_cache/main.go)
+
+```go
+go run basic/expiry_cache/main.go
+```
+
 ### <a name="querying"></a> Querying data
 
 These examples shows how to query data operations against a NamedMap or NamedCache.

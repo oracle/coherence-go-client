@@ -33,15 +33,39 @@ For more information on Coherence caches, please see the [Coherence Documentatio
 
 This API fully supports Go Generics and is only supported for use with Go versions 1.19 and above.
 
-# Obtaining a NamedMap or NamedCache
-
-New [NamedMap] instances are constructed using the Session APIs.
+# Obtaining a Session
 
 Example:
 
 	import (
 	    coherence "github.com/oracle/coherence-go-client/coherence"
 	)
+
+	...
+
+	session, err := coherence.NewSession(ctx)
+	if err != nil {
+	    log.Fatal(err)
+	}
+	defer session.Close()
+
+The [NewSession] function creates a new session that will connect to a gRPC proxy server on "localhost:1408" by default.
+
+You can specify the host and port to connect to by specifying the environment variable COHERENCE_SERVER_ADDRESS.
+See [gRPC Naming] for information on values for this.
+You can also pass [coherence.WithAddress]("host:port") to specify the gRPC host and
+port to connect to. The default connection mode is with SSL enabled, but you can use plan-text via using [coherence.WithPlainText]().
+
+To Configure SSL, you must first enable SSL on the gRPC Proxy, see [gRPC Proxy documentation] for details.
+Refer to the section on [NewSession] for more information on setting up a SSL connection on the client.
+
+# Obtaining a NamedMap or NamedCache
+
+Once a session has been created, the [NewNamedMap](session, name, ...options) can be used to obtain
+an instance of a [NamedMap]. The key and value types must be provided as generic type arguments.
+This identifier may be shared across clients.  It's also possible to have many [NamedMap]'s defined and in use simultaneously.
+
+Example:
 
 	session, err := coherence.NewSession(ctx)
 	if err != nil {
@@ -54,26 +78,20 @@ Example:
 	    log.Fatal(err)
 	}
 
-The [NewSession] method creates a new session that will connect to a gRPC proxy server on "localhost:1408" by default.
+If you wish to create a [NamedCache], which supports expiry, you can use the [NewNamedCache] function and then use the PutWithExpiry function call.
 
-You can specify the host and port to connect to by specifying the environment variable COHERENCE_SERVER_ADDRESS.
-See [gRPC Naming] for information on values for this.
-You can also pass [coherence.WithAddress]("host:port") to specify the gRPC host and
-port to connect to. The default connection mode is with SSL enabled, but you can use plan-text via using [coherence.WithPlainText]().
-
-To Configure SSL, you must first enable SSL on the gRPC Proxy, see [gRPC Proxy documentation] for details.
-Refer to the section on [Session] for more information on setting up a SSL connection on the client.
-
-Once a session has been created, the [NewNamedMap](session, name) can be used to obtain
-an instance of a [NamedMap]. The key and value types must be provided as generic type arguments.
-This identifier may be shared across clients.  It's also possible to have many [NamedMap]'s defined and in use simultaneously.
-
-If you wish to create a [NamedCache], which supports expiry, you can use the following:
-
-	namedMap, err := coherence.NewNamedCache[int, string](session, "customers")
+	namedCache, err := coherence.NewNamedCache[int, string](session, "customers")
 	if err != nil {
 	    log.Fatal(err)
 	}
+
+	_, err = namedCache.PutWithExpiry(ctx, person1.ID, person1, time.Duration(5)*time.Second)
+
+If your [NamedCache] requires the same expiry for every entry, you can use the [coherence.WithExpiry] cache option.
+Each call to Put will use the default expiry you have specified. If you use PutWithExpiry, this will override the default
+expiry for that key.
+
+	namedCache, err := coherence.NewNamedCache[int, Person](session, "cache-expiry", coherence.WithExpiry(time.Duration(5)*time.Second))
 
 See [SessionOptions] which lists all the options supported by the [Session] API.
 
