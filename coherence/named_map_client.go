@@ -8,6 +8,7 @@ package coherence
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/oracle/coherence-go-client/coherence/aggregators"
 	"github.com/oracle/coherence-go-client/coherence/extractors"
@@ -725,7 +726,7 @@ func (nm *NamedMapClient[K, V]) String() string {
 }
 
 // newNamedMap creates a new NamedMap.
-func newNamedMap[K comparable, V any](session *Session, name string, sOpts *SessionOptions) (*NamedMapClient[K, V], error) {
+func newNamedMap[K comparable, V any](session *Session, name string, sOpts *SessionOptions, options ...func(session *CacheOptions)) (*NamedMapClient[K, V], error) {
 	var (
 		format        = sOpts.Format
 		existingCache interface{}
@@ -756,8 +757,21 @@ func newNamedMap[K comparable, V any](session *Session, name string, sOpts *Sess
 		return existing, nil
 	}
 
+	cacheOptions := &CacheOptions{
+		DefaultExpiry: time.Duration(0),
+	}
+
+	// apply any cache options
+	for _, f := range options {
+		f(cacheOptions)
+	}
+
+	if cacheOptions.DefaultExpiry != time.Duration(0) {
+		return nil, errors.New("you cannot use a non-zero expiry for a NamedMap")
+	}
+
 	newMap := &NamedMapClient[K, V]{
-		baseClient: newBaseClient[K, V](session, name, format, sOpts),
+		baseClient: newBaseClient[K, V](session, name, format, sOpts, cacheOptions),
 	}
 	if err := newMap.baseClient.ensureClientConnection(); err != nil {
 		return nil, err
@@ -810,7 +824,7 @@ func newNamedMapReconnectListener[K comparable, V any](session *Session, nm Name
 	return &listener
 }
 
-func newBaseClient[K comparable, V any](session *Session, name string, format string, sOpts *SessionOptions) baseClient[K, V] {
+func newBaseClient[K comparable, V any](session *Session, name string, format string, sOpts *SessionOptions, cOpts *CacheOptions) baseClient[K, V] {
 	return baseClient[K, V]{
 		session:         session,
 		name:            name,
@@ -819,6 +833,7 @@ func newBaseClient[K comparable, V any](session *Session, name string, format st
 		keySerializer:   NewSerializer[K](format),
 		valueSerializer: NewSerializer[V](format),
 		mutex:           &sync.RWMutex{},
+		cacheOpts:       cOpts,
 	}
 }
 

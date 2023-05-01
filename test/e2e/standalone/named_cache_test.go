@@ -42,6 +42,52 @@ func TestPutWithExpiry(t *testing.T) {
 	AssertSize[int, Person](g, namedCache, 0)
 }
 
+// TestPutWithExpiryUsingCacheOption tests that we can se an overall expiry for the cache and this is applied
+// when using standard Put().
+func TestPutWithExpiryUsingCacheOption(t *testing.T) {
+	var (
+		g        = gomega.NewWithT(t)
+		err      error
+		person1  = Person{ID: 1, Name: "Tim"}
+		oldValue *Person
+	)
+
+	session, err := GetSession()
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	defer session.Close()
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	namedCache, err := coherence.NewNamedCache[int, Person](session, "cache-expiry", coherence.WithExpiry(time.Duration(5)*time.Second))
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+
+	defer session.Close()
+	defer func() {
+		_ = namedCache.Destroy(ctx)
+	}()
+
+	_, err = namedCache.Put(ctx, person1.ID, person1)
+	g.Expect(err).NotTo(gomega.HaveOccurred())
+	g.Expect(oldValue).To(gomega.BeNil())
+	AssertSize[int, Person](g, namedCache, 1)
+
+	// sleep for 6 seconds to allow entry to expire
+	time.Sleep(6 * time.Second)
+
+	AssertSize[int, Person](g, namedCache, 0)
+
+	// issue a PutWithExpiry which should override the default expiry
+	_, err = namedCache.PutWithExpiry(ctx, person1.ID, person1, time.Duration(10)*time.Second)
+	g.Expect(err).NotTo(gomega.HaveOccurred())
+
+	// sleep for 6 seconds, the entry should still be present
+	time.Sleep(6 * time.Second)
+
+	AssertSize[int, Person](g, namedCache, 1)
+
+	// sleep for 6 seconds, the entry should now honour the 10-second expiry
+	time.Sleep(6 * time.Second)
+	AssertSize[int, Person](g, namedCache, 0)
+}
+
 // TestTouchProcessor tests a touch processor that will update the time of en entry
 func TestTouchProcessor(t *testing.T) {
 	var (

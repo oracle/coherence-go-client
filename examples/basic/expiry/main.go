@@ -5,7 +5,7 @@
  */
 
 /*
-Package main shows how to put entries that expire in a NamedMap.
+Package main shows how to put entries that expire in a NamedCache.
 */
 package main
 
@@ -32,7 +32,7 @@ func main() {
 
 	// create a new NamedCache with key of int and value of string.
 	// NOTE: A NamedCache is required to call the PutWithExpiry function.
-	namedCache, err := coherence.NewNamedCache[int, string](session, "my-map")
+	namedCache, err := coherence.NewNamedCache[int, string](session, "my-cache")
 	if err != nil {
 		panic(err)
 	}
@@ -43,7 +43,7 @@ func main() {
 		panic(err)
 	}
 
-	// get the value for the given key
+	// get the value for the given key, it should exist
 	if value, err = namedCache.Get(ctx, 1); err != nil {
 		panic(err)
 	}
@@ -54,6 +54,7 @@ func main() {
 	if size, err = namedCache.Size(ctx); err != nil {
 		panic(err)
 	}
+	// cache size should now be zero
 	fmt.Printf("Cache size = %d\n", size)
 
 	if value, err = namedCache.Get(ctx, 1); err != nil {

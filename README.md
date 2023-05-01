@@ -45,7 +45,7 @@ docker run -d -p 1408:1408 ghcr.io/oracle/coherence-ce:22.06.4
 ## Installation
 
 ```bash
-go get github.com/coherence/coherence-go-client@latest
+go get github.com/oracle/coherence-go-client@latest
 ````
 After executing this command coherence-go-client is ready to use, and it's source will be in:
 

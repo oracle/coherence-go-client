@@ -82,11 +82,10 @@ type SessionOptions struct {
 //
 //	session, err := coherence.NewSession(ctx)
 //
-// A Session can also be configured using environment variable COHERENCE_SERVER_ADDRESS. See https://github.com/grpc/grpc/blob/master/doc/naming.md
+// A Session can also be configured using environment variable COHERENCE_SERVER_ADDRESS. See [Grpc Naming]
 // for information on values for this.
 //
-// To Configure SSL, you must first enable SSL on the gRPC Proxy, see
-// https://docs.oracle.com/en/middleware/standalone/coherence/14.1.1.2206/develop-remote-clients/using-coherence-grpc-server.html for details.
+// To Configure SSL, you must first enable SSL on the gRPC Proxy, see [gRPC Proxy Server] for details.
 //
 // The following environment variables need to be set for the client:
 //
@@ -97,6 +96,8 @@ type SessionOptions struct {
 //
 // Finally, the Close() method can be used to close the Session. Once a Session is closed, no APIs
 // on the NamedMap instances should be invoked. If invoked they all will return an error.
+// [gRPC Naming]: https://github.com/grpc/grpc/blob/master/doc/naming.md
+// [gRPC Proxy Server]: https://docs.oracle.com/en/middleware/standalone/coherence/14.1.1.2206/develop-remote-clients/using-coherence-grpc-server.html
 func NewSession(ctx context.Context, options ...func(session *SessionOptions)) (*Session, error) {
 	session := &Session{
 		sessionID:             uuid.New(),
@@ -350,11 +351,12 @@ func (s *Session) RemoveSessionLifecycleListener(listener SessionLifecycleListen
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
-func NewNamedMap[K comparable, V any](session *Session, cacheName string) (NamedMap[K, V], error) {
-	return newNamedMap[K, V](session, cacheName, session.sessOpts)
+func NewNamedMap[K comparable, V any](session *Session, cacheName string, options ...func(session *CacheOptions)) (NamedMap[K, V], error) {
+	return newNamedMap[K, V](session, cacheName, session.sessOpts, options...)
 }
 
-// NewNamedCache returns a NamedCache from a session.  An error will be returned if there
+// NewNamedCache returns a NamedCache from a session.  [NamedCache] is syntactically identical in behaviour to a [NamedMap],
+// but additionally implements the PutWithExpiry function. An error will be returned if there
 // already exists a NamedCache with the same name and different type parameters.
 //
 //	// connect to the default address localhost:1408
@@ -367,8 +369,14 @@ func NewNamedMap[K comparable, V any](session *Session, cacheName string) (Named
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
-func NewNamedCache[K comparable, V any](session *Session, cacheName string) (NamedCache[K, V], error) {
-	return newNamedCache[K, V](session, cacheName, session.sessOpts)
+//
+// If you wish to create a [NamedCache] that has the same expiry for each entry you can use the [coherence.WithExpiry] cache option.
+// Each call to Put will use the default expiry you have specified. If you use PutWithExpiry, this will override the default
+// expiry for that key.
+//
+//	namedCache, err := coherence.NewNamedCache[int, Person](session, "cache-expiry", coherence.WithExpiry(time.Duration(5)*time.Second))
+func NewNamedCache[K comparable, V any](session *Session, cacheName string, options ...func(session *CacheOptions)) (NamedCache[K, V], error) {
+	return newNamedCache[K, V](session, cacheName, session.sessOpts, options...)
 }
 
 // IsClosed returns true if the Session is closed. Returns false otherwise.
