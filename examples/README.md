@@ -77,7 +77,7 @@ go run basic/contains/main.go
 
 #### Putting entries that expire
 
-This example uses a `NamedMap` and issues `PutWithExpiry()` to expire a value after a certain time.
+This example uses a `NamedCache` and issues `PutWithExpiry` to expire a value after a certain time.
 
 Source code: [basic/expiry/main.go](basic/expiry/main.go)
 
@@ -87,8 +87,8 @@ go run basic/expiry/main.go
 
 #### Setting expiry on cache creation
 
-This example uses a `NamedMap` that has been created using `coherence.WithExpiry` option, which 
-will expire **all** cache entries after the specified time without the need ot use `PutWithExpiry`.
+This example uses a `NamedCache` that has been created using `coherence.WithExpiry` option, which 
+will expire **all** cache entries after the specified time without the need to use `PutWithExpiry`.
 
 Source code: [basic/expiry_cache/main.go](basic/expiry_cache/main.go)
 
