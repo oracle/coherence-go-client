@@ -12,7 +12,7 @@ cd coherence-go-client/examples
 ### Install the Coherence Go Client
 
 ```bash
-go get github.com/coherence/coherence-go-client@latest
+go get github.com/oracle/coherence-go-client@latest
 ````
 
 ### Start a Coherence Cluster
