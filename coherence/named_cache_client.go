@@ -514,7 +514,7 @@ func (nc *NamedCacheClient[K, V]) String() string {
 }
 
 // newNamedCache creates a new [NamedCache] of the generic type specified.
-func newNamedCache[K comparable, V any](session *Session, name string, sOpts *SessionOptions, options ...func(session *CacheOptions)) (*NamedCacheClient[K, V], error) {
+func newNamedCache[K comparable, V any](session *Session, name string, sOpts *SessionOptions, options ...func(cache *CacheOptions)) (*NamedCacheClient[K, V], error) {
 	var (
 		format        = sOpts.Format
 		existingCache interface{}

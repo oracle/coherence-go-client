@@ -726,7 +726,7 @@ func (nm *NamedMapClient[K, V]) String() string {
 }
 
 // newNamedMap creates a new NamedMap.
-func newNamedMap[K comparable, V any](session *Session, name string, sOpts *SessionOptions, options ...func(session *CacheOptions)) (*NamedMapClient[K, V], error) {
+func newNamedMap[K comparable, V any](session *Session, name string, sOpts *SessionOptions, options ...func(cache *CacheOptions)) (*NamedMapClient[K, V], error) {
 	var (
 		format        = sOpts.Format
 		existingCache interface{}
