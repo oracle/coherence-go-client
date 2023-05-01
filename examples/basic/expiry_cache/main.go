@@ -47,7 +47,7 @@ func main() {
 	if value, err = namedCache.Get(ctx, 1); err != nil {
 		panic(err)
 	}
-	fmt.Printf("Value for key 1 is %v, sleep 6 seconds and cache size should be zero\n", *value)
+	fmt.Printf("Value for key 1 is %v, sleep 6 seconds and cache size should be zero as default expiry is used\n", *value)
 
 	time.Sleep(time.Duration(6) * time.Second)
 

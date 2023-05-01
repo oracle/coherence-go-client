@@ -43,7 +43,7 @@ func main() {
 		panic(err)
 	}
 
-	// get the value for the given key
+	// get the value for the given key, it should exist
 	if value, err = namedCache.Get(ctx, 1); err != nil {
 		panic(err)
 	}
@@ -54,6 +54,7 @@ func main() {
 	if size, err = namedCache.Size(ctx); err != nil {
 		panic(err)
 	}
+	// cache size should now be zero
 	fmt.Printf("Cache size = %d\n", size)
 
 	if value, err = namedCache.Get(ctx, 1); err != nil {
