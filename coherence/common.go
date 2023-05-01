@@ -51,7 +51,7 @@ type baseClient[K comparable, V any] struct {
 	session         *Session
 	name            string          // Name of the NamedMap or NamedCache
 	sessionOpts     *SessionOptions // Options for the sessions
-	cacheOpts       *CacheOptions   // Options for the cache of map
+	cacheOpts       *CacheOptions   // Options for the cache or map
 	client          pb.NamedCacheServiceClient
 	format          string
 	keySerializer   Serializer[K]
