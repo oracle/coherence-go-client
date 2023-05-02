@@ -204,12 +204,12 @@ type conditionalPutAllProcessor[K comparable, V any] struct {
 	*abstractProcessor
 	Filter     filters.Filter      `json:"filter,omitempty"`
 	Entries    putAllEntries[K, V] `json:"entries,omitempty"`
-	RetCurrent bool                `json:"return,omitempty"`
+	RetCurrent bool                `json:"return"`
 }
 
 type putAllEntry[K comparable, V any] struct {
 	Key   K `json:"key,omitempty"`
-	Value V `json:"value,omitempty"`
+	Value V `json:"value"`
 }
 
 type putAllEntries[K comparable, V any] struct {
@@ -238,7 +238,7 @@ type conditionalPutProcessor[V any] struct {
 	*abstractProcessor
 	Filter     filters.Filter `json:"filter,omitempty"`
 	Value      V              `json:"value,omitempty"`
-	RetCurrent bool           `json:"return,omitempty"`
+	RetCurrent bool           `json:"return"`
 }
 
 func newConditionalPutProcessor[V any](filter filters.Filter, value V, returnCurrent ...bool) *conditionalPutProcessor[V] {
@@ -261,7 +261,7 @@ func (cp *conditionalPutProcessor[V]) ReturnCurrent() Processor {
 type conditionalRemoveProcessor struct {
 	*abstractProcessor
 	Filter     filters.Filter `json:"filter,omitempty"`
-	RetCurrent bool           `json:"return,omitempty"`
+	RetCurrent bool           `json:"return"`
 }
 
 func newConditionalRemoveProcessor(filter filters.Filter, returnCurrent ...bool) *conditionalRemoveProcessor {
@@ -285,7 +285,7 @@ type extractorProcessor[E any] struct {
 	*abstractProcessor
 	Extractor extractors.ValueExtractor[any, E] `json:"extractor,omitempty"`
 	Name      string                            `json:"name,omitempty"`
-	Params    []interface{}                     `json:"params,omitempty"`
+	Params    []interface{}                     `json:"params"`
 	Target    int                               `json:"target,omitempty"` //1 for Key extractor, 0 for value extractor
 }
 
@@ -299,7 +299,7 @@ func newExtractorProcessor[E any](property string) *extractorProcessor[E] {
 type methodInvocationProcessor struct {
 	*abstractProcessor
 	MethodName string        `json:"methodName,omitempty"`
-	IsMutator  bool          `json:"mutator,omitempty"`
+	IsMutator  bool          `json:"mutator"`
 	Args       []interface{} `json:"args"`
 }
 
@@ -321,7 +321,7 @@ type numberIncrementor[I Number] struct {
 	*abstractProcessor
 	Manipulator   *compositeIncrementor[I] `json:"manipulator,omitempty"`
 	IncBy         I                        `json:"increment,omitempty"`
-	ReturnPostInc bool                     `json:"postInc,omitempty"`
+	ReturnPostInc bool                     `json:"postInc"`
 }
 
 func newNumberIncrementor[I Number](propertyName string, incBy I, postInc ...bool) *numberIncrementor[I] {

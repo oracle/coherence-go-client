@@ -9,6 +9,9 @@ package standalone
 import (
 	"github.com/onsi/gomega"
 	"github.com/oracle/coherence-go-client/coherence"
+	"github.com/oracle/coherence-go-client/coherence/aggregators"
+	"github.com/oracle/coherence-go-client/coherence/extractors"
+	"github.com/oracle/coherence-go-client/coherence/filters"
 	"github.com/oracle/coherence-go-client/coherence/processors"
 	. "github.com/oracle/coherence-go-client/test/utils"
 	"testing"
@@ -86,6 +89,48 @@ func TestPutWithExpiryUsingCacheOption(t *testing.T) {
 	// sleep for 6 seconds, the entry should now honour the 10-second expiry
 	time.Sleep(6 * time.Second)
 	AssertSize[int, Person](g, namedCache, 0)
+}
+
+// TestBooleanAndFilters tests to ensure that boolean values are serialized correctly for filters.
+func TestBooleanAndFilters(t *testing.T) {
+	var (
+		g     = gomega.NewWithT(t)
+		err   error
+		test1 = BooleanTest{ID: 1, Name: "Tim", Active: true}
+		test2 = BooleanTest{ID: 2, Name: "Jon", Active: true}
+		test3 = BooleanTest{ID: 3, Name: "Pam", Active: false}
+		size  int
+		count *int64
+	)
+
+	session, err := GetSession()
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	namedCache := GetNamedCache[int, BooleanTest](g, session, "bool-test")
+	defer session.Close()
+
+	_, err = namedCache.Put(ctx, test1.ID, test1)
+	g.Expect(err).NotTo(gomega.HaveOccurred())
+	_, err = namedCache.Put(ctx, test2.ID, test2)
+	g.Expect(err).NotTo(gomega.HaveOccurred())
+	_, err = namedCache.Put(ctx, test3.ID, test3)
+	g.Expect(err).NotTo(gomega.HaveOccurred())
+
+	size, err = namedCache.Size(ctx)
+	g.Expect(err).NotTo(gomega.HaveOccurred())
+	g.Expect(size).To(gomega.Equal(3))
+
+	active := extractors.Extract[bool]("active")
+
+	// count the number of active entries
+	count, err = coherence.AggregateFilter[int, BooleanTest, int64](ctx, namedCache, filters.Equal(active, true), aggregators.Count())
+	g.Expect(err).NotTo(gomega.HaveOccurred())
+	g.Expect(*count).To(gomega.Equal(int64(2)))
+
+	// count the number of inactive entries
+	count, err = coherence.AggregateFilter[int, BooleanTest, int64](ctx, namedCache, filters.Equal(active, false), aggregators.Count())
+	g.Expect(err).NotTo(gomega.HaveOccurred())
+	g.Expect(*count).To(gomega.Equal(int64(1)))
+
 }
 
 // TestTouchProcessor tests a touch processor that will update the time of en entry
