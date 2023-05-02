@@ -191,10 +191,10 @@ func TestFiltersAgainstMapAndCache(t *testing.T) {
 		{"NamedMapIsNilFilter2", GetNamedMap[int, Person](g, session, "filter"), RunTestFilter, isNilTrue, true},
 		{"NamedCacheIsNilFilter1", GetNamedCache[int, Person](g, session, "filter"), RunTestFilter, isNilFalse, false},
 		{"NamedCacheIsNilFilter2", GetNamedCache[int, Person](g, session, "filter"), RunTestFilter, isNilTrue, true},
-		{"NamedMapIsNilFilter1", GetNamedMap[int, Person](g, session, "filter"), RunTestFilter, isNotNilFalse, false},
-		{"NamedMapIsNilFilter2", GetNamedMap[int, Person](g, session, "filter"), RunTestFilter, isNotNilTrue, true},
-		{"NamedCacheIsNilFilter1", GetNamedCache[int, Person](g, session, "filter"), RunTestFilter, isNotNilFalse, false},
-		{"NamedCacheIsNilFilter2", GetNamedCache[int, Person](g, session, "filter"), RunTestFilter, isNotNilTrue, true},
+		{"NamedMapIsNotNilFilter1", GetNamedMap[int, Person](g, session, "filter"), RunTestFilter, isNotNilFalse, false},
+		{"NamedMapIsNotNilFilter2", GetNamedMap[int, Person](g, session, "filter"), RunTestFilter, isNotNilTrue, true},
+		{"NamedCacheIsNotNilFilter1", GetNamedCache[int, Person](g, session, "filter"), RunTestFilter, isNotNilFalse, false},
+		{"NamedCacheIsNotNilFilter2", GetNamedCache[int, Person](g, session, "filter"), RunTestFilter, isNotNilTrue, true},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.testName, func(t *testing.T) {
@@ -249,13 +249,13 @@ func RunTestFilter(t *testing.T, namedMap coherence.NamedMap[int, Person], filte
 	current, err = coherence.Invoke[int, Person, Person](ctx, namedMap, 1, processors.ConditionalRemove(filter, true))
 
 	if shouldRemove {
-		// current should return nil, but as we cannot return nil in generics we return coherence.Nil, which
-		// indicates a Nil value. The cache size should also be zero
+		// The cache size should be zero
 		g.Expect(err).NotTo(gomega.HaveOccurred())
 		AssertSize(g, namedMap, 0)
 	} else {
 		// should not remove and should return the current value
 		g.Expect(err).ShouldNot(gomega.HaveOccurred())
+		g.Expect(current).To(gomega.Not(gomega.BeNil()))
 		g.Expect(*current).To(gomega.Equal(person))
 		AssertSize(g, namedMap, 1)
 	}

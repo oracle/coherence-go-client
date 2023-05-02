@@ -351,7 +351,7 @@ func newKeyAssociatedFilter[K any](fltr Filter, key K) *keyAssociatedFilter[K] {
 
 type betweenFilter[V comparable] struct {
 	*arrayOfFilters
-	PreserveOrder bool `json:"preserveOrder,omitempty"`
+	PreserveOrder bool `json:"preserveOrder"`
 }
 
 func newBetweenFilter[V comparable](extractor extractors.ValueExtractor[any, V], from, to V) Filter {
@@ -365,6 +365,12 @@ func newBetweenFilter[V comparable](extractor extractors.ValueExtractor[any, V],
 
 type comparisonFilter[V any] struct {
 	*extractorFilter[any, V]
+	Value    V `json:"value"`
+	delegate Filter
+}
+
+type comparisonFilterNil[V any] struct {
+	*extractorFilter[any, V]
 	Value    V `json:"value,omitempty"`
 	delegate Filter
 }
@@ -377,6 +383,12 @@ type comparisonFilterValues[V any] struct {
 
 func newComparisonFilter[V any](typeName string, extractor extractors.ValueExtractor[any, V], value V, delegate Filter) *comparisonFilter[V] {
 	compFilter := &comparisonFilter[V]{Value: value, delegate: delegate}
+	compFilter.extractorFilter = newExtractorFilter[any, V](typeName, extractor, delegate)
+	return compFilter
+}
+
+func newComparisonFilterNil[V any](typeName string, extractor extractors.ValueExtractor[any, V], value V, delegate Filter) *comparisonFilterNil[V] {
+	compFilter := &comparisonFilterNil[V]{Value: value, delegate: delegate}
 	compFilter.extractorFilter = newExtractorFilter[any, V](typeName, extractor, delegate)
 	return compFilter
 }
@@ -478,26 +490,26 @@ func newInFilter[V any](extractor extractors.ValueExtractor[any, V], values []V)
 }
 
 type isNilFilter[V any] struct {
-	*comparisonFilter[V]
+	*comparisonFilterNil[V]
 }
 
 func newIsNilFilter[V any](extractor extractors.ValueExtractor[any, V]) *isNilFilter[V] {
 	var zeroValue V
 	nf := &isNilFilter[V]{}
-	nf.comparisonFilter = newComparisonFilter[V](isNilFilterType, extractor, zeroValue, nf)
+	nf.comparisonFilterNil = newComparisonFilterNil[V](isNilFilterType, extractor, zeroValue, nf)
 
 	return nf
 }
 
 type isNotNilFilter[V any] struct {
-	*comparisonFilter[V]
+	*comparisonFilterNil[V]
 }
 
 // newIsNotNilFilter extracts a value for a Filter.
 func newIsNotNilFilter[V any](extractor extractors.ValueExtractor[any, V]) *isNotNilFilter[V] {
 	var zeroValue V
 	nf := &isNotNilFilter[V]{}
-	nf.comparisonFilter = newComparisonFilter[V](isNotNilFilterType, extractor, zeroValue, nf)
+	nf.comparisonFilterNil = newComparisonFilterNil[V](isNotNilFilterType, extractor, zeroValue, nf)
 
 	return nf
 }

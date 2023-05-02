@@ -394,6 +394,12 @@ type Person struct {
 	Department  string   `json:"department"`
 }
 
+type BooleanTest struct {
+	ID     int    `json:"id"`
+	Name   string `json:"name"`
+	Active bool   `json:"active"`
+}
+
 type VersionedPerson struct {
 	Version int     `json:"@version"`
 	ID      int     `json:"id"`
