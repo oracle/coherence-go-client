@@ -338,7 +338,7 @@ func (s *Session) RemoveSessionLifecycleListener(listener SessionLifecycleListen
 	}
 }
 
-// GetNamedMap returns a [NamedMap] from a session. If there is a [NamedMap] defined with the same
+// GetNamedMap returns a [NamedMap] from a session. If there is an existing [NamedMap] defined with the same
 // type parameters and name it will be returned, otherwise a new instance will be returned.
 // An error will be returned if there already exists a [NamedMap] with the same name and different type parameters.
 //
@@ -357,7 +357,7 @@ func GetNamedMap[K comparable, V any](session *Session, cacheName string, option
 }
 
 // GetNamedCache returns a [NamedCache] from a session.  [NamedCache] is syntactically identical in behaviour to a [NamedMap],
-// but additionally implements the PutWithExpiry function. If there is a [NamedCache] defined with the same
+// but additionally implements the PutWithExpiry function. If there is an existing [NamedCache] defined with the same
 // type parameters and name it will be returned, otherwise a new instance will be returned.
 // An error will be returned if there already exists a [NamedCache] with the same name and different type parameters.
 //
