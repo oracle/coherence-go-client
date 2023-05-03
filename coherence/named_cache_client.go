@@ -144,7 +144,7 @@ func (nc *NamedCacheClient[K, V]) Release() {
 //
 // The example below shows how to check if a [NamedCache] contains a mapping for the key 1.
 //
-//	namedCache, err := coherence.NewNamedCache[int, Person](session, "people")
+//	namedCache, err := coherence.GetNamedCache[int, Person](session, "people")
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
@@ -160,7 +160,7 @@ func (nc *NamedCacheClient[K, V]) ContainsKey(ctx context.Context, key K) (bool,
 //
 // The example below shows how to check if a [NamedCache] contains a mapping for the person.
 //
-//	namedCache, err := coherence.NewNamedCache[int, Person](session, "people")
+//	namedCache, err := coherence.GetNamedCache[int, Person](session, "people")
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
@@ -177,7 +177,7 @@ func (nc *NamedCacheClient[K, V]) ContainsValue(ctx context.Context, value V) (b
 //
 // The example below shows how to check if a [NamedCache] contains a mapping for the key 1 and person.
 //
-//	namedCache, err := coherence.NewNamedCache[int, Person](session, "people")
+//	namedCache, err := coherence.GetNamedCache[int, Person](session, "people")
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
@@ -201,7 +201,7 @@ func (nc *NamedCacheClient[K, V]) IsEmpty(ctx context.Context) (bool, error) {
 //
 // The example below shows how to iterate the entries in a [NamedCache] where the age > 20.
 //
-//	namedCache, err := coherence.NewNamedCache[int, Person](session, "people")
+//	namedCache, err := coherence.GetNamedCache[int, Person](session, "people")
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
@@ -225,7 +225,7 @@ func (nc *NamedCacheClient[K, V]) EntrySetFilter(ctx context.Context, fltr filte
 //
 // The example below shows how to iterate the entries in a [NamedCache].
 //
-//	namedCache, err := coherence.NewNamedCache[int, Person](session, "people")
+//	namedCache, err := coherence.GetNamedCache[int, Person](session, "people")
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
@@ -245,7 +245,7 @@ func (nc *NamedCacheClient[K, V]) EntrySet(ctx context.Context) <-chan *Streamed
 // Get returns the value to which the specified key is mapped. V will be nil
 // if this [NamedCache] contains no mapping for the key.
 //
-//	namedCache, err := coherence.NewNamedCache[int, Person](session, "people")
+//	namedCache, err := coherence.GetNamedCache[int, Person](session, "people")
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
@@ -269,7 +269,7 @@ func (nc *NamedCacheClient[K, V]) Get(ctx context.Context, key K) (*V, error) {
 //
 // The example below shows how to get all the entries for keys 1, 3 and 4.
 //
-//	namedCache, err := coherence.NewNamedCache[int, Person](session, "people")
+//	namedCache, err := coherence.GetNamedCache[int, Person](session, "people")
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
@@ -298,7 +298,7 @@ func (nc *NamedCacheClient[K, V]) GetOrDefault(ctx context.Context, key K, def V
 //
 // The example below shows how to iterate the keys in a [NamedCache] where the age > 20.
 //
-//	namedCache, err := coherence.NewNamedCache[int, Person](session,"people")
+//	namedCache, err := coherence.GetNamedCache[int, Person](session,"people")
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
@@ -322,7 +322,7 @@ func (nc *NamedCacheClient[K, V]) KeySetFilter(ctx context.Context, fltr filters
 //
 // The example below shows how to iterate the keys in a [NamedCache].
 //
-//	namedCache, err := coherence.NewNamedCache[int, Person](session, "people")
+//	namedCache, err := coherence.GetNamedCache[int, Person](session, "people")
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
@@ -349,13 +349,13 @@ func (nc *NamedCacheClient[K, V]) Name() string {
 // is carried out in parallel and no previous values are returned.
 //
 //	var peopleData = map[int]Person{
-//	    1: {ID: 1, Name: "Tim", Age: 50},
+//	    1: {ID: 1, Name: "Tim", Age: 21},
 //	    2: {ID: 2, Name: "Andrew", Age: 44},
 //	    3: {ID: 3, Name: "Helen", Age: 20},
 //	    4: {ID: 4, Name: "Alexa", Age: 12},
 //	}
 //
-//	namedCache, err := coherence.NewNamedCache[int, Person](session, "people")
+//	namedCache, err := coherence.GetNamedCache[int, Person](session, "people")
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
@@ -392,7 +392,7 @@ func (nc *NamedCacheClient[K, V]) PutWithExpiry(ctx context.Context, key K, valu
 // Remove removes the mapping for a key from this [NamedCache] if it is present and
 // returns the previous value or nil if there wasn't one.
 //
-//	namedCache, err := coherence.NewNamedCache[int, Person](session, "people")
+//	namedCache, err := coherence.GetNamedCache[int, Person](session, "people")
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
@@ -466,7 +466,7 @@ func (nc *NamedCacheClient[K, V]) Size(ctx context.Context) (int, error) {
 //
 // The example below shows how to iterate the values in a [NamedCache] where the age > 20.
 //
-//	namedCache, err := coherence.NewNamedCache[int, Person](session, "people")
+//	namedCache, err := coherence.GetNamedCache[int, Person](session, "people")
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
@@ -490,7 +490,7 @@ func (nc *NamedCacheClient[K, V]) ValuesFilter(ctx context.Context, fltr filters
 //
 // The example below shows how to iterate the values in a [NamedCache].
 //
-//	namedCache, err := coherence.NewNamedCache[int, Person](session, "people")
+//	namedCache, err := coherence.GetNamedCache[int, Person](session, "people")
 //	if err != nil {
 //	    log.Fatal(err)
 //	}

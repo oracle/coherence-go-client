@@ -232,7 +232,7 @@ func RunTestFilter(t *testing.T, namedMap coherence.NamedMap[int, Person], filte
 		err    error
 		person = Person{ID: 1, Name: "Tim", Age: 10, Salary: 1000,
 			Languages:   []string{"English", "French"},
-			HomeAddress: Address{Address1: "address1", Address2: "address2", City: "Perth", State: "WA", PostCode: 6028}}
+			HomeAddress: Address{Address1: "address1", Address2: "address2", City: "Perth", State: "WA", PostCode: 6000}}
 		current *Person
 	)
 

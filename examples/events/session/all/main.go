@@ -36,7 +36,7 @@ func main() {
 	}
 
 	// create a new NamedMap of Person with key int
-	namedMap, err := coherence.NewNamedMap[int, Person](session, "people")
+	namedMap, err := coherence.GetNamedMap[int, Person](session, "people")
 	if err != nil {
 		panic(err)
 	}

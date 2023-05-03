@@ -39,7 +39,7 @@ func (nm *NamedMapClient[K, V]) getBaseClient() *baseClient[K, V] { //nolint
 //
 // The example below shows how to run an entry processor to increment the age of person identified by the key 1.
 //
-//	namedMap, err := coherence.NewNamedMap[int, Person](session, "people")
+//	namedMap, err := coherence.GetNamedMap[int, Person](session, "people")
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
@@ -57,7 +57,7 @@ func Invoke[K comparable, V any, R any](ctx context.Context, nm NamedMap[K, V], 
 // The example below shows how to run an entry processor to increment the age of any people older than 1. This function
 // returns a stream of [StreamedValue][R] of the values changed.
 //
-//	namedMap, err := coherence.NewNamedMap[int, Person](session, "people")
+//	namedMap, err := coherence.GetNamedMap[int, Person](session, "people")
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
@@ -86,7 +86,7 @@ func InvokeAllFilter[K comparable, V any, R any](ctx context.Context, nm NamedMa
 // The example below shows how to run an entry processor to increment the age of any people with keys 1 and 2. This function
 // returns a stream of  [StreamedValue][R] of the values changed.
 //
-//	namedMap, err := coherence.NewNamedMap[int, Person](session, "people")
+//	namedMap, err := coherence.GetNamedMap[int, Person](session, "people")
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
@@ -113,7 +113,7 @@ func InvokeAllKeys[K comparable, V any, R any](ctx context.Context, nm NamedMap[
 // The example below shows how to run an entry processor to increment the age of all people. This function
 // returns a stream of [StreamedValue][R] of the values changed.
 //
-//	namedMap, err := coherence.NewNamedMap[int, Person](session, "people")
+//	namedMap, err := coherence.GetNamedMap[int, Person](session, "people")
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
@@ -139,7 +139,7 @@ func InvokeAll[K comparable, V any, R any](ctx context.Context, nm NamedMap[K, V
 //
 // The example below shows how to get the minimum age across the people with keys 3, 4, and 5.
 //
-//	namedMap, err := coherence.NewNamedMap[int, Person](session, "people")
+//	namedMap, err := coherence.GetNamedMap[int, Person](session, "people")
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
@@ -159,7 +159,7 @@ func AggregateKeys[K comparable, V, R any](ctx context.Context, nm NamedMap[K, V
 //
 // The example below shows how to get the count of people ages older than 19.
 //
-//	namedMap, err := coherence.NewNamedMap[int, Person](session, "people")
+//	namedMap, err := coherence.GetNamedMap[int, Person](session, "people")
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
@@ -180,7 +180,7 @@ func AggregateFilter[K comparable, V, R any](ctx context.Context, nm NamedMap[K,
 //
 // The example below shows how to get the average age of all people.
 //
-//	namedMap, err := coherence.NewNamedMap[int, Person](session, "people")
+//	namedMap, err := coherence.GetNamedMap[int, Person](session, "people")
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
@@ -201,7 +201,7 @@ func Aggregate[K comparable, V, R any](ctx context.Context, nm NamedMap[K, V], a
 //
 // The example below shows how to add a sorted index (on age) on the age attribute.
 //
-//	namedMap, err := coherence.NewNamedMap[int, Person](session, "people")
+//	namedMap, err := coherence.GetNamedMap[int, Person](session, "people")
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
@@ -218,7 +218,7 @@ func AddIndex[K comparable, V, T, E any](ctx context.Context, nm NamedMap[K, V],
 //
 // The example below shows how to add an index on the age attribute sorted by name.
 //
-//	namedMap, err := coherence.NewNamedMap[int, Person](session, "people")
+//	namedMap, err := coherence.GetNamedMap[int, Person](session, "people")
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
@@ -236,7 +236,7 @@ func AddIndexWithComparator[K comparable, V, T, E any](ctx context.Context, nm N
 //
 // The example below shows how to remove and index on the age attribute.
 //
-//	namedMap, err := coherence.NewNamedMap[int, Person](session, "people")
+//	namedMap, err := coherence.GetNamedMap[int, Person](session, "people")
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
@@ -364,7 +364,7 @@ func (nm *NamedMapClient[K, V]) Release() {
 //
 // The example below shows how to check if a [NamedMap] contains a mapping for the key 1.
 //
-//	namedMap, err := coherence.NewNamedMap[int, Person](session, "people")
+//	namedMap, err := coherence.GetNamedMap[int, Person](session, "people")
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
@@ -380,7 +380,7 @@ func (nm *NamedMapClient[K, V]) ContainsKey(ctx context.Context, key K) (bool, e
 //
 // The example below shows how to check if a [NamedMap] contains a mapping for the person.
 //
-//	namedMap, err := coherence.NewNamedMap[int, Person](session, "people")
+//	namedMap, err := coherence.GetNamedMap[int, Person](session, "people")
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
@@ -397,7 +397,7 @@ func (nm *NamedMapClient[K, V]) ContainsValue(ctx context.Context, value V) (boo
 //
 // The example below shows how to check if a [NamedMap] contains a mapping for the key 1 and person.
 //
-//	namedMap, err := coherence.NewNamedMap[int, Person](session, "people")
+//	namedMap, err := coherence.GetNamedMap[int, Person](session, "people")
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
@@ -421,7 +421,7 @@ func (nm *NamedMapClient[K, V]) IsEmpty(ctx context.Context) (bool, error) {
 //
 // The example below shows how to iterate the entries in a [NamedMap] where the age > 20.
 //
-//	namedMap, err := coherence.NewNamedMap[int, Person](session, "people")
+//	namedMap, err := coherence.GetNamedMap[int, Person](session, "people")
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
@@ -445,7 +445,7 @@ func (nm *NamedMapClient[K, V]) EntrySetFilter(ctx context.Context, fltr filters
 //
 // The example below shows how to iterate the entries in a [NamedMap].
 //
-//	namedMap, err := coherence.NewNamedMap[int, Person](session, "people")
+//	namedMap, err := coherence.GetNamedMap[int, Person](session, "people")
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
@@ -465,7 +465,7 @@ func (nm *NamedMapClient[K, V]) EntrySet(ctx context.Context) <-chan *StreamedEn
 // Get returns the value to which the specified key is mapped. V will be nil
 // if the [NamedMap] contains no mapping for the key.
 //
-//	namedMap, err := coherence.NewNamedMap[int, Person](session, "people")
+//	namedMap, err := coherence.GetNamedMap[int, Person](session, "people")
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
@@ -489,7 +489,7 @@ func (nm *NamedMapClient[K, V]) Get(ctx context.Context, key K) (*V, error) {
 //
 // The example below shows how to get all the entries for keys 1, 3 and 4.
 //
-//	namedMap, err := coherence.NewNamedMap[int, Person](session, "people")
+//	namedMap, err := coherence.GetNamedMap[int, Person](session, "people")
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
@@ -518,7 +518,7 @@ func (nm *NamedMapClient[K, V]) GetOrDefault(ctx context.Context, key K, def V) 
 //
 // The example below shows how to iterate the keys in a [NamedMap] where the age > 20.
 //
-//	namedMap, err := coherence.NewNamedMap[int, Person](session, "people")
+//	namedMap, err := coherence.GetNamedMap[int, Person](session, "people")
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
@@ -542,7 +542,7 @@ func (nm *NamedMapClient[K, V]) KeySetFilter(ctx context.Context, fltr filters.F
 //
 // The example below shows how to iterate the keys in a [NamedMap].
 //
-//	namedMap, err := coherence.NewNamedMap[int, Person](session, "people")
+//	namedMap, err := coherence.GetNamedMap[int, Person](session, "people")
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
@@ -571,13 +571,13 @@ func (nm *NamedMapClient[K, V]) Name() string {
 // is carried out in parallel and no previous values are returned.
 //
 //	var peopleData = map[int]Person{
-//	    1: {ID: 1, Name: "Tim", Age: 50},
+//	    1: {ID: 1, Name: "Tim", Age: 21},
 //	    2: {ID: 2, Name: "Andrew", Age: 44},
 //	    3: {ID: 3, Name: "Helen", Age: 20},
 //	    4: {ID: 4, Name: "Alexa", Age: 12},
 //	}
 //
-//	namedMap, err := coherence.NewNamedMap[int, Person](session, "people")
+//	namedMap, err := coherence.GetNamedMap[int, Person](session, "people")
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
@@ -604,7 +604,7 @@ func (nm *NamedMapClient[K, V]) Put(ctx context.Context, key K, value V) (*V, er
 // Remove removes the mapping for a key from the [NamedMap] if it is present and
 // returns the previous value or nil if there wasn't one.
 //
-//	namedMap, err := coherence.NewNamedMap[int, Person](session, "people")
+//	namedMap, err := coherence.GetNamedMap[int, Person](session, "people")
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
@@ -678,7 +678,7 @@ func (nm *NamedMapClient[K, V]) Size(ctx context.Context) (int, error) {
 //
 // The example below shows how to iterate the values in a [NamedMap] where the age > 20.
 //
-//	namedMap, err := coherence.NewNamedMap[int, Person](session, "people")
+//	namedMap, err := coherence.GetNamedMap[int, Person](session, "people")
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
@@ -702,7 +702,7 @@ func (nm *NamedMapClient[K, V]) ValuesFilter(ctx context.Context, fltr filters.F
 //
 // The example below shows how to iterate the values in a [NamedMap].
 //
-//	namedMap, err := coherence.NewNamedMap[int, Person](session, "people")
+//	namedMap, err := coherence.GetNamedMap[int, Person](session, "people")
 //	if err != nil {
 //	    log.Fatal(err)
 //	}

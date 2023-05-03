@@ -170,7 +170,7 @@ public class RestServer {
             if (!"Tim".equals(customer.getCustomerName())) {
                 throw new RuntimeException("Could not get customer name");
             }
-            if (!"Iluka".equals(customer.getHomeAddress().getSuburb())) {
+            if (!"Balcatta".equals(customer.getHomeAddress().getSuburb())) {
                 throw new RuntimeException("Could not get home address");
             }
         }

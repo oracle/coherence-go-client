@@ -31,7 +31,7 @@ func (p Person) String() string {
 
 func main() {
 	var (
-		person1 = Person{ID: 1, Name: "Tim", Age: 54}
+		person1 = Person{ID: 1, Name: "Tim", Age: 12}
 		person2 = Person{ID: 2, Name: "Helen", Age: 44}
 		person  *Person
 		ctx     = context.Background()
@@ -45,7 +45,7 @@ func main() {
 	defer session.Close()
 
 	// create a new NamedMap of Person with key int
-	namedMap, err := coherence.NewNamedMap[int, Person](session, "processor-test")
+	namedMap, err := coherence.GetNamedMap[int, Person](session, "processor-test")
 	if err != nil {
 		panic(err)
 	}

@@ -74,20 +74,20 @@ func RunSerializationTest(t *testing.T, namedMap coherence.NamedMap[int, Custome
 	homeAddress := CustomerAddress{
 		Class:        addressClass,
 		AddressLine1: "123 James Street",
-		Suburb:       "Iluka",
+		Suburb:       "Balcatta",
 		City:         "Perth",
 		State:        "WA",
-		PostCode:     6028,
+		PostCode:     6000,
 	}
 
 	postalAddress := CustomerAddress{
 		Class:        addressClass,
 		AddressLine1: "PO Box 1000",
-		AddressLine2: "Joondalup Post Office",
-		Suburb:       "Joondalup",
+		AddressLine2: "Balcatta Post Office",
+		Suburb:       "Balcatta",
 		City:         "Perth",
 		State:        "WA",
-		PostCode:     6028,
+		PostCode:     6000,
 	}
 
 	customer := Customer{

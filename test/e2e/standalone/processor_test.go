@@ -471,7 +471,7 @@ func RunTestInvokeAll(t *testing.T, namedMap coherence.NamedMap[int, Person]) {
 	g.Expect(len(results)).To(gomega.Equal(len(peopleData)))
 
 	// ensure all values were updated
-	expectedAgesAfterUpdate := map[int]int{1: 51, 2: 45, 3: 21, 4: 13}
+	expectedAgesAfterUpdate := map[int]int{1: 34, 2: 45, 3: 21, 4: 13}
 
 	ch2 := namedMap.EntrySetFilter(ctx, filters.Always())
 	for se := range ch2 {
@@ -485,7 +485,7 @@ func RunTestInvokeAll(t *testing.T, namedMap coherence.NamedMap[int, Person]) {
 // addPerson adds a Person and asserts that the size is 1
 func addPerson(g *gomega.WithT, namedMap coherence.NamedMap[int, Person]) {
 	_, err := namedMap.Put(ctx, 1, Person{ID: 1, Name: "Tim", Age: 10, Salary: 1000,
-		HomeAddress: Address{Address1: "address1", Address2: "address1", City: "Perth", State: "WA", PostCode: 6028}})
+		HomeAddress: Address{Address1: "address1", Address2: "address1", City: "Perth", State: "WA", PostCode: 6000}})
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	AssertSize(g, namedMap, 1)
 }

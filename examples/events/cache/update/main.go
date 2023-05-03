@@ -41,7 +41,7 @@ func main() {
 	defer session.Close()
 
 	// create a new NamedMap of Person with key int
-	namedMap, err := coherence.NewNamedMap[int, Person](session, "people")
+	namedMap, err := coherence.GetNamedMap[int, Person](session, "people")
 	if err != nil {
 		panic(err)
 	}
@@ -80,7 +80,7 @@ func main() {
 		}
 	}(ctx, namedMap, listener)
 
-	newPerson := Person{ID: 1, Name: "Tim", Age: 53}
+	newPerson := Person{ID: 1, Name: "Tim", Age: 21}
 	fmt.Println("Add new Person", newPerson)
 	if _, err = namedMap.Put(ctx, newPerson.ID, newPerson); err != nil {
 		panic(err)
@@ -93,7 +93,7 @@ func main() {
 
 	fmt.Println("Update person age using processor")
 	// Update the age
-	_, err = coherence.Invoke[int, Person, bool](ctx, namedMap, 1, processors.Update("age", 56))
+	_, err = coherence.Invoke[int, Person, bool](ctx, namedMap, 1, processors.Update("age", 22))
 	if err != nil {
 		panic(err)
 	}

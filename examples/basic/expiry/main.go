@@ -32,7 +32,7 @@ func main() {
 
 	// create a new NamedCache with key of int and value of string.
 	// NOTE: A NamedCache is required to call the PutWithExpiry function.
-	namedCache, err := coherence.NewNamedCache[int, string](session, "my-cache")
+	namedCache, err := coherence.GetNamedCache[int, string](session, "my-cache")
 	if err != nil {
 		panic(err)
 	}

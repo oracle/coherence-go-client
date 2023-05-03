@@ -341,7 +341,7 @@ func GetSession(options ...func(session *coherence.SessionOptions)) (*coherence.
 }
 
 func GetNamedMapWithScope[K comparable, V any](g *gomega.WithT, session *coherence.Session, cacheName, _ string) coherence.NamedMap[K, V] {
-	namedCache, err := coherence.NewNamedMap[K, V](session, cacheName)
+	namedCache, err := coherence.GetNamedMap[K, V](session, cacheName)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	err = namedCache.Clear(ctx)
 	g.Expect(err).NotTo(gomega.HaveOccurred())
@@ -350,7 +350,7 @@ func GetNamedMapWithScope[K comparable, V any](g *gomega.WithT, session *coheren
 }
 
 func GetNamedCacheWithScope[K comparable, V any](g *gomega.WithT, session *coherence.Session, cacheName, _ string) coherence.NamedCache[K, V] {
-	namedCache, err := coherence.NewNamedCache[K, V](session, cacheName)
+	namedCache, err := coherence.GetNamedCache[K, V](session, cacheName)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	err = namedCache.Clear(ctx)
 	g.Expect(err).NotTo(gomega.HaveOccurred())

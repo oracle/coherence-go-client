@@ -59,7 +59,7 @@ func TestPutWithExpiryUsingCacheOption(t *testing.T) {
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	defer session.Close()
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-	namedCache, err := coherence.NewNamedCache[int, Person](session, "cache-expiry", coherence.WithExpiry(time.Duration(5)*time.Second))
+	namedCache, err := coherence.GetNamedCache[int, Person](session, "cache-expiry", coherence.WithExpiry(time.Duration(5)*time.Second))
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 	defer session.Close()
@@ -194,13 +194,13 @@ func TestTestMultipleCallsToNamedCache(t *testing.T) {
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	defer session.Close()
 
-	namedCache1, err := coherence.NewNamedCache[int, Person](session, "cache-1")
+	namedCache1, err := coherence.GetNamedCache[int, Person](session, "cache-1")
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	err = namedCache1.Clear(ctx)
 	g.Expect(err).NotTo(gomega.HaveOccurred())
 
 	// retrieve the named map again, should return the same one
-	namedCache2, err := coherence.NewNamedCache[int, Person](session, "cache-1")
+	namedCache2, err := coherence.GetNamedCache[int, Person](session, "cache-1")
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	err = namedCache2.Clear(ctx)
 	g.Expect(err).NotTo(gomega.HaveOccurred())
@@ -218,7 +218,7 @@ func TestTestMultipleCallsToNamedCache(t *testing.T) {
 
 	g.Expect(*personValue1).To(gomega.Equal(*personValue2))
 
-	namedCache3, err := coherence.NewNamedCache[int, Person](session, "cache-2")
+	namedCache3, err := coherence.GetNamedCache[int, Person](session, "cache-2")
 	g.Expect(err).NotTo(gomega.HaveOccurred())
 
 	size, err := namedCache3.Size(ctx)
@@ -226,6 +226,6 @@ func TestTestMultipleCallsToNamedCache(t *testing.T) {
 	g.Expect(size).To(gomega.Equal(0))
 
 	// try and retrieve a NamedCache that is for the same cache but different type, this should cause error
-	_, err = coherence.NewNamedCache[int, string](session, "cache-2")
+	_, err = coherence.GetNamedCache[int, string](session, "cache-2")
 	g.Expect(err).To(gomega.HaveOccurred())
 }
