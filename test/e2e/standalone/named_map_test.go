@@ -72,7 +72,7 @@ func TestBasicCrudOperationsVariousTypes(t *testing.T) {
 	RunKeyValueTest[string, Person](g, getNewNamedMap[string, Person](g, session, "c13"), "k1", Person{ID: 1, Name: "Tim"})
 	RunKeyValueTest[string, string](g, getNewNamedMap[string, string](g, session, "c14"), "k1", "value1")
 	RunKeyValueTest[int, Person](g, getNewNamedMap[int, Person](g, session, "c15"), 1,
-		Person{ID: 1, Name: "Tim", HomeAddress: Address{Address1: "a1", Address2: "a2", City: "Perth", State: "WA", PostCode: 6028}})
+		Person{ID: 1, Name: "Tim", HomeAddress: Address{Address1: "a1", Address2: "a2", City: "Perth", State: "WA", PostCode: 6000}})
 	RunKeyValueTest[int, []string](g, getNewNamedMap[int, []string](g, session, "c16"), 1,
 		[]string{"a", "b", "c"})
 	RunKeyValueTest[int, map[int]string](g, getNewNamedMap[int, map[int]string](g, session, "c17"), 1,
@@ -92,7 +92,7 @@ func TestBasicCrudOperationsVariousTypes(t *testing.T) {
 	RunKeyValueTest[string, Person](g, getNewNamedCache[string, Person](g, session, "c13"), "k1", Person{ID: 1, Name: "Tim"})
 	RunKeyValueTest[string, string](g, getNewNamedCache[string, string](g, session, "c14"), "k1", "value1")
 	RunKeyValueTest[int, Person](g, getNewNamedCache[int, Person](g, session, "c15"), 1,
-		Person{ID: 1, Name: "Tim", HomeAddress: Address{Address1: "a1", Address2: "a2", City: "Perth", State: "WA", PostCode: 6028}})
+		Person{ID: 1, Name: "Tim", HomeAddress: Address{Address1: "a1", Address2: "a2", City: "Perth", State: "WA", PostCode: 6000}})
 	RunKeyValueTest[int, []string](g, getNewNamedCache[int, []string](g, session, "c16"), 1,
 		[]string{"a", "b", "c"})
 	RunKeyValueTest[int, map[int]string](g, getNewNamedCache[int, map[int]string](g, session, "c17"), 1,
@@ -119,14 +119,14 @@ func TestBasicCrudOperationsVariousTypesWithStructKey(t *testing.T) {
 
 // getNewNamedMap returns a map for a session and asserts err is nil.
 func getNewNamedMap[K comparable, V any](g *gomega.WithT, session *coherence.Session, name string) coherence.NamedMap[K, V] {
-	namedMap, err := coherence.NewNamedMap[K, V](session, name)
+	namedMap, err := coherence.GetNamedMap[K, V](session, name)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	return namedMap
 }
 
 // getNewNamedCache returns a cache for a session and asserts err is nil.
 func getNewNamedCache[K comparable, V any](g *gomega.WithT, session *coherence.Session, name string) coherence.NamedCache[K, V] {
-	namedCache, err := coherence.NewNamedCache[K, V](session, name)
+	namedCache, err := coherence.GetNamedCache[K, V](session, name)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	return namedCache
 }
@@ -203,7 +203,7 @@ func TestCantSetDefaultExpiryForNamedMap(t *testing.T) {
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	defer session.Close()
 
-	_, err = coherence.NewNamedMap[int, Person](session, "cache-expiry", coherence.WithExpiry(time.Duration(5)*time.Second))
+	_, err = coherence.GetNamedMap[int, Person](session, "cache-expiry", coherence.WithExpiry(time.Duration(5)*time.Second))
 	g.Expect(err).Should(gomega.HaveOccurred())
 }
 
@@ -255,13 +255,13 @@ func TestTestMultipleCallsToNamedMap(t *testing.T) {
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	defer session.Close()
 
-	namedMap1, err := coherence.NewNamedMap[int, Person](session, "map-1")
+	namedMap1, err := coherence.GetNamedMap[int, Person](session, "map-1")
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	err = namedMap1.Clear(ctx)
 	g.Expect(err).NotTo(gomega.HaveOccurred())
 
 	// retrieve the named map again, should return the same one
-	namedMap2, err := coherence.NewNamedMap[int, Person](session, "map-1")
+	namedMap2, err := coherence.GetNamedMap[int, Person](session, "map-1")
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	err = namedMap2.Clear(ctx)
 	g.Expect(err).NotTo(gomega.HaveOccurred())
@@ -279,13 +279,13 @@ func TestTestMultipleCallsToNamedMap(t *testing.T) {
 
 	g.Expect(*personValue1).To(gomega.Equal(*personValue2))
 
-	namedMap3, err := coherence.NewNamedMap[int, Person](session, "map-2")
+	namedMap3, err := coherence.GetNamedMap[int, Person](session, "map-2")
 	g.Expect(err).NotTo(gomega.HaveOccurred())
 
 	AssertSize(g, namedMap3, 0)
 
 	// try and retrieve a NamedMap that is for the same cache but different type, this should cause error
-	_, err = coherence.NewNamedMap[int, string](session, "map-2")
+	_, err = coherence.GetNamedMap[int, string](session, "map-2")
 	g.Expect(err).To(gomega.HaveOccurred())
 }
 
@@ -593,7 +593,7 @@ func RunTestRemoveMapping(t *testing.T, namedMap coherence.NamedMap[int, Person]
 }
 
 var peopleData = map[int]Person{
-	1: {ID: 1, Name: "Tim", Age: 50},
+	1: {ID: 1, Name: "Tim", Age: 33},
 	2: {ID: 2, Name: "Andrew", Age: 44},
 	3: {ID: 3, Name: "Helen", Age: 20},
 	4: {ID: 4, Name: "Alexa", Age: 12},
@@ -808,7 +808,7 @@ func RunTestKeySetBase(t *testing.T, namedMap coherence.NamedMap[int, Person], i
 	g.Expect(counter).To(gomega.Equal(0))
 
 	// test with single entry which will force only 1 page to be returned
-	_, err = namedMap.Put(ctx, 1, Person{ID: 1, Name: "Tim", Age: 54})
+	_, err = namedMap.Put(ctx, 1, Person{ID: 1, Name: "Tim", Age: 20})
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 	for ch := range namedMap.KeySet(ctx) {
@@ -862,7 +862,7 @@ func RunTestEntrySetBase(t *testing.T, namedMap coherence.NamedMap[int, Person],
 	g.Expect(counter).To(gomega.Equal(0))
 
 	// test with single entry which will force only 1 page to be returned
-	_, err = namedMap.Put(ctx, 1, Person{ID: 1, Name: "Tim", Age: 54})
+	_, err = namedMap.Put(ctx, 1, Person{ID: 1, Name: "Tim", Age: 20})
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 	for se := range namedMap.EntrySet(ctx) {
@@ -916,7 +916,7 @@ func RunTestValuesBase(t *testing.T, namedMap coherence.NamedMap[int, Person], i
 	g.Expect(counter).To(gomega.Equal(0))
 
 	// test with single entry which will force only 1 page to be returned
-	_, err = namedMap.Put(ctx, 1, Person{ID: 1, Name: "Tim", Age: 54})
+	_, err = namedMap.Put(ctx, 1, Person{ID: 1, Name: "Tim", Age: 20})
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 	for ch := range namedMap.Values(ctx) {

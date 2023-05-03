@@ -49,7 +49,7 @@ func main() {
 	defer session.Close()
 
 	// create a new NamedMap of Person with key int
-	namedMap, err := coherence.NewNamedMap[int, Person](session, "aggregation-test")
+	namedMap, err := coherence.GetNamedMap[int, Person](session, "aggregation-test")
 	if err != nil {
 		panic(err)
 	}

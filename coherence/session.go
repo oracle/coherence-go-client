@@ -338,8 +338,9 @@ func (s *Session) RemoveSessionLifecycleListener(listener SessionLifecycleListen
 	}
 }
 
-// NewNamedMap returns a NamedMap from a session. An error will be returned if there
-// already exists a NamedMap with the same name and different type parameters.
+// GetNamedMap returns a [NamedMap] from a session. If there is a [NamedMap] defined with the same
+// type parameters and name it will be returned, otherwise a new instance will be returned.
+// An error will be returned if there already exists a [NamedMap] with the same name and different type parameters.
 //
 //	// connect to the default address localhost:1408
 //	session, err = coherence.NewSession(ctx)
@@ -347,17 +348,18 @@ func (s *Session) RemoveSessionLifecycleListener(listener SessionLifecycleListen
 //	    log.Fatal(err)
 //	}
 //
-//	namedMap, err := coherence.NewNamedMap[int, Person](session, "people")
+//	namedMap, err := coherence.GetNamedMap[int, Person](session, "people")
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
-func NewNamedMap[K comparable, V any](session *Session, cacheName string, options ...func(session *CacheOptions)) (NamedMap[K, V], error) {
+func GetNamedMap[K comparable, V any](session *Session, cacheName string, options ...func(session *CacheOptions)) (NamedMap[K, V], error) {
 	return newNamedMap[K, V](session, cacheName, session.sessOpts, options...)
 }
 
-// NewNamedCache returns a NamedCache from a session.  [NamedCache] is syntactically identical in behaviour to a [NamedMap],
-// but additionally implements the PutWithExpiry function. An error will be returned if there
-// already exists a NamedCache with the same name and different type parameters.
+// GetNamedCache returns a [NamedCache] from a session.  [NamedCache] is syntactically identical in behaviour to a [NamedMap],
+// but additionally implements the PutWithExpiry function. If there is a [NamedCache] defined with the same
+// type parameters and name it will be returned, otherwise a new instance will be returned.
+// An error will be returned if there already exists a [NamedCache] with the same name and different type parameters.
 //
 //	// connect to the default address localhost:1408
 //	session, err = coherence.NewSession(ctx)
@@ -365,7 +367,7 @@ func NewNamedMap[K comparable, V any](session *Session, cacheName string, option
 //	    log.Fatal(err)
 //	}
 //
-//	namedMap, err := coherence.NewNamedCache[int, Person](session, "people")
+//	namedMap, err := coherence.GetNamedCache[int, Person](session, "people")
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
@@ -374,8 +376,8 @@ func NewNamedMap[K comparable, V any](session *Session, cacheName string, option
 // Each call to Put will use the default expiry you have specified. If you use PutWithExpiry, this will override the default
 // expiry for that key.
 //
-//	namedCache, err := coherence.NewNamedCache[int, Person](session, "cache-expiry", coherence.WithExpiry(time.Duration(5)*time.Second))
-func NewNamedCache[K comparable, V any](session *Session, cacheName string, options ...func(session *CacheOptions)) (NamedCache[K, V], error) {
+//	namedCache, err := coherence.GetNamedCache[int, Person](session, "cache-expiry", coherence.WithExpiry(time.Duration(5)*time.Second))
+func GetNamedCache[K comparable, V any](session *Session, cacheName string, options ...func(session *CacheOptions)) (NamedCache[K, V], error) {
 	return newNamedCache[K, V](session, cacheName, session.sessOpts, options...)
 }
 

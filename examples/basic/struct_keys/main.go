@@ -62,7 +62,7 @@ func main() {
 	defer session.Close()
 
 	// create a new NamedMap of Account with key of AccountKey
-	namedMap, err := coherence.NewNamedMap[AccountKey, Account](session, "accounts")
+	namedMap, err := coherence.GetNamedMap[AccountKey, Account](session, "accounts")
 	if err != nil {
 		panic(err)
 	}

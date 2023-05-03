@@ -38,7 +38,7 @@ func TestBasicCrudOperationsVariousTypes(t *testing.T) {
 	RunKeyValueTest[string, Person](g, getNewNamedMap[string, Person](g, session, "c13"), "k1", Person{ID: 1, Name: "Tim"})
 	RunKeyValueTest[string, string](g, getNewNamedMap[string, string](g, session, "c14"), "k1", "value1")
 	RunKeyValueTest[int, Person](g, getNewNamedMap[int, Person](g, session, "c15"), 1,
-		Person{ID: 1, Name: "Tim", HomeAddress: Address{Address1: "a1", Address2: "a2", City: "Perth", State: "WA", PostCode: 6028}})
+		Person{ID: 1, Name: "Tim", HomeAddress: Address{Address1: "a1", Address2: "a2", City: "Perth", State: "WA", PostCode: 6000}})
 	RunKeyValueTest[int, []string](g, getNewNamedMap[int, []string](g, session, "c16"), 1,
 		[]string{"a", "b", "c"})
 	RunKeyValueTest[int, map[int]string](g, getNewNamedMap[int, map[int]string](g, session, "c17"), 1,
@@ -58,7 +58,7 @@ func TestBasicCrudOperationsVariousTypes(t *testing.T) {
 	RunKeyValueTest[string, Person](g, getNewNamedCache[string, Person](g, session, "c13"), "k1", Person{ID: 1, Name: "Tim"})
 	RunKeyValueTest[string, string](g, getNewNamedCache[string, string](g, session, "c14"), "k1", "value1")
 	RunKeyValueTest[int, Person](g, getNewNamedCache[int, Person](g, session, "c15"), 1,
-		Person{ID: 1, Name: "Tim", HomeAddress: Address{Address1: "a1", Address2: "a2", City: "Perth", State: "WA", PostCode: 6028}})
+		Person{ID: 1, Name: "Tim", HomeAddress: Address{Address1: "a1", Address2: "a2", City: "Perth", State: "WA", PostCode: 6000}})
 	RunKeyValueTest[int, []string](g, getNewNamedCache[int, []string](g, session, "c16"), 1,
 		[]string{"a", "b", "c"})
 	RunKeyValueTest[int, map[int]string](g, getNewNamedCache[int, map[int]string](g, session, "c17"), 1,
@@ -67,14 +67,14 @@ func TestBasicCrudOperationsVariousTypes(t *testing.T) {
 
 // getNewNamedMap returns a map for a session and asserts err is nil.
 func getNewNamedMap[K comparable, V any](g *gomega.WithT, session *coherence.Session, name string) coherence.NamedMap[K, V] {
-	namedMap, err := coherence.NewNamedMap[K, V](session, name)
+	namedMap, err := coherence.GetNamedMap[K, V](session, name)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	return namedMap
 }
 
 // getNewNamedCache returns a cache for a session and asserts err is nil.
 func getNewNamedCache[K comparable, V any](g *gomega.WithT, session *coherence.Session, name string) coherence.NamedCache[K, V] {
-	namedCache, err := coherence.NewNamedCache[K, V](session, name)
+	namedCache, err := coherence.GetNamedCache[K, V](session, name)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	return namedCache
 }

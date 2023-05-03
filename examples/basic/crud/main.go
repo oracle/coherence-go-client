@@ -30,7 +30,7 @@ func main() {
 	defer session.Close()
 
 	// create a new NamedMap with key of int and value of string
-	namedMap, err := coherence.NewNamedMap[int, string](session, "my-map")
+	namedMap, err := coherence.GetNamedMap[int, string](session, "my-map")
 	if err != nil {
 		panic(err)
 	}

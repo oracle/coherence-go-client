@@ -35,7 +35,7 @@ func TestSessionLifecycle(t *testing.T) {
 	g.Expect(expect[int32](f, 1, 10)).To(BeNil())
 
 	// try to use the session, we should not be able to
-	_, err = coherence.NewNamedMap[int, string](session, "my-map")
+	_, err = coherence.GetNamedMap[int, string](session, "my-map")
 	g.Expect(err).To(Equal(coherence.ErrClosed))
 }
 

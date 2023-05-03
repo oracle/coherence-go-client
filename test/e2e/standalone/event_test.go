@@ -30,14 +30,14 @@ func init() {
 var (
 	alvin = Person{ID: 1, Name: "Alvin", Age: 40, Salary: 1000,
 		Languages:   []string{"English", "French"},
-		HomeAddress: Address{Address1: "address1", Address2: "address2", City: "Perth", State: "WA", PostCode: 6028}}
+		HomeAddress: Address{Address1: "address1", Address2: "address2", City: "Perth", State: "WA", PostCode: 6000}}
 
 	bill = Person{ID: 1, Name: "Bill", Age: 45, Salary: 1000,
 		Languages:   []string{"English", "French"},
-		HomeAddress: Address{Address1: "address1", Address2: "address2", City: "Perth", State: "WA", PostCode: 6028}}
+		HomeAddress: Address{Address1: "address1", Address2: "address2", City: "Perth", State: "WA", PostCode: 6000}}
 	charlie = Person{ID: 1, Name: "Charlie", Age: 29, Salary: 1000,
 		Languages:   []string{"English", "French"},
-		HomeAddress: Address{Address1: "address1", Address2: "address2", City: "Perth", State: "WA", PostCode: 6028}}
+		HomeAddress: Address{Address1: "address1", Address2: "address2", City: "Perth", State: "WA", PostCode: 6000}}
 )
 
 func TestMapAndLifecycleEventsAll(t *testing.T) {

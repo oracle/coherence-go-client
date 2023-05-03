@@ -61,9 +61,9 @@ Refer to the section on [NewSession] for more information on setting up a SSL co
 
 # Obtaining a NamedMap or NamedCache
 
-Once a session has been created, the [NewNamedMap](session, name, ...options) can be used to obtain
-an instance of a [NamedMap]. The key and value types must be provided as generic type arguments.
-This identifier may be shared across clients.  It's also possible to have many [NamedMap]'s defined and in use simultaneously.
+Once a session has been created, the [GetNamedMap](session, name, ...options) or [GetNamedCache](session, name, ...options)
+can be used to obtain an instance of a [NamedMap] or [NamedCache]. The key and value types must be provided as generic type arguments.
+This identifier may be shared across clients.  It's also possible to have many [NamedMap]s or [NamedCache]s defined and in use simultaneously.
 
 Example:
 
@@ -73,14 +73,14 @@ Example:
 	}
 	defer session.Close()
 
-	namedMap, err := coherence.NewNamedMap[int, string](session, "customers")
+	namedMap, err := coherence.GetNamedMap[int, string](session, "customers")
 	if err != nil {
 	    log.Fatal(err)
 	}
 
-If you wish to create a [NamedCache], which supports expiry, you can use the [NewNamedCache] function and then use the PutWithExpiry function call.
+If you wish to create a [NamedCache], which supports expiry, you can use the [GetNamedCache] function and then use the PutWithExpiry function call.
 
-	namedCache, err := coherence.NewNamedCache[int, string](session, "customers")
+	namedCache, err := coherence.GetNamedCache[int, string](session, "customers")
 	if err != nil {
 	    log.Fatal(err)
 	}
@@ -91,7 +91,7 @@ If your [NamedCache] requires the same expiry for every entry, you can use the [
 Each call to Put will use the default expiry you have specified. If you use PutWithExpiry, this will override the default
 expiry for that key.
 
-	namedCache, err := coherence.NewNamedCache[int, Person](session, "cache-expiry", coherence.WithExpiry(time.Duration(5)*time.Second))
+	namedCache, err := coherence.GetNamedCache[int, Person](session, "cache-expiry", coherence.WithExpiry(time.Duration(5)*time.Second))
 
 See [SessionOptions] which lists all the options supported by the [Session] API.
 
@@ -106,7 +106,7 @@ Assuming a very trivial [NamedMap] with integer keys and string values.
 	    log.Fatal(err)
 	}
 
-	namedMap, err := coherence.NewNamedMap[int, string](session, "my-map")
+	namedMap, err := coherence.GetNamedMap[int, string](session, "my-map")
 	if err != nil {
 	    log.Fatal(err)
 	}
@@ -151,7 +151,7 @@ if you wish to store structs as native Java objects, then please see the section
 	}
 
 	// create a new NamedMap of Person with key int
-	namedMap, err := coherence.NewNamedMap[int, Person](session, "test")
+	namedMap, err := coherence.GetNamedMap[int, Person](session, "test")
 	if err != nil {
 	    log.Fatal(err)
 	}
@@ -161,7 +161,7 @@ if you wish to store structs as native Java objects, then please see the section
 	    log.Fatal(err)
 	}
 
-	newPerson := Person{ID: 1, Name: "Tim", Age: 53}
+	newPerson := Person{ID: 1, Name: "Tim", Age: 21}
 	fmt.Println("Add new Person", newPerson)
 	if _, err = namedMap.Put(ctx, newPerson.Id, newPerson); err != nil {
 	    log.Fatal(err)
@@ -195,7 +195,7 @@ Key and/or a Value. As always, the Err object must be checked for errors before 
 All functions that return channels are EntrySetFilter, KeySetFilter, ValuesFilter,
 EntrySet, KeySet, Values, InvokeAll and InvokeAllFilter.
 
-	namedMap, err := coherence.NewNamedMap[int, Person](session, "people")
+	namedMap, err := coherence.GetNamedMap[int, Person](session, "people")
 	if err != nil {
 	    log.Fatal(err)
 	}
@@ -234,7 +234,7 @@ run various scenarios to increase peoples salary by using a [processors.Multiply
 	    City   string  `json:"city"`
 	}
 
-	namedMap, err := coherence.NewNamedMap[int, Person](session, "people")
+	namedMap, err := coherence.GetNamedMap[int, Person](session, "people")
 
 	// 1. Increase the salary of the person with Id = 1
 	newSalary, err = coherence.Invoke[int, Person, float32](ctx, namedMap, 1, processors.Multiply("salary", 1.1, true))
@@ -266,7 +266,7 @@ large amounts of data.
 To demonstrate this, lets assume we have a [NamedMap] populated with Person struct as per the previous example, and we want to
 run various scenarios to perform aggregations.
 
-	namedMap, err := coherence.NewNamedMap[int, Person](session, "people")
+	namedMap, err := coherence.GetNamedMap[int, Person](session, "people")
 	if err != nil {
 	    log.Fatal(err)
 	}
@@ -296,7 +296,7 @@ that occur against a [NamedMap] or [NamedCache]. You can listen for all events, 
 vents based upon a key.
 
 	// in your main code, create a new NamedMap and register the listener
-	namedMap, err := coherence.NewNamedMap[int, Person](session, "people")
+	namedMap, err := coherence.GetNamedMap[int, Person](session, "people")
 	if err != nil {
 	    log.Fatal(err)
 	}
@@ -359,7 +359,7 @@ that occur against a [NamedMap] or [NamedCache].
 
 	// consider the example below where we want to listen for all 'truncate' events for a NamedMap.
 	// in your main code, create a new NamedMap and register the listener
-	namedMap, err := coherence.NewNamedMap[int, Person](session, "people")
+	namedMap, err := coherence.GetNamedMap[int, Person](session, "people")
 	if err != nil {
 	    log.Fatal(err)
 	}
@@ -373,7 +373,7 @@ that occur against a [NamedMap] or [NamedCache].
 	namedMap.AddLifecycleListener(listener)
 	defer namedMap.RemoveLifecycleListener(listener)
 
-	newPerson := Person{ID: 1, Name: "Tim", Age: 53}
+	newPerson := Person{ID: 1, Name: "Tim", Age: 21}
 	fmt.Println("Add new Person", newPerson)
 	if _, err = namedMap.Put(ctx, newPerson.Id, newPerson); err != nil {
 	    log.Fatal(err)
@@ -421,7 +421,7 @@ in your main code, create a new [Session] and register the listener
 	defer session.RemoveSessionLifecycleListener(listener)
 
 	// create a new NamedMap of Person with key int
-	namedMap, err := coherence.NewNamedMap[int, Person](session, "people")
+	namedMap, err := coherence.GetNamedMap[int, Person](session, "people")
 	if err != nil {
 	    log.Fatal(err)
 	}
