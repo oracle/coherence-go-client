@@ -478,7 +478,7 @@ which contains an alias and fully qualified class name for each of your classes.
 
 	# Example META-INF/type-aliases.properties file
 	customer=com.oracle.demo.Customer
-	order.com.oracle.demo.Order
+	order=com.oracle.demo.Order
 
 Step 3. Define your Go structs
 
