@@ -2,12 +2,11 @@
 
 ![Coherence Go Client](https://github.com/oracle/coherence-go-client/workflows/CI/badge.svg?branch=main)
 [![License](http://img.shields.io/badge/license-UPL%201.0-blue.svg)](https://oss.oracle.com/licenses/upl/)
-
-[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=oracle_coherence-go-client&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=oracle_coherence-go-client)
 [![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=oracle_coherence-go-client&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=oracle_coherence-go-client)
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/oracle/coherence-go-client)](https://goreportcard.com/report/github.com/oracle/coherence-go-client)
 ![GitHub release (latest by date)](https://img.shields.io/github/v/release/oracle/coherence-go-client)
+<a href="https://pkg.go.dev/github.com/oracle/coherence-go-client/coherence"><img src="https://pkg.go.dev/badge/go get github.com/oracle/coherence-go-client.svg" alt="Go Reference"></a>
 
 The Coherence Go Client allows Go applications to act as cache clients 
 to a Coherence Cluster using gRPC for the network transport.

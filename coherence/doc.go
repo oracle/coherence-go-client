@@ -59,6 +59,8 @@ port to connect to. The default connection mode is with SSL enabled, but you can
 To Configure SSL, you must first enable SSL on the gRPC Proxy, see [gRPC Proxy documentation] for details.
 Refer to the section on [NewSession] for more information on setting up a SSL connection on the client.
 
+See [SessionOptions] which lists all the options supported by the [Session] API.
+
 # Obtaining a NamedMap or NamedCache
 
 Once a session has been created, the [GetNamedMap](session, name, ...options) or [GetNamedCache](session, name, ...options)
@@ -93,7 +95,7 @@ expiry for that key.
 
 	namedCache, err := coherence.GetNamedCache[int, Person](session, "cache-expiry", coherence.WithExpiry(time.Duration(5)*time.Second))
 
-See [SessionOptions] which lists all the options supported by the [Session] API.
+See [CacheOptions] which lists all the options supported by the [GetNamedCache] or [GetNamedMap] API.
 
 # Basic CRUD operations
 
