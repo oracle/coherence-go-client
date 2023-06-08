@@ -151,8 +151,7 @@ func NewSession(ctx context.Context, options ...func(session *SessionOptions)) (
 	}
 
 	// ensure initial connection
-	err := session.ensureConnection()
-	return session, err
+	return session, session.ensureConnection()
 }
 
 // WithAddress returns a function to set the address for session.
@@ -249,7 +248,12 @@ func (s *Session) ensureConnection() error {
 	s.mutex.Lock()
 	locked = true
 
-	conn, err := grpc.DialContext(s.sessionConnectCtx, s.sessOpts.Address, s.dialOptions...)
+	newCtx, cancel := s.ensureContext(s.sessionConnectCtx)
+	if cancel != nil {
+		defer cancel()
+	}
+
+	conn, err := grpc.DialContext(newCtx, s.sessOpts.Address, s.dialOptions...)
 
 	if err != nil {
 		log.Printf("could not connect. Reason: %v", err)
@@ -522,7 +526,7 @@ func (s *Session) dispatch(eventType SessionLifecycleEventType,
 // [SessionOptions].
 func (s *Session) ensureContext(ctx context.Context) (context.Context, context.CancelFunc) {
 	if _, ok := ctx.Deadline(); !ok {
-		// no deadline set to wrap the context in a Timeout
+		// no deadline set, so wrap the context in a Timeout
 		return context.WithTimeout(ctx, s.sessOpts.Timeout)
 	}
 	return ctx, nil
