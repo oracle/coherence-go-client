@@ -9,7 +9,9 @@ package coherence
 import (
 	"context"
 	"github.com/onsi/gomega"
+	"strconv"
 	"testing"
+	"time"
 )
 
 func TestSessionValidation(t *testing.T) {
@@ -21,4 +23,15 @@ func TestSessionValidation(t *testing.T) {
 
 	_, err = NewSession(ctx, WithFormat("not-json"))
 	g.Expect(err).To(gomega.Equal(ErrInvalidFormat))
+
+	// test default timeout
+	timeout, _ := strconv.ParseInt(defaultSessionTimeout, 10, 64)
+	s, err := NewSession(ctx)
+	g.Expect(err).To(gomega.Not(gomega.HaveOccurred()))
+	g.Expect(s.sessOpts.Timeout).To(gomega.Equal(time.Duration(timeout) * time.Millisecond))
+
+	// test setting a timeout
+	s, err = NewSession(ctx, WithSessionTimeout(time.Duration(33)*time.Millisecond))
+	g.Expect(err).To(gomega.Not(gomega.HaveOccurred()))
+	g.Expect(s.sessOpts.Timeout).To(gomega.Equal(time.Duration(33) * time.Millisecond))
 }

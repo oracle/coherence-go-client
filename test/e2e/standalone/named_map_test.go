@@ -99,6 +99,64 @@ func TestBasicCrudOperationsVariousTypes(t *testing.T) {
 		map[int]string{1: "one", 2: "two", 3: "three"})
 }
 
+func TestSessionWithSpecifiedTimeout(t *testing.T) {
+	var (
+		g       = gomega.NewWithT(t)
+		err     error
+		session *coherence.Session
+	)
+
+	// create a session that has a default timeout of 1 nanos, which means each operation should fail with an error
+	session, err = GetSession(coherence.WithSessionTimeout(time.Duration(1) * time.Nanosecond))
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	defer session.Close()
+
+	// we should get an error as we are setting the default timeout to 1ns
+	namedMap := getNewNamedMap[int, string](g, session, "timeout-map")
+	err = namedMap.Clear(ctx)
+	g.Expect(err).Should(gomega.HaveOccurred())
+
+	namedCache := getNewNamedCache[int, string](g, session, "timeout-cache")
+	err = namedCache.Clear(ctx)
+	g.Expect(err).Should(gomega.HaveOccurred())
+
+	// create a new context with an existing deadline, it should be honors
+	ctxNew, cancel := context.WithTimeout(ctx, time.Duration(10)*time.Second)
+	defer cancel()
+	err = namedCache.Clear(ctxNew)
+	g.Expect(err).Should(gomega.Not(gomega.HaveOccurred()))
+}
+
+func TestSessionWithEnvTimeout(t *testing.T) {
+	var (
+		g       = gomega.NewWithT(t)
+		err     error
+		session *coherence.Session
+	)
+
+	// create a session that has a default timeout of 1 millis, which means each operation should fail with an error
+	t.Setenv("COHERENCE_SESSION_TIMEOUT", "1")
+
+	session, err = GetSession()
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	defer session.Close()
+
+	// we should get an error as we are setting the default timeout to 1ns
+	namedMap := getNewNamedMap[int, string](g, session, "timeout-map")
+	err = namedMap.Clear(ctx)
+	g.Expect(err).Should(gomega.HaveOccurred())
+
+	namedCache := getNewNamedCache[int, string](g, session, "timeout-cache")
+	err = namedCache.Clear(ctx)
+	g.Expect(err).Should(gomega.HaveOccurred())
+
+	// create a new context with an existing deadline, it should be honors
+	ctxNew, cancel := context.WithTimeout(ctx, time.Duration(10)*time.Second)
+	defer cancel()
+	err = namedCache.Clear(ctxNew)
+	g.Expect(err).Should(gomega.Not(gomega.HaveOccurred()))
+}
+
 // TestBasicCrudOperationsVariousTypesWithStructKey tests operations against caches that have keys and values as structs.
 func TestBasicCrudOperationsVariousTypesWithStructKey(t *testing.T) {
 	var (

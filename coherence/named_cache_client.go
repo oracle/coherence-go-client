@@ -575,7 +575,7 @@ func newNamedCache[K comparable, V any](session *Session, name string, sOpts *Se
 	unlocked = true
 	session.mutex.Unlock()
 
-	listener := newNamedCacheReconnectListener[K, V](session, *newCache)
+	listener := newNamedCacheReconnectListener[K, V](*newCache)
 	newCache.namedCacheReconnectListener = *listener
 
 	// unlock before adding reconnect listener
@@ -591,7 +591,7 @@ type namedCacheReconnectListener[K comparable, V any] struct {
 }
 
 // newReconnectSessionListener creates a new namedCacheReconnectListener.
-func newNamedCacheReconnectListener[K comparable, V any](session *Session, nc NamedCacheClient[K, V]) *namedCacheReconnectListener[K, V] {
+func newNamedCacheReconnectListener[K comparable, V any](nc NamedCacheClient[K, V]) *namedCacheReconnectListener[K, V] {
 	listener := namedCacheReconnectListener[K, V]{
 		listener: NewSessionLifecycleListener(),
 	}
@@ -599,7 +599,7 @@ func newNamedCacheReconnectListener[K comparable, V any](session *Session, nc Na
 	listener.listener.OnReconnected(func(e SessionLifecycleEvent) {
 		// re-register listeners for the NamedCache
 		namedMap := convertNamedCacheClient[K, V](&nc)
-		if err := reRegisterListeners[K, V](session.sessionConnectCtx, &namedMap, &nc.baseClient); err != nil {
+		if err := reRegisterListeners[K, V](context.Background(), &namedMap, &nc.baseClient); err != nil {
 			log.Println(err)
 		}
 	})

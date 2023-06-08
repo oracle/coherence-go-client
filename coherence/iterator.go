@@ -101,9 +101,14 @@ func (it *streamedKeyIterator[K, V]) getNextPage() error {
 		return err
 	}
 
+	newCtx, cancel := it.bc.session.ensureContext(it.ctx)
+	if cancel != nil {
+		defer cancel()
+	}
+
 	request := &pb.PageRequest{Scope: it.bc.sessionOpts.Scope, Cache: it.bc.name, Format: it.bc.format, Cookie: it.cookie}
 
-	if client, err = it.bc.client.NextKeySetPage(it.ctx, request); err != nil {
+	if client, err = it.bc.client.NextKeySetPage(newCtx, request); err != nil {
 		return err
 	}
 
@@ -221,9 +226,14 @@ func (it *streamedEntryIterator[K, V]) getNextPage() error {
 		return err
 	}
 
+	newCtx, cancel := it.bc.session.ensureContext(it.ctx)
+	if cancel != nil {
+		defer cancel()
+	}
+
 	request := &pb.PageRequest{Scope: it.bc.sessionOpts.Scope, Cache: it.bc.name, Format: it.bc.format, Cookie: it.cookie}
 
-	if client, err = it.bc.client.NextEntrySetPage(it.ctx, request); err != nil {
+	if client, err = it.bc.client.NextEntrySetPage(newCtx, request); err != nil {
 		return err
 	}
 

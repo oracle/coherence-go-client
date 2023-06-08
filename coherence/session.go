@@ -19,20 +19,23 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
 
 // ErrInvalidFormat indicates that the serialization format can only be JSON.
 var ErrInvalidFormat = errors.New("format can only be 'json'")
 
 const (
-	defaultFormat    = "json"
-	mapOrCacheExists = "the %s %s already exists with different type parameters"
+	defaultFormat         = "json"
+	mapOrCacheExists      = "the %s %s already exists with different type parameters"
+	defaultSessionTimeout = "30000" // millis
 )
 
-// Session provides APIs to create NamedCaches. The NewSession() method creates a
-// new instance of a Session. This method also takes a variable number of arguments, called options,
+// Session provides APIs to create NamedCaches. The [NewSession] method creates a
+// new instance of a [Session]. This method also takes a variable number of arguments, called options,
 // that can be passed to configure the Session.
 type Session struct {
 	sessionID             uuid.UUID
@@ -60,6 +63,7 @@ type SessionOptions struct {
 	ClientKeyPath  string
 	CaCertPath     string
 	PlainText      bool
+	Timeout        time.Duration
 }
 
 // NewSession creates a new Session with the specified sessionOptions.
@@ -94,8 +98,8 @@ type SessionOptions struct {
 //	export COHERENCE_TLS_CERTS_PATH=/path/to/cert/to/be/added/for/trust
 //	export COHERENCE_IGNORE_INVALID_CERTS=true    // option to ignore self-signed certificates - for testing only. Not to be used in production
 //
-// Finally, the Close() method can be used to close the Session. Once a Session is closed, no APIs
-// on the NamedMap instances should be invoked. If invoked they all will return an error.
+// Finally, the Close() method can be used to close the [Session]. Once a [Session] is closed, no APIs
+// on the [NamedMap] instances should be invoked. If invoked they will return an error.
 // [gRPC Naming]: https://github.com/grpc/grpc/blob/master/doc/naming.md
 // [gRPC Proxy Server]: https://docs.oracle.com/en/middleware/standalone/coherence/14.1.1.2206/develop-remote-clients/using-coherence-grpc-server.html
 func NewSession(ctx context.Context, options ...func(session *SessionOptions)) (*Session, error) {
@@ -111,7 +115,8 @@ func NewSession(ctx context.Context, options ...func(session *SessionOptions)) (
 		lifecycleListeners:    []*SessionLifecycleListener{},
 		sessOpts: &SessionOptions{
 			PlainText: false,
-			Format:    defaultFormat},
+			Format:    defaultFormat,
+			Timeout:   time.Duration(0) * time.Second},
 	}
 
 	if getBoolValueFromEnvVarOrDefault(envSessionDebug, false) {
@@ -133,6 +138,16 @@ func NewSession(ctx context.Context, options ...func(session *SessionOptions)) (
 	// if no address option sent in then use the env or defaults
 	if session.sessOpts.Address == "" {
 		session.sessOpts.Address = getStringValueFromEnvVarOrDefault(envHostName, "localhost:1408")
+	}
+
+	// if no timeout then use the env or default
+	if session.sessOpts.Timeout == time.Duration(0) {
+		timeoutString := getStringValueFromEnvVarOrDefault(envSessionTimeout, defaultSessionTimeout)
+		timeout, err := strconv.ParseInt(timeoutString, 10, 64)
+		if err != nil || timeout <= 0 {
+			return nil, fmt.Errorf("invalid value of %s for timeout", timeoutString)
+		}
+		session.sessOpts.Timeout = time.Duration(timeout) * time.Millisecond
 	}
 
 	// ensure initial connection
@@ -169,6 +184,13 @@ func WithPlainText() func(sessionOptions *SessionOptions) {
 	}
 }
 
+// WithSessionTimeout returns a function to set the session timeout.
+func WithSessionTimeout(timeout time.Duration) func(sessionOptions *SessionOptions) {
+	return func(s *SessionOptions) {
+		s.Timeout = timeout
+	}
+}
+
 // ID returns the identifier of a session.
 func (s *Session) ID() string {
 	return s.sessionID.String()
@@ -188,6 +210,11 @@ func (s *Session) Close() {
 func (s *Session) String() string {
 	return fmt.Sprintf("Session{id=%s, closed=%v, caches=%d, maps=%d, options=%v}", s.sessionID.String(), s.closed,
 		len(s.caches), len(s.maps), s.sessOpts)
+}
+
+// GetSessionTimeout returns the session timeout in seconds.
+func (s *Session) GetSessionTimeout() time.Duration {
+	return s.sessOpts.Timeout
 }
 
 // ensureConnection ensures a session has a valid connection
@@ -469,8 +496,8 @@ func validateFilePath(file string) error {
 // String returns a string representation of SessionOptions.
 func (s *SessionOptions) String() string {
 	var sb = strings.Builder{}
-	sb.WriteString(fmt.Sprintf("SessionOptions{address=%v, tLSEnabled=%v, scope=%v, format=%v,",
-		s.Address, s.TLSEnabled, s.Scope, s.Format))
+	sb.WriteString(fmt.Sprintf("SessionOptions{address=%v, tLSEnabled=%v, scope=%v, format=%v, timeout=%v",
+		s.Address, s.TLSEnabled, s.Scope, s.Format, s.Timeout))
 
 	if s.TLSEnabled {
 		sb.WriteString(fmt.Sprintf(" clientCertPath=%v, clientKeyPath=%v, caCertPath=%v,",
@@ -489,4 +516,14 @@ func (s *Session) dispatch(eventType SessionLifecycleEventType,
 			e.getEmitter().emit(eventType, event)
 		}
 	}
+}
+
+// ensureContext will ensure that the context has deadline and if not will apply the timeout from the
+// [SessionOptions].
+func (s *Session) ensureContext(ctx context.Context) (context.Context, context.CancelFunc) {
+	if _, ok := ctx.Deadline(); !ok {
+		// no deadline set to wrap the context in a Timeout
+		return context.WithTimeout(ctx, s.sessOpts.Timeout)
+	}
+	return ctx, nil
 }

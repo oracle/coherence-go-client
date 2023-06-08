@@ -547,8 +547,6 @@ func (nm *NamedMapClient[K, V]) KeySetFilter(ctx context.Context, fltr filters.F
 //	    log.Fatal(err)
 //	}
 //
-//	iter := namedMap.KeySet(ctx)
-//
 //	ch := namedMap.KeySet(ctx)
 //	for result := range ch {
 //	    if result.Err != nil {
@@ -792,7 +790,7 @@ func newNamedMap[K comparable, V any](session *Session, name string, sOpts *Sess
 	unlocked = true
 	session.mutex.Unlock()
 
-	listener := newNamedMapReconnectListener[K, V](session, *newMap)
+	listener := newNamedMapReconnectListener[K, V](*newMap)
 	newMap.namedMapReconnectListener = *listener
 
 	// unlock before adding reconnect listener
@@ -808,7 +806,7 @@ type namedMapReconnectListener[K comparable, V any] struct {
 }
 
 // newReconnectSessionListener creates new namedMapReconnectListener.
-func newNamedMapReconnectListener[K comparable, V any](session *Session, nm NamedMapClient[K, V]) *namedMapReconnectListener[K, V] {
+func newNamedMapReconnectListener[K comparable, V any](nm NamedMapClient[K, V]) *namedMapReconnectListener[K, V] {
 	listener := namedMapReconnectListener[K, V]{
 		listener: NewSessionLifecycleListener(),
 	}
@@ -816,7 +814,7 @@ func newNamedMapReconnectListener[K comparable, V any](session *Session, nm Name
 	listener.listener.OnReconnected(func(e SessionLifecycleEvent) {
 		// re-register listeners for the NamedMap
 		namedMap := convertNamedMapClient[K, V](&nm)
-		if err := reRegisterListeners[K, V](session.sessionConnectCtx, &namedMap, &nm.baseClient); err != nil {
+		if err := reRegisterListeners[K, V](context.Background(), &namedMap, &nm.baseClient); err != nil {
 			log.Println(err)
 		}
 	})
