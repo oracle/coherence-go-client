@@ -111,20 +111,7 @@ func TestSessionWithSpecifiedTimeout(t *testing.T) {
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	defer session.Close()
 
-	// we should get an error as we are setting the default timeout to 1ns
-	namedMap := getNewNamedMap[int, string](g, session, "timeout-map")
-	err = namedMap.Clear(ctx)
-	g.Expect(err).Should(gomega.HaveOccurred())
-
-	namedCache := getNewNamedCache[int, string](g, session, "timeout-cache")
-	err = namedCache.Clear(ctx)
-	g.Expect(err).Should(gomega.HaveOccurred())
-
-	// create a new context with an existing deadline, it should be honors
-	ctxNew, cancel := context.WithTimeout(ctx, time.Duration(10)*time.Second)
-	defer cancel()
-	err = namedCache.Clear(ctxNew)
-	g.Expect(err).Should(gomega.Not(gomega.HaveOccurred()))
+	runTimeoutTest(g, session)
 }
 
 func TestSessionWithEnvTimeout(t *testing.T) {
@@ -141,16 +128,20 @@ func TestSessionWithEnvTimeout(t *testing.T) {
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	defer session.Close()
 
-	// we should get an error as we are setting the default timeout to 1ns
+	runTimeoutTest(g, session)
+}
+
+func runTimeoutTest(g *gomega.WithT, session *coherence.Session) {
+	// we should get an error as we should be > default timeout
 	namedMap := getNewNamedMap[int, string](g, session, "timeout-map")
-	err = namedMap.Clear(ctx)
+	err := namedMap.Clear(ctx)
 	g.Expect(err).Should(gomega.HaveOccurred())
 
 	namedCache := getNewNamedCache[int, string](g, session, "timeout-cache")
 	err = namedCache.Clear(ctx)
 	g.Expect(err).Should(gomega.HaveOccurred())
 
-	// create a new context with an existing deadline, it should be honors
+	// create a new context with an existing deadline, it should be honored
 	ctxNew, cancel := context.WithTimeout(ctx, time.Duration(10)*time.Second)
 	defer cancel()
 	err = namedCache.Clear(ctxNew)
