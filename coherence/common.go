@@ -27,6 +27,7 @@ const (
 	envTLSClientCert      = "COHERENCE_TLS_CLIENT_CERT"
 	envTLSClientKey       = "COHERENCE_TLS_CLIENT_KEY"
 	envIgnoreInvalidCerts = "COHERENCE_IGNORE_INVALID_CERTS"
+	envSessionTimeout     = "COHERENCE_SESSION_TIMEOUT"
 
 	// envSessionDebug enabled session debug messages to be displayed.
 	envSessionDebug = "COHERENCE_SESSION_DEBUG"
@@ -81,9 +82,14 @@ func executeClear[K comparable, V any](ctx context.Context, bc *baseClient[K, V]
 		return err
 	}
 
+	newCtx, cancel := bc.session.ensureContext(ctx)
+	if cancel != nil {
+		defer cancel()
+	}
+
 	clearRequest := pb.ClearRequest{Cache: bc.name, Scope: bc.sessionOpts.Scope}
 
-	_, err = bc.client.Clear(ctx, &clearRequest)
+	_, err = bc.client.Clear(newCtx, &clearRequest)
 	return err
 }
 
@@ -116,6 +122,11 @@ func executeAddIndex[K comparable, V, T, E any](ctx context.Context, bc *baseCli
 		return err
 	}
 
+	newCtx, cancel := bc.session.ensureContext(ctx)
+	if cancel != nil {
+		defer cancel()
+	}
+
 	binExtractor, err = extractorSerializer.Serialize(extractor)
 	if err != nil {
 		return err
@@ -128,7 +139,7 @@ func executeAddIndex[K comparable, V, T, E any](ctx context.Context, bc *baseCli
 
 	addIndexRequest := pb.AddIndexRequest{
 		Cache: bc.name, Scope: bc.sessionOpts.Scope, Format: bc.format, Extractor: binExtractor, Sorted: sorted, Comparator: binComparator}
-	_, err = bc.client.AddIndex(ctx, &addIndexRequest)
+	_, err = bc.client.AddIndex(newCtx, &addIndexRequest)
 	return err
 }
 
@@ -144,6 +155,11 @@ func executeRemoveIndex[K comparable, V, T, E any](ctx context.Context, bc *base
 		return err
 	}
 
+	newCtx, cancel := bc.session.ensureContext(ctx)
+	if cancel != nil {
+		defer cancel()
+	}
+
 	binExtractor, err = extractorSerializer.Serialize(extractor)
 	if err != nil {
 		return err
@@ -152,7 +168,7 @@ func executeRemoveIndex[K comparable, V, T, E any](ctx context.Context, bc *base
 	removeIndexRequest := pb.RemoveIndexRequest{
 		Cache: bc.name, Scope: bc.sessionOpts.Scope, Format: bc.format, Extractor: binExtractor}
 
-	_, err = bc.client.RemoveIndex(ctx, &removeIndexRequest)
+	_, err = bc.client.RemoveIndex(newCtx, &removeIndexRequest)
 	return err
 }
 
@@ -163,9 +179,14 @@ func executeTruncate[K comparable, V any](ctx context.Context, bc *baseClient[K,
 		return err
 	}
 
+	newCtx, cancel := bc.session.ensureContext(ctx)
+	if cancel != nil {
+		defer cancel()
+	}
+
 	request := pb.TruncateRequest{Cache: bc.name, Scope: bc.sessionOpts.Scope}
 
-	_, err = bc.client.Truncate(ctx, &request)
+	_, err = bc.client.Truncate(newCtx, &request)
 	return err
 }
 
@@ -176,9 +197,14 @@ func executeDestroy[K comparable, V any](ctx context.Context, bc *baseClient[K, 
 		return err
 	}
 
+	newCtx, cancel := bc.session.ensureContext(ctx)
+	if cancel != nil {
+		defer cancel()
+	}
+
 	request := pb.DestroyRequest{Cache: bc.name, Scope: bc.sessionOpts.Scope}
 
-	_, err = bc.client.Destroy(ctx, &request)
+	_, err = bc.client.Destroy(newCtx, &request)
 	if err != nil {
 		return err
 	}
@@ -220,6 +246,11 @@ func executeContainsKey[K comparable, V any](ctx context.Context, bc *baseClient
 		return false, err
 	}
 
+	newCtx, cancel := bc.session.ensureContext(ctx)
+	if cancel != nil {
+		defer cancel()
+	}
+
 	binKey, err = bc.keySerializer.Serialize(key)
 	if err != nil {
 		return false, err
@@ -227,7 +258,7 @@ func executeContainsKey[K comparable, V any](ctx context.Context, bc *baseClient
 
 	containsKeyRequest := pb.ContainsKeyRequest{Cache: bc.name, Key: binKey, Format: bc.format, Scope: bc.sessionOpts.Scope}
 
-	result, err = bc.client.ContainsKey(ctx, &containsKeyRequest)
+	result, err = bc.client.ContainsKey(newCtx, &containsKeyRequest)
 	if err != nil {
 		return false, err
 	}
@@ -245,6 +276,11 @@ func executeContainsValue[K comparable, V any](ctx context.Context, bc *baseClie
 		return false, err
 	}
 
+	newCtx, cancel := bc.session.ensureContext(ctx)
+	if cancel != nil {
+		defer cancel()
+	}
+
 	binValue, err = bc.valueSerializer.Serialize(value)
 	if err != nil {
 		return false, err
@@ -252,7 +288,7 @@ func executeContainsValue[K comparable, V any](ctx context.Context, bc *baseClie
 
 	containsValueRequest := pb.ContainsValueRequest{Cache: bc.name, Value: binValue, Format: bc.format, Scope: bc.sessionOpts.Scope}
 
-	result, err = bc.client.ContainsValue(ctx, &containsValueRequest)
+	result, err = bc.client.ContainsValue(newCtx, &containsValueRequest)
 	if err != nil {
 		return false, err
 	}
@@ -271,6 +307,11 @@ func executeContainsEntry[K comparable, V any](ctx context.Context, bc *baseClie
 		return false, err
 	}
 
+	newCtx, cancel := bc.session.ensureContext(ctx)
+	if cancel != nil {
+		defer cancel()
+	}
+
 	binKey, err = bc.keySerializer.Serialize(key)
 	if err != nil {
 		return false, err
@@ -283,7 +324,7 @@ func executeContainsEntry[K comparable, V any](ctx context.Context, bc *baseClie
 
 	containsEntryRequest := pb.ContainsEntryRequest{Cache: bc.name, Key: binKey, Value: binValue, Format: bc.format, Scope: bc.sessionOpts.Scope}
 
-	result, err = bc.client.ContainsEntry(ctx, &containsEntryRequest)
+	result, err = bc.client.ContainsEntry(newCtx, &containsEntryRequest)
 	if err != nil {
 		return false, err
 	}
@@ -300,9 +341,14 @@ func executeIsEmpty[K comparable, V any](ctx context.Context, bc *baseClient[K, 
 		return false, err
 	}
 
+	newCtx, cancel := bc.session.ensureContext(ctx)
+	if cancel != nil {
+		defer cancel()
+	}
+
 	emptyRequest := pb.IsEmptyRequest{Cache: bc.name}
 
-	result, err = bc.client.IsEmpty(ctx, &emptyRequest)
+	result, err = bc.client.IsEmpty(newCtx, &emptyRequest)
 	if err != nil {
 		return false, err
 	}
@@ -321,6 +367,11 @@ func executeGet[K comparable, V any](ctx context.Context, bc *baseClient[K, V], 
 		return zeroValue, err
 	}
 
+	newCtx, cancel := bc.session.ensureContext(ctx)
+	if cancel != nil {
+		defer cancel()
+	}
+
 	binKey, err = bc.keySerializer.Serialize(key)
 
 	if err != nil {
@@ -329,7 +380,7 @@ func executeGet[K comparable, V any](ctx context.Context, bc *baseClient[K, V], 
 
 	getRequest := pb.GetRequest{Key: binKey, Cache: bc.name, Format: bc.format, Scope: bc.sessionOpts.Scope}
 
-	result, err := bc.client.Get(ctx, &getRequest)
+	result, err := bc.client.Get(newCtx, &getRequest)
 	if err != nil {
 		return zeroValue, err
 	}
@@ -354,6 +405,8 @@ func executeGetAll[K comparable, V any](ctx context.Context, bc *baseClient[K, V
 		return ch
 	}
 
+	newCtx, cancel := bc.session.ensureContext(ctx)
+
 	// serialize the array of keys
 	binKeys, err = serializeKeys[K](bc.keySerializer, keys)
 	if err != nil {
@@ -362,6 +415,10 @@ func executeGetAll[K comparable, V any](ctx context.Context, bc *baseClient[K, V
 	}
 
 	go func() {
+		if cancel != nil {
+			defer cancel()
+		}
+
 		var (
 			request = pb.GetAllRequest{Cache: bc.name, Key: binKeys,
 				Format: bc.format, Scope: bc.sessionOpts.Scope}
@@ -369,7 +426,7 @@ func executeGetAll[K comparable, V any](ctx context.Context, bc *baseClient[K, V
 			value *V
 		)
 
-		getAllClient, err1 := bc.client.GetAll(ctx, &request)
+		getAllClient, err1 := bc.client.GetAll(newCtx, &request)
 		if err1 != nil {
 			ch <- &StreamedEntry[K, V]{Err: err1}
 			close(ch)
@@ -377,9 +434,7 @@ func executeGetAll[K comparable, V any](ctx context.Context, bc *baseClient[K, V
 		}
 
 		for {
-			var (
-				response = new(pb.Entry)
-			)
+			var response = new(pb.Entry)
 
 			err1 = getAllClient.RecvMsg(response)
 			if err1 == io.EOF {
@@ -452,6 +507,11 @@ func executeAggregate[K comparable, V, R any](ctx context.Context, bc *baseClien
 		return zeroValue, err
 	}
 
+	newCtx, cancel := bc.session.ensureContext(ctx)
+	if cancel != nil {
+		defer cancel()
+	}
+
 	aggregatorSerializer := NewSerializer[any](bc.format)
 	binAggregator, err = aggregatorSerializer.Serialize(aggr)
 	if err != nil {
@@ -481,7 +541,7 @@ func executeAggregate[K comparable, V, R any](ctx context.Context, bc *baseClien
 		Format: bc.format, Scope: bc.sessionOpts.Scope, Aggregator: binAggregator,
 		Filter: binFilter}
 
-	result, err = bc.client.Aggregate(ctx, &request)
+	result, err = bc.client.Aggregate(newCtx, &request)
 	if err != nil {
 		return zeroValue, err
 	}
@@ -503,8 +563,9 @@ func executeInvoke[K comparable, V any, R any](ctx context.Context, bc *baseClie
 		return zeroValue, err
 	}
 
-	if err != nil {
-		return zeroValue, err
+	newCtx, cancel := bc.session.ensureContext(ctx)
+	if cancel != nil {
+		defer cancel()
 	}
 
 	binKey, err = bc.keySerializer.Serialize(key)
@@ -521,7 +582,7 @@ func executeInvoke[K comparable, V any, R any](ctx context.Context, bc *baseClie
 	request := pb.InvokeRequest{Key: binKey, Cache: bc.name,
 		Format: bc.format, Scope: bc.sessionOpts.Scope, Processor: binProcessor}
 
-	result, err = bc.client.Invoke(ctx, &request)
+	result, err = bc.client.Invoke(newCtx, &request)
 	if err != nil {
 		return zeroValue, err
 	}
@@ -544,6 +605,8 @@ func executeInvokeAllFilterOrKeys[K comparable, V any, R any](ctx context.Contex
 		return ch
 	}
 
+	newCtx, cancel := bc.session.ensureContext(ctx)
+
 	procSerializer := NewSerializer[any](bc.format)
 	if binProcessor, err = procSerializer.Serialize(proc); err != nil {
 		ch <- &StreamedValue[R]{Err: err}
@@ -565,9 +628,12 @@ func executeInvokeAllFilterOrKeys[K comparable, V any, R any](ctx context.Contex
 	}
 
 	go func() {
+		if cancel != nil {
+			defer cancel()
+		}
 		request := pb.InvokeAllRequest{Cache: bc.name, Filter: binFilter, Keys: binKeys,
 			Processor: binProcessor, Format: bc.format, Scope: bc.sessionOpts.Scope}
-		valuesClient, err1 := bc.client.InvokeAll(ctx, &request)
+		valuesClient, err1 := bc.client.InvokeAll(newCtx, &request)
 		resultSerializer := NewSerializer[R](bc.format)
 
 		if err1 != nil {
@@ -652,6 +718,8 @@ func executeKeySetFilter[K comparable, V any](ctx context.Context, bc *baseClien
 		return ch
 	}
 
+	newCtx, cancel := bc.session.ensureContext(ctx)
+
 	if fltr == nil {
 		fltr = filters.Always()
 	}
@@ -662,9 +730,13 @@ func executeKeySetFilter[K comparable, V any](ctx context.Context, bc *baseClien
 	}
 
 	go func() {
+		if cancel != nil {
+			defer cancel()
+		}
+
 		request := pb.KeySetRequest{Cache: bc.name, Filter: binFilter,
 			Format: bc.format, Scope: bc.sessionOpts.Scope}
-		valuesClient, err1 := bc.client.KeySet(ctx, &request)
+		valuesClient, err1 := bc.client.KeySet(newCtx, &request)
 
 		if err1 != nil {
 			ch <- &StreamedKey[K]{Err: err1}
@@ -714,8 +786,13 @@ func executePutAll[K comparable, V any](ctx context.Context, bc *baseClient[K, V
 		return err
 	}
 
+	newCtx, cancel := bc.session.ensureContext(ctx)
+	if cancel != nil {
+		defer cancel()
+	}
+
 	e := make([]*pb.Entry, len(entries))
-	counter := 0
+	counterPutAll := 0
 	for k, v := range entries {
 		binKey, err = bc.keySerializer.Serialize(k)
 		if err != nil {
@@ -726,13 +803,13 @@ func executePutAll[K comparable, V any](ctx context.Context, bc *baseClient[K, V
 		if err != nil {
 			return err
 		}
-		e[counter] = &pb.Entry{Key: binKey, Value: binValue}
-		counter++
+		e[counterPutAll] = &pb.Entry{Key: binKey, Value: binValue}
+		counterPutAll++
 	}
 
 	putAllRequest := pb.PutAllRequest{Entry: e, Cache: bc.name, Format: bc.format, Scope: bc.sessionOpts.Scope}
 
-	_, err = bc.client.PutAll(ctx, &putAllRequest)
+	_, err = bc.client.PutAll(newCtx, &putAllRequest)
 	if err != nil {
 		return err
 	}
@@ -754,6 +831,11 @@ func executePutIfAbsent[K comparable, V any](ctx context.Context, bc *baseClient
 		return zeroValue, err
 	}
 
+	newCtx, cancel := bc.session.ensureContext(ctx)
+	if cancel != nil {
+		defer cancel()
+	}
+
 	binKey, err = bc.keySerializer.Serialize(key)
 	if err != nil {
 		return zeroValue, err
@@ -767,7 +849,7 @@ func executePutIfAbsent[K comparable, V any](ctx context.Context, bc *baseClient
 	putIfAbsentRequest := pb.PutIfAbsentRequest{Key: binKey, Value: binValue, Cache: bc.name, Format: bc.format,
 		Scope: bc.sessionOpts.Scope}
 
-	result, err = bc.client.PutIfAbsent(ctx, &putIfAbsentRequest)
+	result, err = bc.client.PutIfAbsent(newCtx, &putIfAbsentRequest)
 	if err != nil {
 		return zeroValue, err
 	}
@@ -789,6 +871,11 @@ func executePutWithExpiry[K comparable, V any](ctx context.Context, bc *baseClie
 		return zeroValue, err
 	}
 
+	newCtx, cancel := bc.session.ensureContext(ctx)
+	if cancel != nil {
+		defer cancel()
+	}
+
 	binKey, err = bc.keySerializer.Serialize(key)
 	if err != nil {
 		return zeroValue, err
@@ -802,7 +889,7 @@ func executePutWithExpiry[K comparable, V any](ctx context.Context, bc *baseClie
 	putRequest := pb.PutRequest{Key: binKey, Value: binValue, Cache: bc.name,
 		Format: bc.format, Ttl: ttl.Milliseconds(), Scope: bc.sessionOpts.Scope}
 
-	result, err = bc.client.Put(ctx, &putRequest)
+	result, err = bc.client.Put(newCtx, &putRequest)
 	if err != nil {
 		return zeroValue, err
 	}
@@ -822,6 +909,11 @@ func executeRemove[K comparable, V any](ctx context.Context, bc *baseClient[K, V
 		return zeroValue, err
 	}
 
+	newCtx, cancel := bc.session.ensureContext(ctx)
+	if cancel != nil {
+		defer cancel()
+	}
+
 	binKey, err = bc.keySerializer.Serialize(key)
 	if err != nil {
 		return zeroValue, err
@@ -829,7 +921,7 @@ func executeRemove[K comparable, V any](ctx context.Context, bc *baseClient[K, V
 
 	removeRequest := pb.RemoveRequest{Key: binKey, Cache: bc.name, Format: bc.format, Scope: bc.sessionOpts.Scope}
 
-	oldValue, err = bc.client.Remove(ctx, &removeRequest)
+	oldValue, err = bc.client.Remove(newCtx, &removeRequest)
 	if err != nil {
 		return zeroValue, err
 	}
@@ -850,6 +942,11 @@ func executeRemoveMapping[K comparable, V any](ctx context.Context, bc *baseClie
 		return false, err
 	}
 
+	newCtx, cancel := bc.session.ensureContext(ctx)
+	if cancel != nil {
+		defer cancel()
+	}
+
 	binKey, err = bc.keySerializer.Serialize(key)
 	if err != nil {
 		return false, err
@@ -862,7 +959,7 @@ func executeRemoveMapping[K comparable, V any](ctx context.Context, bc *baseClie
 
 	request := pb.RemoveMappingRequest{Cache: bc.name, Key: binKey, Value: binValue, Format: bc.format, Scope: bc.sessionOpts.Scope}
 
-	result, err = bc.client.RemoveMapping(ctx, &request)
+	result, err = bc.client.RemoveMapping(newCtx, &request)
 	if err != nil {
 		return false, err
 	}
@@ -882,6 +979,11 @@ func executeReplace[K comparable, V any](ctx context.Context, bc *baseClient[K, 
 		return zeroValue, err
 	}
 
+	newCtx, cancel := bc.session.ensureContext(ctx)
+	if cancel != nil {
+		defer cancel()
+	}
+
 	binKey, err = bc.keySerializer.Serialize(key)
 	if err != nil {
 		return zeroValue, err
@@ -894,7 +996,7 @@ func executeReplace[K comparable, V any](ctx context.Context, bc *baseClient[K, 
 
 	request := pb.ReplaceRequest{Key: binKey, Value: binValue, Cache: bc.name, Format: bc.format, Scope: bc.sessionOpts.Scope}
 
-	oldValue, err = bc.client.Replace(ctx, &request)
+	oldValue, err = bc.client.Replace(newCtx, &request)
 	if err != nil {
 		return zeroValue, err
 	}
@@ -916,6 +1018,11 @@ func executeReplaceMapping[K comparable, V any](ctx context.Context, bc *baseCli
 		return false, err
 	}
 
+	newCtx, cancel := bc.session.ensureContext(ctx)
+	if cancel != nil {
+		defer cancel()
+	}
+
 	binKey, err = bc.keySerializer.Serialize(key)
 	if err != nil {
 		return false, err
@@ -934,7 +1041,7 @@ func executeReplaceMapping[K comparable, V any](ctx context.Context, bc *baseCli
 	request := pb.ReplaceMappingRequest{Cache: bc.name, Key: binKey, PreviousValue: binPrevValue,
 		NewValue: binNewValue, Format: bc.format, Scope: bc.sessionOpts.Scope}
 
-	result, err = bc.client.ReplaceMapping(ctx, &request)
+	result, err = bc.client.ReplaceMapping(newCtx, &request)
 	if err != nil {
 		return false, err
 	}
@@ -948,9 +1055,14 @@ func executeSize[K comparable, V any](ctx context.Context, bc *baseClient[K, V])
 		return 0, err
 	}
 
+	newCtx, cancel := bc.session.ensureContext(ctx)
+	if cancel != nil {
+		defer cancel()
+	}
+
 	sizeRequest := pb.SizeRequest{Cache: bc.name}
 
-	size, err := bc.client.Size(ctx, &sizeRequest)
+	size, err := bc.client.Size(newCtx, &sizeRequest)
 	if err != nil {
 		return 0, err
 	}
@@ -960,15 +1072,16 @@ func executeSize[K comparable, V any](ctx context.Context, bc *baseClient[K, V])
 // executeEntrySet executes the KeySet operation against a baseClient.
 func executeEntrySet[K comparable, V any](ctx context.Context, bc *baseClient[K, V]) <-chan *StreamedEntry[K, V] {
 	var (
-		err  = bc.ensureClientConnection()
-		ch   = make(chan *StreamedEntry[K, V])
-		iter = newEntryPageIterator[K, V](ctx, bc)
+		err = bc.ensureClientConnection()
+		ch  = make(chan *StreamedEntry[K, V])
 	)
 
 	if err != nil {
 		ch <- &StreamedEntry[K, V]{Err: err}
 		return ch
 	}
+
+	iter := newEntryPageIterator[K, V](ctx, bc)
 
 	go func() {
 		for {
@@ -1001,6 +1114,8 @@ func executeEntrySetFilter[K comparable, V any](ctx context.Context, bc *baseCli
 		return ch
 	}
 
+	newCtx, cancel := bc.session.ensureContext(ctx)
+
 	if fltr == nil {
 		fltr = filters.Always()
 	}
@@ -1011,6 +1126,10 @@ func executeEntrySetFilter[K comparable, V any](ctx context.Context, bc *baseCli
 	}
 
 	go func() {
+		if cancel != nil {
+			defer cancel()
+		}
+
 		var (
 			request = pb.EntrySetRequest{Cache: bc.name, Filter: binFilter,
 				Format: bc.format, Scope: bc.sessionOpts.Scope}
@@ -1018,7 +1137,7 @@ func executeEntrySetFilter[K comparable, V any](ctx context.Context, bc *baseCli
 			value *V
 		)
 
-		entrySetClient, err1 := bc.client.EntrySet(ctx, &request)
+		entrySetClient, err1 := bc.client.EntrySet(newCtx, &request)
 		if err1 != nil {
 			ch <- &StreamedEntry[K, V]{Err: err1}
 			close(ch)
@@ -1079,6 +1198,8 @@ func executeValues[K comparable, V any](ctx context.Context, bc *baseClient[K, V
 		return ch
 	}
 
+	newCtx, cancel := bc.session.ensureContext(ctx)
+
 	if fltr == nil {
 		fltr = filters.Always()
 	}
@@ -1089,9 +1210,12 @@ func executeValues[K comparable, V any](ctx context.Context, bc *baseClient[K, V
 	}
 
 	go func() {
+		if cancel != nil {
+			defer cancel()
+		}
 		request := pb.ValuesRequest{Cache: bc.name, Filter: binFilter,
 			Format: bc.format, Scope: bc.sessionOpts.Scope}
-		valuesClient, err1 := bc.client.Values(ctx, &request)
+		valuesClient, err1 := bc.client.Values(newCtx, &request)
 
 		if err1 != nil {
 			ch <- &StreamedValue[V]{Err: err1}
@@ -1133,15 +1257,16 @@ func executeValues[K comparable, V any](ctx context.Context, bc *baseClient[K, V
 // executeValuesNoFilter executes the Values operation against a baseClient when no filter is required.
 func executeValuesNoFilter[K comparable, V any](ctx context.Context, bc *baseClient[K, V]) <-chan *StreamedValue[V] {
 	var (
-		err  = bc.ensureClientConnection()
-		ch   = make(chan *StreamedValue[V])
-		iter = newValuePageIterator[K, V](ctx, bc)
+		err = bc.ensureClientConnection()
+		ch  = make(chan *StreamedValue[V])
 	)
 
 	if err != nil {
 		ch <- &StreamedValue[V]{Err: err}
 		return ch
 	}
+
+	iter := newValuePageIterator[K, V](ctx, bc)
 
 	go func() {
 		for {

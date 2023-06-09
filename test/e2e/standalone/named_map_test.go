@@ -99,6 +99,53 @@ func TestBasicCrudOperationsVariousTypes(t *testing.T) {
 		map[int]string{1: "one", 2: "two", 3: "three"})
 }
 
+func TestSessionWithSpecifiedTimeout(t *testing.T) {
+	var (
+		g       = gomega.NewWithT(t)
+		err     error
+		session *coherence.Session
+	)
+
+	session, err = GetSession(coherence.WithSessionTimeout(time.Duration(10) * time.Second))
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	defer session.Close()
+
+	runTimeoutTest(g, session)
+}
+
+func TestSessionWithEnvTimeout(t *testing.T) {
+	var (
+		g       = gomega.NewWithT(t)
+		err     error
+		session *coherence.Session
+	)
+
+	t.Setenv("COHERENCE_SESSION_TIMEOUT", "10000")
+
+	session, err = GetSession()
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	defer session.Close()
+
+	runTimeoutTest(g, session)
+}
+
+func runTimeoutTest(g *gomega.WithT, session *coherence.Session) {
+	// we should get an error as we should be > default timeout
+	namedMap := getNewNamedMap[int, string](g, session, "timeout-map")
+	err := namedMap.Clear(ctx)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+
+	namedCache := getNewNamedCache[int, string](g, session, "timeout-cache")
+	err = namedCache.Clear(ctx)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+
+	// create a new context with an existing deadline, it should be honored
+	ctxNew, cancel := context.WithTimeout(ctx, time.Duration(1)*time.Nanosecond)
+	defer cancel()
+	err = namedCache.Clear(ctxNew)
+	g.Expect(err).Should(gomega.HaveOccurred())
+}
+
 // TestBasicCrudOperationsVariousTypesWithStructKey tests operations against caches that have keys and values as structs.
 func TestBasicCrudOperationsVariousTypesWithStructKey(t *testing.T) {
 	var (
