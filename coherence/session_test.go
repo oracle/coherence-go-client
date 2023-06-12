@@ -35,3 +35,44 @@ func TestSessionValidation(t *testing.T) {
 	g.Expect(err).To(gomega.Not(gomega.HaveOccurred()))
 	g.Expect(s.sessOpts.Timeout).To(gomega.Equal(time.Duration(33) * time.Millisecond))
 }
+
+func TestSessionEnvDebug(t *testing.T) {
+	var (
+		g   = gomega.NewWithT(t)
+		ctx = context.Background()
+	)
+	t.Setenv(envSessionDebug, "true")
+	_, err := NewSession(ctx)
+	g.Expect(err).To(gomega.Not(gomega.HaveOccurred()))
+}
+
+func TestConnectionOverride(t *testing.T) {
+	var (
+		g   = gomega.NewWithT(t)
+		ctx = context.Background()
+	)
+	t.Setenv(envHostName, "localhost:12345")
+	s, err := NewSession(ctx)
+	g.Expect(err).To(gomega.Not(gomega.HaveOccurred()))
+	g.Expect(s.sessOpts.Address).To(gomega.Equal("localhost:12345"))
+}
+
+func TestInvalidFormat(t *testing.T) {
+	var (
+		g   = gomega.NewWithT(t)
+		ctx = context.Background()
+	)
+	_, err := NewSession(ctx, WithFormat("abc"))
+	g.Expect(err).To(gomega.HaveOccurred())
+}
+
+func TestSessionTimeout(t *testing.T) {
+	var (
+		g   = gomega.NewWithT(t)
+		ctx = context.Background()
+	)
+
+	t.Setenv(envSessionTimeout, "-1")
+	_, err := NewSession(ctx)
+	g.Expect(err).To(gomega.HaveOccurred())
+}
