@@ -197,12 +197,17 @@ func (s *Session) ID() string {
 
 // Close closes a connection.
 func (s *Session) Close() {
-	s.maps = make(map[string]interface{}, 0)
-	s.caches = make(map[string]interface{}, 0)
-	err := s.conn.Close()
-	s.closed = true
-	if err != nil {
-		log.Printf("Unable to close session %s %v", s.sessionID, err)
+	if !s.closed {
+		s.maps = make(map[string]interface{}, 0)
+		s.caches = make(map[string]interface{}, 0)
+		err := s.conn.Close()
+		s.closed = true
+		s.dispatch(Closed, func() SessionLifecycleEvent {
+			return newSessionLifecycleEvent(s, Closed)
+		})
+		if err != nil {
+			log.Printf("Unable to close session %s %v", s.sessionID, err)
+		}
 	}
 }
 
@@ -268,10 +273,11 @@ func (s *Session) ensureConnection() error {
 	// refer: https://grpc.github.io/grpc/core/md_doc_connectivity-semantics-and-api.html
 	go func(session *Session) {
 		var (
-			firstConnect = true
-			connected    = false
-			ctx          = context.Background()
-			lastState    = session.conn.GetState()
+			firstConnect         = true
+			connected            = false
+			ctx                  = context.Background()
+			lastState            = session.conn.GetState()
+			disconnectTime int64 = 0
 		)
 
 		for {
@@ -285,18 +291,16 @@ func (s *Session) ensureConnection() error {
 			session.debug("connection:", lastState, "=>", newState)
 
 			if newState == connectivity.Shutdown {
-				log.Printf("closed session %v", s.sessionID)
-				s.dispatch(Closed, func() SessionLifecycleEvent {
-					return newSessionLifecycleEvent(session, Closed)
-				})
-				session.closed = true
+				log.Printf("closed session %v", session.sessionID)
+				session.Close()
 				return
 			}
 
 			if newState == connectivity.Ready {
 				if !firstConnect && !connected {
+					disconnectTime = 0
 					log.Printf("session: %s re-connected to address %s", session.sessionID, session.sessOpts.Address)
-					s.dispatch(Reconnected, func() SessionLifecycleEvent {
+					session.dispatch(Reconnected, func() SessionLifecycleEvent {
 						return newSessionLifecycleEvent(session, Reconnected)
 					})
 					session.closed = false
@@ -304,19 +308,33 @@ func (s *Session) ensureConnection() error {
 				} else if firstConnect && !connected {
 					firstConnect = false
 					connected = true
-					s.hasConnected = true
+					session.hasConnected = true
 					log.Printf("session: %s connected to address %s", session.sessionID, session.sessOpts.Address)
-					s.dispatch(Connected, func() SessionLifecycleEvent {
+					session.dispatch(Connected, func() SessionLifecycleEvent {
 						return newSessionLifecycleEvent(session, Connected)
 					})
 				}
 			} else {
 				if connected {
+					disconnectTime = -1
 					log.Printf("session: %s disconnected from address %s", session.sessionID, session.sessOpts.Address)
-					s.dispatch(Disconnected, func() SessionLifecycleEvent {
+					session.dispatch(Disconnected, func() SessionLifecycleEvent {
 						return newSessionLifecycleEvent(session, Disconnected)
 					})
 					connected = false
+				}
+
+				if disconnectTime != 0 {
+					if disconnectTime == -1 {
+						disconnectTime = time.Now().UnixMilli()
+					} else {
+						waited := time.Now().UnixMilli() - disconnectTime
+						if waited >= session.GetSessionTimeout().Milliseconds() {
+							log.Printf("session: %s unable to reconnect within [%s].  Closing session.", session.sessionID, session.GetSessionTimeout().String())
+							session.Close()
+							return
+						}
+					}
 				}
 
 				// trigger a reconnection on state change
