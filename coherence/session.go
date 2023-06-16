@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/backoff"
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
@@ -249,6 +250,17 @@ func (s *Session) ensureConnection() error {
 		return fmt.Errorf(errString)
 	}
 	s.dialOptions = append(s.dialOptions, tlsOpt)
+
+	connOpt := grpc.WithConnectParams(grpc.ConnectParams{
+		Backoff: backoff.Config{
+			BaseDelay:  1.0 * time.Second,
+			Multiplier: 1.1,
+			Jitter:     0.0,
+			MaxDelay:   3.0 * time.Second,
+		},
+		MinConnectTimeout: 10 * time.Second,
+	})
+	s.dialOptions = append(s.dialOptions, connOpt)
 
 	s.mutex.Lock()
 	locked = true
