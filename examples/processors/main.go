@@ -67,10 +67,13 @@ func main() {
 	}
 	fmt.Println("Person is", *person)
 
+	var updated *bool
 	// update the age to 68
-	if _, err = coherence.Invoke[int, Person, bool](ctx, namedMap, 1, processors.Update("age", 68)); err != nil {
+	if updated, err = coherence.Invoke[int, Person, bool](ctx, namedMap, 1, processors.Update("age", 68)); err != nil {
 		panic(err)
 	}
+
+	fmt.Println("Updated = ", *updated)
 
 	// get the Person
 	person, err = namedMap.Get(ctx, 1)
@@ -116,4 +119,16 @@ func main() {
 			fmt.Println("Person is", se.Value)
 		}
 	}
+
+	// updating multiple values using composite processors to update person one age to 67 and un-retire them.
+	// this will return an array of booleans to indicate each update
+	var proc = processors.Update("age", 67).AndThen(processors.Update("retired", false))
+
+	type result [2]bool
+	var updated2 *result
+	updated2, err = coherence.Invoke[int, Person, result](ctx, namedMap, 1, proc)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("Boolean updates are", updated2[0], updated2[0])
 }

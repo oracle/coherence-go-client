@@ -422,6 +422,22 @@ func RunTestInvokeUpdater(t *testing.T, namedMap coherence.NamedMap[int, Person]
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	g.Expect(result).To(gomega.Not(gomega.BeNil()))
 	g.Expect(result.Age).To(gomega.Equal(20))
+
+	// invoke multiple processors
+	type result2 [2]bool
+	var updated *result2
+	proc := processors.Update("age", 22).AndThen(processors.Update("name", "James Brown"))
+	updated, err = coherence.Invoke[int, Person, result2](ctx, namedMap, 1, proc)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	g.Expect(len(updated)).To(gomega.Equal(2))
+	g.Expect(updated[0]).To(gomega.Equal(true))
+	g.Expect(updated[1]).To(gomega.Equal(true))
+
+	result, err = namedMap.Get(ctx, 1)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	g.Expect(result).To(gomega.Not(gomega.BeNil()))
+	g.Expect(result.Age).To(gomega.Equal(22))
+	g.Expect(result.Name).To(gomega.Equal("James Brown"))
 }
 
 func RunTestInvokeConditionalPutAll(t *testing.T, namedMap coherence.NamedMap[int, Person]) {

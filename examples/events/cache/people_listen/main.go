@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"github.com/oracle/coherence-go-client/coherence"
 	"log"
+	"os"
 	"time"
 )
 
@@ -38,6 +39,13 @@ func main() {
 	}
 
 	defer session.Close()
+
+	session.AddSessionLifecycleListener(
+		coherence.NewSessionLifecycleListener().
+			OnClosed(func(event coherence.SessionLifecycleEvent) {
+				log.Println("session closed, exiting")
+				os.Exit(0)
+			}))
 
 	// create a new NamedMap of Person with key int
 	namedMap, err := coherence.GetNamedMap[int, Person](session, "people")
