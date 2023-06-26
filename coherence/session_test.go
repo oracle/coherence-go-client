@@ -25,15 +25,51 @@ func TestSessionValidation(t *testing.T) {
 	g.Expect(err).To(gomega.Equal(ErrInvalidFormat))
 
 	// test default timeout
-	timeout, _ := strconv.ParseInt(defaultSessionTimeout, 10, 64)
+	timeout, _ := strconv.ParseInt(defaultRequestTimeout, 10, 64)
 	s, err := NewSession(ctx)
 	g.Expect(err).To(gomega.Not(gomega.HaveOccurred()))
-	g.Expect(s.sessOpts.Timeout).To(gomega.Equal(time.Duration(timeout) * time.Millisecond))
+	g.Expect(s.sessOpts.RequestTimeout).To(gomega.Equal(time.Duration(timeout) * time.Millisecond))
 
-	// test setting a timeout
-	s, err = NewSession(ctx, WithSessionTimeout(time.Duration(33)*time.Millisecond))
+	// test setting a request timeout
+	s, err = NewSession(ctx, WithRequestTimeout(time.Duration(33)*time.Millisecond))
 	g.Expect(err).To(gomega.Not(gomega.HaveOccurred()))
-	g.Expect(s.sessOpts.Timeout).To(gomega.Equal(time.Duration(33) * time.Millisecond))
+	g.Expect(s.sessOpts.RequestTimeout).To(gomega.Equal(time.Duration(33) * time.Millisecond))
+
+	// test setting a disconnected timeout
+	s, err = NewSession(ctx, WithDisconnectTimeout(time.Duration(34)*time.Millisecond))
+	g.Expect(err).To(gomega.Not(gomega.HaveOccurred()))
+	g.Expect(s.sessOpts.DisconnectTimeout).To(gomega.Equal(time.Duration(34) * time.Millisecond))
+
+	// test setting a ready timeout
+	s, err = NewSession(ctx, WithReadyTimeout(time.Duration(35)*time.Millisecond))
+	g.Expect(err).To(gomega.Not(gomega.HaveOccurred()))
+	g.Expect(s.sessOpts.ReadyTimeout).To(gomega.Equal(time.Duration(35) * time.Millisecond))
+}
+
+func TestSessionEnvValidation(t *testing.T) {
+	var (
+		g   = gomega.NewWithT(t)
+		err error
+		ctx = context.Background()
+	)
+
+	// test default timeout
+	t.Setenv("COHERENCE_CLIENT_REQUEST_TIMEOUT", "5000")
+	s, err := NewSession(ctx)
+	g.Expect(err).To(gomega.Not(gomega.HaveOccurred()))
+	g.Expect(s.sessOpts.RequestTimeout).To(gomega.Equal(time.Duration(5000) * time.Millisecond))
+
+	// test setting a disconnected timeout
+	t.Setenv("COHERENCE_SESSION_DISCONNECT_TIMEOUT", "6000")
+	s, err = NewSession(ctx)
+	g.Expect(err).To(gomega.Not(gomega.HaveOccurred()))
+	g.Expect(s.sessOpts.DisconnectTimeout).To(gomega.Equal(time.Duration(6000) * time.Millisecond))
+
+	// test setting a ready timeout
+	t.Setenv("COHERENCE_READY_TIMEOUT", "7000")
+	s, err = NewSession(ctx)
+	g.Expect(err).To(gomega.Not(gomega.HaveOccurred()))
+	g.Expect(s.sessOpts.ReadyTimeout).To(gomega.Equal(time.Duration(7000) * time.Millisecond))
 }
 
 func TestSessionEnvDebug(t *testing.T) {
@@ -72,7 +108,7 @@ func TestSessionTimeout(t *testing.T) {
 		ctx = context.Background()
 	)
 
-	t.Setenv(envSessionTimeout, "-1")
+	t.Setenv(envRequestTimeout, "-1")
 	_, err := NewSession(ctx)
 	g.Expect(err).To(gomega.HaveOccurred())
 }

@@ -30,9 +30,11 @@ import (
 var ErrInvalidFormat = errors.New("format can only be 'json'")
 
 const (
-	defaultFormat         = "json"
-	mapOrCacheExists      = "the %s %s already exists with different type parameters"
-	defaultSessionTimeout = "30000" // millis
+	defaultFormat            = "json"
+	mapOrCacheExists         = "the %s %s already exists with different type parameters"
+	defaultRequestTimeout    = "30000" // millis
+	defaultDisconnectTimeout = "30000" // millis
+	defaultReadyTimeout      = "0"     // millis
 )
 
 // Session provides APIs to create NamedCaches. The [NewSession] method creates a
@@ -56,15 +58,17 @@ type Session struct {
 
 // SessionOptions holds the session attributes like host, port, tls attributes etc.
 type SessionOptions struct {
-	Address        string
-	TLSEnabled     bool
-	Scope          string
-	Format         string
-	ClientCertPath string
-	ClientKeyPath  string
-	CaCertPath     string
-	PlainText      bool
-	Timeout        time.Duration
+	Address           string
+	TLSEnabled        bool
+	Scope             string
+	Format            string
+	ClientCertPath    string
+	ClientKeyPath     string
+	CaCertPath        string
+	PlainText         bool
+	RequestTimeout    time.Duration
+	DisconnectTimeout time.Duration
+	ReadyTimeout      time.Duration
 }
 
 // NewSession creates a new Session with the specified sessionOptions.
@@ -115,9 +119,11 @@ func NewSession(ctx context.Context, options ...func(session *SessionOptions)) (
 		caches:                make(map[string]interface{}, 0),
 		lifecycleListeners:    []*SessionLifecycleListener{},
 		sessOpts: &SessionOptions{
-			PlainText: false,
-			Format:    defaultFormat,
-			Timeout:   time.Duration(0) * time.Second},
+			PlainText:         false,
+			Format:            defaultFormat,
+			RequestTimeout:    time.Duration(0) * time.Second,
+			ReadyTimeout:      time.Duration(0) * time.Second,
+			DisconnectTimeout: time.Duration(0) * time.Second},
 	}
 
 	if getBoolValueFromEnvVarOrDefault(envSessionDebug, false) {
@@ -141,14 +147,34 @@ func NewSession(ctx context.Context, options ...func(session *SessionOptions)) (
 		session.sessOpts.Address = getStringValueFromEnvVarOrDefault(envHostName, "localhost:1408")
 	}
 
-	// if no timeout then use the env or default
-	if session.sessOpts.Timeout == time.Duration(0) {
-		timeoutString := getStringValueFromEnvVarOrDefault(envSessionTimeout, defaultSessionTimeout)
+	// if no request timeout then use the env or default
+	if session.sessOpts.RequestTimeout == time.Duration(0) {
+		timeoutString := getStringValueFromEnvVarOrDefault(envRequestTimeout, defaultRequestTimeout)
 		timeout, err := strconv.ParseInt(timeoutString, 10, 64)
 		if err != nil || timeout <= 0 {
-			return nil, fmt.Errorf("invalid value of %s for timeout", timeoutString)
+			return nil, fmt.Errorf("invalid value of %s for request timeout", timeoutString)
 		}
-		session.sessOpts.Timeout = time.Duration(timeout) * time.Millisecond
+		session.sessOpts.RequestTimeout = time.Duration(timeout) * time.Millisecond
+	}
+
+	// if no disconnect timeout then use the env or default
+	if session.sessOpts.DisconnectTimeout == time.Duration(0) {
+		timeoutString := getStringValueFromEnvVarOrDefault(envDisconnectTimeout, defaultDisconnectTimeout)
+		timeout, err := strconv.ParseInt(timeoutString, 10, 64)
+		if err != nil || timeout <= 0 {
+			return nil, fmt.Errorf("invalid value of %s for disconnect timeout", timeoutString)
+		}
+		session.sessOpts.DisconnectTimeout = time.Duration(timeout) * time.Millisecond
+	}
+
+	// if no ready timeout then use the env or default
+	if session.sessOpts.ReadyTimeout == time.Duration(0) {
+		timeoutString := getStringValueFromEnvVarOrDefault(envReadyTimeout, defaultReadyTimeout)
+		timeout, err := strconv.ParseInt(timeoutString, 10, 64)
+		if err != nil || timeout < 0 {
+			return nil, fmt.Errorf("invalid value of %s for ready timeout", timeoutString)
+		}
+		session.sessOpts.ReadyTimeout = time.Duration(timeout) * time.Millisecond
 	}
 
 	// ensure initial connection
@@ -184,10 +210,27 @@ func WithPlainText() func(sessionOptions *SessionOptions) {
 	}
 }
 
-// WithSessionTimeout returns a function to set the session timeout.
-func WithSessionTimeout(timeout time.Duration) func(sessionOptions *SessionOptions) {
+// WithRequestTimeout returns a function to set the request timeout in millis.
+func WithRequestTimeout(timeout time.Duration) func(sessionOptions *SessionOptions) {
 	return func(s *SessionOptions) {
-		s.Timeout = timeout
+		s.RequestTimeout = timeout
+	}
+}
+
+// WithDisconnectTimeout returns a function to set the maximum amount of time, in millis, a [Session]
+// may remain in a disconnected state without successfully reconnecting.
+func WithDisconnectTimeout(timeout time.Duration) func(sessionOptions *SessionOptions) {
+	return func(s *SessionOptions) {
+		s.DisconnectTimeout = timeout
+	}
+}
+
+// WithReadyTimeout returns a function to set the maximum amount of time an [NamedMap] or [NamedCache]
+// operations may wait for the underlying gRPC channel to be ready.  This is independent of the request
+// timeout which sets a deadline on how long the call may take after being dispatched.
+func WithReadyTimeout(timeout time.Duration) func(sessionOptions *SessionOptions) {
+	return func(s *SessionOptions) {
+		s.ReadyTimeout = timeout
 	}
 }
 
@@ -217,9 +260,19 @@ func (s *Session) String() string {
 		len(s.caches), len(s.maps), s.sessOpts)
 }
 
-// GetSessionTimeout returns the session timeout in seconds.
-func (s *Session) GetSessionTimeout() time.Duration {
-	return s.sessOpts.Timeout
+// GetRequestTimeout returns the session timeout in millis.
+func (s *Session) GetRequestTimeout() time.Duration {
+	return s.sessOpts.RequestTimeout
+}
+
+// GetDisconnectTimeout returns the session disconnect timeout in millis.
+func (s *Session) GetDisconnectTimeout() time.Duration {
+	return s.sessOpts.DisconnectTimeout
+}
+
+// GetReadyTimeout returns the session disconnect timeout in millis.
+func (s *Session) GetReadyTimeout() time.Duration {
+	return s.sessOpts.ReadyTimeout
 }
 
 // ensureConnection ensures a session has a valid connection
@@ -227,6 +280,10 @@ func (s *Session) ensureConnection() error {
 	if s.firstConnectAttempted {
 		// We have previously tried to connect so check that the connect state is connected
 		if s.conn.GetState() != connectivity.Ready {
+			// if the readyTime is set, and we are not connected then block and wait for connection
+			if s.GetReadyTimeout() != 0 {
+				return waitForReady(s)
+			}
 			s.debug(fmt.Sprintf("session: %s attempting connection to address %s", s.sessionID, s.sessOpts.Address))
 			s.conn.Connect()
 			return nil
@@ -285,11 +342,11 @@ func (s *Session) ensureConnection() error {
 	// refer: https://grpc.github.io/grpc/core/md_doc_connectivity-semantics-and-api.html
 	go func(session *Session) {
 		var (
-			firstConnect         = true
-			connected            = false
-			ctx                  = context.Background()
-			lastState            = session.conn.GetState()
-			disconnectTime int64 = 0
+			firstConnect   = true
+			connected      = false
+			ctx            = context.Background()
+			lastState      = session.conn.GetState()
+			disconnectTime int64
 		)
 
 		for {
@@ -341,8 +398,9 @@ func (s *Session) ensureConnection() error {
 						disconnectTime = time.Now().UnixMilli()
 					} else {
 						waited := time.Now().UnixMilli() - disconnectTime
-						if waited >= session.GetSessionTimeout().Milliseconds() {
-							log.Printf("session: %s unable to reconnect within [%s].  Closing session.", session.sessionID, session.GetSessionTimeout().String())
+						if waited >= session.GetDisconnectTimeout().Milliseconds() {
+							log.Printf("session: %s unable to reconnect within disconnect timeout of [%s]. Closing session.",
+								session.sessionID, session.GetDisconnectTimeout().String())
 							session.Close()
 							return
 						}
@@ -359,6 +417,38 @@ func (s *Session) ensureConnection() error {
 	}(s)
 
 	return nil
+}
+
+// waitForReady waits until the connection is ready up to the ready session timeout and will
+// return nil if the session was connected, otherwise an error is returned.
+func waitForReady(s *Session) error {
+	var (
+		readyTimeout  = s.GetReadyTimeout()
+		messageLogged = false
+	)
+
+	//s.debug(fmt.Sprintf("State is %v, waiting until ready timeout of %v for valid connection", initialState, readyTimeout))
+
+	// try to connect up until timeout, then throw err if not available
+	timeout := time.Now().Add(readyTimeout)
+	for {
+		if time.Now().After(timeout) {
+			return fmt.Errorf("unable to connect to %s after ready timeout of %v", s.sessOpts.Address, readyTimeout)
+		}
+
+		s.conn.Connect()
+
+		time.Sleep(time.Duration(250) * time.Millisecond)
+		state := s.conn.GetState()
+
+		if state == connectivity.Ready {
+			return nil
+		}
+		if !messageLogged {
+			log.Printf("State is %v, waiting until ready timeout of %v for valid connection", state, readyTimeout)
+			messageLogged = true
+		}
+	}
 }
 
 // GetOptions returns the options that were passed during this session creation.
@@ -530,8 +620,8 @@ func validateFilePath(file string) error {
 // String returns a string representation of SessionOptions.
 func (s *SessionOptions) String() string {
 	var sb = strings.Builder{}
-	sb.WriteString(fmt.Sprintf("SessionOptions{address=%v, tLSEnabled=%v, scope=%v, format=%v, timeout=%v",
-		s.Address, s.TLSEnabled, s.Scope, s.Format, s.Timeout))
+	sb.WriteString(fmt.Sprintf("SessionOptions{address=%v, tLSEnabled=%v, scope=%v, format=%v, request timeout=%v, disconnect timeout=%v, ready timeout=%v",
+		s.Address, s.TLSEnabled, s.Scope, s.Format, s.RequestTimeout, s.DisconnectTimeout, s.ReadyTimeout))
 
 	if s.TLSEnabled {
 		sb.WriteString(fmt.Sprintf(" clientCertPath=%v, clientKeyPath=%v, caCertPath=%v,",
@@ -556,8 +646,8 @@ func (s *Session) dispatch(eventType SessionLifecycleEventType,
 // [SessionOptions].
 func (s *Session) ensureContext(ctx context.Context) (context.Context, context.CancelFunc) {
 	if _, ok := ctx.Deadline(); !ok {
-		// no deadline set, so wrap the context in a Timeout
-		return context.WithTimeout(ctx, s.sessOpts.Timeout)
+		// no deadline set, so wrap the context in a RequestTimeout
+		return context.WithTimeout(ctx, s.sessOpts.RequestTimeout)
 	}
 	return ctx, nil
 }

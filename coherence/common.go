@@ -27,7 +27,9 @@ const (
 	envTLSClientCert      = "COHERENCE_TLS_CLIENT_CERT"
 	envTLSClientKey       = "COHERENCE_TLS_CLIENT_KEY"
 	envIgnoreInvalidCerts = "COHERENCE_IGNORE_INVALID_CERTS"
-	envSessionTimeout     = "COHERENCE_SESSION_TIMEOUT"
+	envRequestTimeout     = "COHERENCE_CLIENT_REQUEST_TIMEOUT"
+	envDisconnectTimeout  = "COHERENCE_SESSION_DISCONNECT_TIMEOUT"
+	envReadyTimeout       = "COHERENCE_READY_TIMEOUT"
 
 	// envSessionDebug enabled session debug messages to be displayed.
 	envSessionDebug = "COHERENCE_SESSION_DEBUG"

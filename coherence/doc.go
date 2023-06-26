@@ -61,17 +61,26 @@ Refer to the section on [NewSession] for more information on setting up a SSL co
 
 See [SessionOptions] which lists all the options supported by the [Session] API.
 
-# Controlling connection timeouts
+# Controlling timeouts
 
 Most operations you call require you to supply a [context.Context]. If your context does not contain a deadline,
 the operation will wrap your context in a new [context.WithTimeout] using either the default timeout of 30,000 millis or
-the value you set using option [coherence.WithSessionTimeout] when you called [NewSession].
+the value you set using option [coherence.WithRequestTimeout] when you called [NewSession].
 
-For example, to override the default timeout of 30,000 millis with one of 5 seconds for a [Session] you can do the following:
+For example, to override the default request timeout of 30,000 millis with one of 5 seconds for a [Session] you can do the following:
 
-	session, err = coherence.NewSession(ctx, coherence.WithSessionTimeout(time.Duration(5) * time.Second))
+	session, err = coherence.NewSession(ctx, coherence.WithRequestTimeout(time.Duration(5) * time.Second))
 
-You can also override the default timeout using the environment variable COHERENCE_SESSION_TIMEOUT.
+You can also override the default request timeout using the environment variable COHERENCE_CLIENT_REQUEST_TIMEOUT.
+
+By default, if an endpoint is not ready, the Go client will fail-fast. You can change this behaviour by setting
+the option [coherence.WithReadyTimeout] to a value millis value greater than zero which will cause the Go client
+to wait until up to the timeout specified until it fails if no endpoint is available. You can also use the environment variable
+COHERENCE_READY_TIMEOUT.
+
+You also have the ability to control maximum amount of time, in milliseconds, a [Session] may remain in a disconnected state
+without successfully reconnecting. For this you use the option [coherence.WithDisconnectTimeout] or the environment
+variable COHERENCE_SESSION_DISCONNECT_TIMEOUT.
 
 # Obtaining a NamedMap or NamedCache
 

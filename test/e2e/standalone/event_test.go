@@ -220,7 +220,7 @@ func TestMapEventMultipleListeners(t *testing.T) {
 	}
 }
 
-// RunTestReconnect tests that a gRPC connection will reset it's self and the map listetners
+// RunTestReconnect tests that a gRPC connection will reset it's self and the map listeners
 // will re-register correctly.
 func RunTestReconnect(g *gomega.WithT, namedMap coherence.NamedMap[string, string]) {
 	defer func(cache coherence.NamedMap[string, string], ctx context.Context) {

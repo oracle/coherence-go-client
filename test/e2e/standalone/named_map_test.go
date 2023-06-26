@@ -106,7 +106,7 @@ func TestSessionWithSpecifiedTimeout(t *testing.T) {
 		session *coherence.Session
 	)
 
-	session, err = GetSession(coherence.WithSessionTimeout(time.Duration(10) * time.Second))
+	session, err = GetSession(coherence.WithRequestTimeout(time.Duration(10) * time.Second))
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	defer session.Close()
 
@@ -120,7 +120,7 @@ func TestSessionWithEnvTimeout(t *testing.T) {
 		session *coherence.Session
 	)
 
-	t.Setenv("COHERENCE_SESSION_TIMEOUT", "10000")
+	t.Setenv("COHERENCE_CLIENT_REQUEST_TIMEOUT", "10000")
 
 	session, err = GetSession()
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
