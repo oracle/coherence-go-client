@@ -18,13 +18,16 @@ import (
 // TestCacheLifecycle runs tests to ensure correct behaviour when working with session events.
 func TestSessionLifecycle(t *testing.T) {
 	g := NewWithT(t)
+
+	t.Setenv("COHERENCE_SESSION_DEBUG", "true")
+
 	session, err := GetSession()
 	g.Expect(err).ShouldNot(HaveOccurred())
 
 	listener := NewAllLifecycleEventsListener()
 	session.AddSessionLifecycleListener(listener.listener)
 
-	Sleep(5)
+	Sleep(15)
 
 	// close the session
 	session.Close()

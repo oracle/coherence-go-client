@@ -61,6 +61,8 @@ func main() {
 	}
 	defer session.Close()
 
+	log.Printf("%v\n", session)
+
 	namedMap, err := coherence.GetNamedMap[int, Person](session, "people")
 	if err != nil {
 		panic(err)
