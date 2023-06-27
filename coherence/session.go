@@ -421,13 +421,13 @@ func (s *Session) ensureConnection() error {
 
 // waitForReady waits until the connection is ready up to the ready session timeout and will
 // return nil if the session was connected, otherwise an error is returned.
+// We intentionally do no use the gRPC WaitForReady as this can cause a race condition in the session
+// events code.
 func waitForReady(s *Session) error {
 	var (
 		readyTimeout  = s.GetReadyTimeout()
 		messageLogged = false
 	)
-
-	//s.debug(fmt.Sprintf("State is %v, waiting until ready timeout of %v for valid connection", initialState, readyTimeout))
 
 	// try to connect up until timeout, then throw err if not available
 	timeout := time.Now().Add(readyTimeout)
