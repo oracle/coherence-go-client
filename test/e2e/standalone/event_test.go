@@ -110,10 +110,25 @@ func TestEventDisconnect(t *testing.T) {
 
 	namedCache := GetNamedCache[string, string](g, session, "test-reconnect-cache")
 
-	RunTestReconnect(g, namedCache)
+	RunTestReconnect(g, namedCache, true)
 
 	namedMap := GetNamedMap[string, string](g, session, "test-reconnect-map")
-	RunTestReconnect(g, namedMap)
+	RunTestReconnect(g, namedMap, true)
+}
+
+// TestEventDisconnectWithReadyTimeoutDelay tests that the ready timeout is honoured
+// and we can just issue a command and not sleep.
+func TestEventDisconnectWithReadyTimeoutDelay(t *testing.T) {
+	t.Setenv("COHERENCE_SESSION_DEBUG", "true")
+	g, session := initTest(t, coherence.WithReadyTimeout(time.Duration(120000)*time.Millisecond))
+	defer session.Close()
+
+	namedCache := GetNamedCache[string, string](g, session, "test-reconnect-cache")
+
+	RunTestReconnect(g, namedCache, false)
+
+	namedMap := GetNamedMap[string, string](g, session, "test-reconnect-map")
+	RunTestReconnect(g, namedMap, false)
 }
 
 func TestMapEventInsertsOnly(t *testing.T) {
@@ -221,8 +236,8 @@ func TestMapEventMultipleListeners(t *testing.T) {
 }
 
 // RunTestReconnect tests that a gRPC connection will reset it's self and the map listeners
-// will re-register correctly.
-func RunTestReconnect(g *gomega.WithT, namedMap coherence.NamedMap[string, string]) {
+// will re-register correctly. If doSleep is true then a 60-second sleep is added, otherwise no sleep is included.
+func RunTestReconnect(g *gomega.WithT, namedMap coherence.NamedMap[string, string], doSleep bool) {
 	defer func(cache coherence.NamedMap[string, string], ctx context.Context) {
 		err := cache.Destroy(ctx)
 		if err != nil {
@@ -251,8 +266,10 @@ func RunTestReconnect(g *gomega.WithT, namedMap coherence.NamedMap[string, strin
 	_, err = IssuePostRequest("http://127.0.0.1:30000/management/coherence/cluster/services/$GRPC:GrpcProxy/members/1/stop")
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
-	// sleep for 60 seconds to give the shutdown time to take effect
-	Sleep(60)
+	if doSleep {
+		// sleep for 60 seconds to give the shutdown time to take effect
+		Sleep(60)
+	}
 
 	// add another 'additional' mutations
 	createMutations(g, namedMap, additional)

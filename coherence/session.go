@@ -149,36 +149,42 @@ func NewSession(ctx context.Context, options ...func(session *SessionOptions)) (
 
 	// if no request timeout then use the env or default
 	if session.sessOpts.RequestTimeout == time.Duration(0) {
-		timeoutString := getStringValueFromEnvVarOrDefault(envRequestTimeout, defaultRequestTimeout)
-		timeout, err := strconv.ParseInt(timeoutString, 10, 64)
-		if err != nil || timeout <= 0 {
-			return nil, fmt.Errorf("invalid value of %s for request timeout", timeoutString)
+		timeout, err := getTimeoutValue(envRequestTimeout, defaultRequestTimeout, "request timeout")
+		if err != nil {
+			return nil, err
 		}
-		session.sessOpts.RequestTimeout = time.Duration(timeout) * time.Millisecond
+		session.sessOpts.RequestTimeout = timeout
 	}
 
 	// if no disconnect timeout then use the env or default
 	if session.sessOpts.DisconnectTimeout == time.Duration(0) {
-		timeoutString := getStringValueFromEnvVarOrDefault(envDisconnectTimeout, defaultDisconnectTimeout)
-		timeout, err := strconv.ParseInt(timeoutString, 10, 64)
-		if err != nil || timeout <= 0 {
-			return nil, fmt.Errorf("invalid value of %s for disconnect timeout", timeoutString)
+		timeout, err := getTimeoutValue(envDisconnectTimeout, defaultDisconnectTimeout, "disconnect timeout")
+		if err != nil {
+			return nil, err
 		}
-		session.sessOpts.DisconnectTimeout = time.Duration(timeout) * time.Millisecond
+		session.sessOpts.DisconnectTimeout = timeout
 	}
 
 	// if no ready timeout then use the env or default
 	if session.sessOpts.ReadyTimeout == time.Duration(0) {
-		timeoutString := getStringValueFromEnvVarOrDefault(envReadyTimeout, defaultReadyTimeout)
-		timeout, err := strconv.ParseInt(timeoutString, 10, 64)
-		if err != nil || timeout < 0 {
-			return nil, fmt.Errorf("invalid value of %s for ready timeout", timeoutString)
+		timeout, err := getTimeoutValue(envReadyTimeout, defaultReadyTimeout, "ready timeout")
+		if err != nil {
+			return nil, err
 		}
-		session.sessOpts.ReadyTimeout = time.Duration(timeout) * time.Millisecond
+		session.sessOpts.ReadyTimeout = timeout
 	}
 
 	// ensure initial connection
 	return session, session.ensureConnection()
+}
+
+func getTimeoutValue(envVar, defaultValue, description string) (time.Duration, error) {
+	timeoutString := getStringValueFromEnvVarOrDefault(envVar, defaultValue)
+	timeout, err := strconv.ParseInt(timeoutString, 10, 64)
+	if err != nil || timeout < 0 {
+		return 0, fmt.Errorf("invalid value of %s for %s", timeoutString, description)
+	}
+	return time.Duration(timeout) * time.Millisecond, nil
 }
 
 // WithAddress returns a function to set the address for session.
