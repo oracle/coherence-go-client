@@ -8,7 +8,7 @@
 # ----------------------------------------------------------------------------------------------------------------------
 
 # This is the version of the coherence-go-client
-VERSION ?=1.0.0-rc4
+VERSION ?=1.0.0
 CURRDIR := $(shell pwd)
 USER_ID := $(shell echo "`id -u`:`id -g`")
 
