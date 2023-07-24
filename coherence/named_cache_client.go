@@ -507,6 +507,14 @@ func (nc *NamedCacheClient[K, V]) Values(ctx context.Context) <-chan *StreamedVa
 	return executeValuesNoFilter[K, V](ctx, &nc.baseClient)
 }
 
+// IsReady returns whether this [NamedCache] is ready to be used.
+// An example of when this method would return false would
+// be where a partitioned cache service that owns this cache has no
+// storage-enabled members.
+func (nc *NamedCacheClient[K, V]) IsReady(ctx context.Context) (bool, error) {
+	return executeIsReady[K, V](ctx, &nc.baseClient)
+}
+
 // String returns a string representation of a [NamedCacheClient].
 func (nc *NamedCacheClient[K, V]) String() string {
 	return fmt.Sprintf("NamedCache{name=%s, format=%s, destroyed=%v, released=%v}",

@@ -8,6 +8,7 @@ package com.oracle.coherence.go.testing;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -26,6 +27,7 @@ import com.tangosol.net.NamedCache;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
+import com.tangosol.net.NamedMap;
 import com.tangosol.net.SessionConfiguration;
 import com.tangosol.net.management.MBeanServerProxy;
 
@@ -66,6 +68,7 @@ public class RestServer {
             server.createContext("/cache", RestServer::cache);
             server.createContext("/balanced", RestServer::balanced);
             server.createContext("/checkCustomerCache", RestServer::checkCustomerCache);
+            server.createContext("/isIsReadyPresent", RestServer::isIsReadyPresent);
 
             server.setExecutor(null); // creates a default executor
             server.start();
@@ -101,6 +104,10 @@ public class RestServer {
 
     private static void ready(HttpExchange t) throws IOException {
         send(t, 200, "OK");
+    }
+
+    private static void isIsReadyPresent(HttpExchange t) throws IOException {
+        send(t, 200, Boolean.toString(canFindIsReady()));
     }
 
     private static void env(HttpExchange t) throws IOException {
@@ -139,6 +146,17 @@ public class RestServer {
         }
         catch (Exception e) {
             send(t, 400, e.getMessage());
+        }
+    }
+
+    private static boolean canFindIsReady() {
+        try {
+            Object inst = NamedMap.class.getMethod("isReady");
+            CacheFactory.log("Method = " + inst, CacheFactory.LOG_INFO);
+            return true;
+        }
+        catch (Exception e) {
+            return false;
         }
     }
 

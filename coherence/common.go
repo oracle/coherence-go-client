@@ -1050,7 +1050,7 @@ func executeReplaceMapping[K comparable, V any](ctx context.Context, bc *baseCli
 	return result.Value, nil
 }
 
-// executeReplaceMapping executes the ReplaceMapping operation against a baseClient.
+// executeSize executes the size operation against a baseClient.
 func executeSize[K comparable, V any](ctx context.Context, bc *baseClient[K, V]) (int, error) {
 	err := bc.ensureClientConnection()
 	if err != nil {
@@ -1069,6 +1069,27 @@ func executeSize[K comparable, V any](ctx context.Context, bc *baseClient[K, V])
 		return 0, err
 	}
 	return int(size.Value), err
+}
+
+// executeIsReady executes the isReady operation against a baseClient.
+func executeIsReady[K comparable, V any](ctx context.Context, bc *baseClient[K, V]) (bool, error) {
+	err := bc.ensureClientConnection()
+	if err != nil {
+		return false, err
+	}
+
+	newCtx, cancel := bc.session.ensureContext(ctx)
+	if cancel != nil {
+		defer cancel()
+	}
+
+	isReadyRequest := pb.IsReadyRequest{Cache: bc.name}
+
+	size, err := bc.client.IsReady(newCtx, &isReadyRequest)
+	if err != nil {
+		return false, err
+	}
+	return size.Value, err
 }
 
 // executeEntrySet executes the KeySet operation against a baseClient.
