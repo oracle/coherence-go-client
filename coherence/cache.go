@@ -187,6 +187,13 @@ type NamedMap[K comparable, V any] interface {
 	Values(ctx context.Context) <-chan *StreamedValue[V]
 
 	getBaseClient() *baseClient[K, V]
+
+	// IsReady returns whether this [NamedMap] is ready to be used.
+	// An example of when this method would return false would
+	// be where a partitioned cache service that owns this cache has no
+	// storage-enabled members.
+	// If it is not supported by the gRPC proxy, an error will be returned.
+	IsReady(ctx context.Context) (bool, error)
 }
 
 // NamedCache is syntactically identical in behaviour to a NamedMap, but additionally implements

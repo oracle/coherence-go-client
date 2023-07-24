@@ -55,6 +55,8 @@ type NamedCacheServiceClient interface {
 	InvokeAll(ctx context.Context, in *InvokeAllRequest, opts ...grpc.CallOption) (NamedCacheService_InvokeAllClient, error)
 	// Determine whether a cache is empty.
 	IsEmpty(ctx context.Context, in *IsEmptyRequest, opts ...grpc.CallOption) (*wrapperspb.BoolValue, error)
+	// Determine whether a cache is empty.
+	IsReady(ctx context.Context, in *IsReadyRequest, opts ...grpc.CallOption) (*wrapperspb.BoolValue, error)
 	// Obtain all of the keys in the cache where the cache entries
 	// match a given filter.
 	KeySet(ctx context.Context, in *KeySetRequest, opts ...grpc.CallOption) (NamedCacheService_KeySetClient, error)
@@ -322,6 +324,15 @@ func (c *namedCacheServiceClient) IsEmpty(ctx context.Context, in *IsEmptyReques
 	return out, nil
 }
 
+func (c *namedCacheServiceClient) IsReady(ctx context.Context, in *IsReadyRequest, opts ...grpc.CallOption) (*wrapperspb.BoolValue, error) {
+	out := new(wrapperspb.BoolValue)
+	err := c.cc.Invoke(ctx, "/coherence.NamedCacheService/isReady", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *namedCacheServiceClient) KeySet(ctx context.Context, in *KeySetRequest, opts ...grpc.CallOption) (NamedCacheService_KeySetClient, error) {
 	stream, err := c.cc.NewStream(ctx, &NamedCacheService_ServiceDesc.Streams[4], "/coherence.NamedCacheService/keySet", opts...)
 	if err != nil {
@@ -575,6 +586,8 @@ type NamedCacheServiceServer interface {
 	InvokeAll(*InvokeAllRequest, NamedCacheService_InvokeAllServer) error
 	// Determine whether a cache is empty.
 	IsEmpty(context.Context, *IsEmptyRequest) (*wrapperspb.BoolValue, error)
+	// Determine whether a cache is empty.
+	IsReady(context.Context, *IsReadyRequest) (*wrapperspb.BoolValue, error)
 	// Obtain all of the keys in the cache where the cache entries
 	// match a given filter.
 	KeySet(*KeySetRequest, NamedCacheService_KeySetServer) error
@@ -663,6 +676,9 @@ func (UnimplementedNamedCacheServiceServer) InvokeAll(*InvokeAllRequest, NamedCa
 }
 func (UnimplementedNamedCacheServiceServer) IsEmpty(context.Context, *IsEmptyRequest) (*wrapperspb.BoolValue, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method IsEmpty not implemented")
+}
+func (UnimplementedNamedCacheServiceServer) IsReady(context.Context, *IsReadyRequest) (*wrapperspb.BoolValue, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method IsReady not implemented")
 }
 func (UnimplementedNamedCacheServiceServer) KeySet(*KeySetRequest, NamedCacheService_KeySetServer) error {
 	return status.Errorf(codes.Unimplemented, "method KeySet not implemented")
@@ -988,6 +1004,24 @@ func _NamedCacheService_IsEmpty_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _NamedCacheService_IsReady_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(IsReadyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NamedCacheServiceServer).IsReady(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/coherence.NamedCacheService/isReady",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NamedCacheServiceServer).IsReady(ctx, req.(*IsReadyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _NamedCacheService_KeySet_Handler(srv interface{}, stream grpc.ServerStream) error {
 	m := new(KeySetRequest)
 	if err := stream.RecvMsg(m); err != nil {
@@ -1298,6 +1332,10 @@ var NamedCacheService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "isEmpty",
 			Handler:    _NamedCacheService_IsEmpty_Handler,
+		},
+		{
+			MethodName: "isReady",
+			Handler:    _NamedCacheService_IsReady_Handler,
 		},
 		{
 			MethodName: "put",

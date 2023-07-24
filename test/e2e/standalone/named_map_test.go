@@ -236,6 +236,8 @@ func TestBasicOperationsAgainstMapAndCache(t *testing.T) {
 		{"NamedCacheRunTestValues", GetNamedCache[int, Person](g, session, "values-cache-short"), RunTestValuesShort},
 		{"NamedMapRunTestValues", GetNamedMap[int, Person](g, session, "values-map"), RunTestValuesLong},
 		{"NamedCacheRunTestValues", GetNamedCache[int, Person](g, session, "values-cache"), RunTestValuesLong},
+		{"NamedMapRunTestIsReady", GetNamedMap[int, Person](g, session, "is-ready-map"), RunTestIsReady},
+		{"NamedCacheRunTestIsReady", GetNamedCache[int, Person](g, session, "is-read-cache"), RunTestIsReady},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.testName, func(t *testing.T) {
@@ -252,6 +254,31 @@ func TestCantSetDefaultExpiryForNamedMap(t *testing.T) {
 
 	_, err = coherence.GetNamedMap[int, Person](session, "cache-expiry", coherence.WithExpiry(time.Duration(5)*time.Second))
 	g.Expect(err).Should(gomega.HaveOccurred())
+}
+
+func RunTestIsReady(t *testing.T, namedMap coherence.NamedMap[int, Person]) {
+	var (
+		g       = gomega.NewWithT(t)
+		err     error
+		isReady bool
+		content []byte
+	)
+	session, err := GetSession()
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	defer session.Close()
+
+	content, err = IssueGetRequest(GetTestContext().RestURL + "/isIsReadyPresent")
+	g.Expect(err).Should(gomega.Not(gomega.HaveOccurred()))
+
+	isReady, err = namedMap.IsReady(ctx)
+	if string(content) == "true" {
+		// IsReady is present on the server, so we can proceed with test and it should succeed
+		g.Expect(err).Should(gomega.Not(gomega.HaveOccurred()))
+		g.Expect(isReady).To(gomega.Equal(true))
+	} else {
+		// should raise an error if not available on the server
+		g.Expect(err).Should(gomega.HaveOccurred())
+	}
 }
 
 func RunTestBasicCrudOperations(t *testing.T, namedMap coherence.NamedMap[int, Person]) {

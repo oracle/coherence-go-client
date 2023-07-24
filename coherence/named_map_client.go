@@ -717,6 +717,15 @@ func (nm *NamedMapClient[K, V]) Values(ctx context.Context) <-chan *StreamedValu
 	return executeValuesNoFilter[K, V](ctx, &nm.baseClient)
 }
 
+// IsReady returns whether this [NamedMap] is ready to be used.
+// An example of when this method would return false would
+// be where a partitioned cache service that owns this cache has no
+// storage-enabled members.
+// If it is not supported by the gRPC proxy, an error will be returned.
+func (nm *NamedMapClient[K, V]) IsReady(ctx context.Context) (bool, error) {
+	return executeIsReady[K, V](ctx, &nm.baseClient)
+}
+
 // String returns a string representation of a NamedMapClient.
 func (nm *NamedMapClient[K, V]) String() string {
 	return fmt.Sprintf("NamedMap{name=%s, format=%s, destroyed=%v, released=%v}",
