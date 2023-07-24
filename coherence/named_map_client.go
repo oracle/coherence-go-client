@@ -721,6 +721,7 @@ func (nm *NamedMapClient[K, V]) Values(ctx context.Context) <-chan *StreamedValu
 // An example of when this method would return false would
 // be where a partitioned cache service that owns this cache has no
 // storage-enabled members.
+// If it is not supported by the gRPC proxy, an error will be returned.
 func (nm *NamedMapClient[K, V]) IsReady(ctx context.Context) (bool, error) {
 	return executeIsReady[K, V](ctx, &nm.baseClient)
 }

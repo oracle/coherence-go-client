@@ -269,11 +269,15 @@ func RunTestIsReady(t *testing.T, namedMap coherence.NamedMap[int, Person]) {
 
 	content, err = IssueGetRequest(GetTestContext().RestURL + "/isIsReadyPresent")
 	g.Expect(err).Should(gomega.Not(gomega.HaveOccurred()))
+
+	isReady, err = namedMap.IsReady(ctx)
 	if string(content) == "true" {
-		// IsReady is present on the server, so we can proceed with test
-		isReady, err = namedMap.IsReady(ctx)
+		// IsReady is present on the server, so we can proceed with test and it should succeed
 		g.Expect(err).Should(gomega.Not(gomega.HaveOccurred()))
 		g.Expect(isReady).To(gomega.Equal(true))
+	} else {
+		// should raise an error if not available on the server
+		g.Expect(err).Should(gomega.HaveOccurred())
 	}
 }
 
