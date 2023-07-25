@@ -1377,6 +1377,7 @@ func serializeKeys[K comparable](serializer Serializer[K], keys []K) ([][]byte, 
 }
 
 // ensureError inspects the error and if it is gRPC related, will wrap with a more helpful message.
+// any new execute* function added since v1.0.0 must call this to wrap errors.
 func ensureError(err error) error {
 	if status.Code(err) == codes.Unimplemented {
 		return fmt.Errorf("this operation is not supported by the current gRPC proxy, either upgrade the version of Coherence on the gRPC proxy or connect to a gRPC proxy that supports the operation: %w", err)
