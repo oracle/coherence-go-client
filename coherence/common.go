@@ -9,11 +9,14 @@ package coherence
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/oracle/coherence-go-client/coherence/aggregators"
 	"github.com/oracle/coherence-go-client/coherence/extractors"
 	"github.com/oracle/coherence-go-client/coherence/filters"
 	"github.com/oracle/coherence-go-client/coherence/processors"
 	pb "github.com/oracle/coherence-go-client/proto"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	"io"
 	"os"
@@ -1068,7 +1071,7 @@ func executeSize[K comparable, V any](ctx context.Context, bc *baseClient[K, V])
 	if err != nil {
 		return 0, err
 	}
-	return int(size.Value), err
+	return int(size.Value), nil
 }
 
 // executeIsReady executes the isReady operation against a baseClient.
@@ -1085,11 +1088,12 @@ func executeIsReady[K comparable, V any](ctx context.Context, bc *baseClient[K, 
 
 	isReadyRequest := pb.IsReadyRequest{Cache: bc.name}
 
-	size, err := bc.client.IsReady(newCtx, &isReadyRequest)
+	isReady, err := bc.client.IsReady(newCtx, &isReadyRequest)
+
 	if err != nil {
-		return false, err
+		return false, ensureError(err)
 	}
-	return size.Value, err
+	return isReady.Value, nil
 }
 
 // executeEntrySet executes the KeySet operation against a baseClient.
@@ -1370,4 +1374,13 @@ func serializeKeys[K comparable](serializer Serializer[K], keys []K) ([][]byte, 
 	}
 
 	return binKeys, nil
+}
+
+// ensureError inspects the error and if it is gRPC related, will wrap with a more helpful message.
+// any new execute* function added since v1.0.0 must call this to wrap errors.
+func ensureError(err error) error {
+	if status.Code(err) == codes.Unimplemented {
+		return fmt.Errorf("this operation is not supported by the current gRPC proxy, either upgrade the version of Coherence on the gRPC proxy or connect to a gRPC proxy that supports the operation: %w", err)
+	}
+	return err
 }
