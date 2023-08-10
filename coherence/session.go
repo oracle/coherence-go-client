@@ -105,8 +105,10 @@ type SessionOptions struct {
 //
 // Finally, the Close() method can be used to close the [Session]. Once a [Session] is closed, no APIs
 // on the [NamedMap] instances should be invoked. If invoked they will return an error.
-// [gRPC Naming]: https://github.com/grpc/grpc/blob/master/doc/naming.md
+//
 // [gRPC Proxy Server]: https://docs.oracle.com/en/middleware/standalone/coherence/14.1.1.2206/develop-remote-clients/using-coherence-grpc-server.html
+//
+// [gRPC Naming]: https://github.com/grpc/grpc/blob/master/doc/naming.md
 func NewSession(ctx context.Context, options ...func(session *SessionOptions)) (*Session, error) {
 	session := &Session{
 		sessionID:             uuid.New(),
@@ -213,6 +215,27 @@ func WithScope(scope string) func(sessionOptions *SessionOptions) {
 func WithPlainText() func(sessionOptions *SessionOptions) {
 	return func(s *SessionOptions) {
 		s.PlainText = true
+	}
+}
+
+// WithTLSCertsPath returns a function to set the (CA) certificates to be added for a session.
+func WithTLSCertsPath(path string) func(sessionOptions *SessionOptions) {
+	return func(s *SessionOptions) {
+		s.CaCertPath = path
+	}
+}
+
+// WithTLSClientCert returns a function to set the client certificate to be added for a session.
+func WithTLSClientCert(path string) func(sessionOptions *SessionOptions) {
+	return func(s *SessionOptions) {
+		s.ClientCertPath = path
+	}
+}
+
+// WithTLSClientKey returns a function to set the client key to be added for a session.
+func WithTLSClientKey(path string) func(sessionOptions *SessionOptions) {
+	return func(s *SessionOptions) {
+		s.ClientKeyPath = path
 	}
 }
 
