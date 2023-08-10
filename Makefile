@@ -185,6 +185,7 @@ copyright: getcopyright ## Check copyright headers
 	  -X .tpl \
 	  -X .txt \
 	  -X test_utils/certs \
+	  -X test/utils/certs \
 	  -X pkg/data/assets/
 
 # ----------------------------------------------------------------------------------------------------------------------

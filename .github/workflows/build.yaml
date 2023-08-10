@@ -96,14 +96,23 @@ jobs:
         name: test-output
         path: build/_output/test-logs
 
-    - name: E2E Local Tests SSL
+    - name: E2E Local Tests SSL (env)
       shell: bash
       run: |
-        SECURE=true COHERENCE_IGNORE_INVALID_CERTS=true \
+        SECURE=env COHERENCE_IGNORE_INVALID_CERTS=true \
           COHERENCE_TLS_CERTS_PATH=`pwd`/test/utils/certs/guardians-ca.crt \
           COHERENCE_TLS_CLIENT_CERT=`pwd`/test/utils/certs/star-lord.crt \
           COHERENCE_TLS_CLIENT_KEY=`pwd`/test/utils/certs/star-lord.key \
-          COHERENCE_VERSION=22.06.4 PROFILES=,secure,-jakarta,javax make clean certs generate-proto build-test-images test-e2e-standalone
+          COHERENCE_VERSION=22.06.5 PROFILES=,secure,-jakarta,javax make clean certs generate-proto build-test-images test-e2e-standalone
+
+    - name: E2E Local Tests SSL (options)
+      shell: bash
+      run: |
+        SECURE=options COHERENCE_IGNORE_INVALID_CERTS_OPTION=true \
+          COHERENCE_TLS_CERTS_PATH_OPTION=`pwd`/test/utils/certs/guardians-ca.crt \
+          COHERENCE_TLS_CLIENT_CERT_OPTION=`pwd`/test/utils/certs/star-lord.crt \
+          COHERENCE_TLS_CLIENT_KEY_OPTION=`pwd`/test/utils/certs/star-lord.key \
+          COHERENCE_VERSION=22.06.5 PROFILES=,secure,-jakarta,javax,scope make clean certs generate-proto build-test-images test-e2e-standalone-scope
 
     - uses: actions/upload-artifact@v3
       if: failure()

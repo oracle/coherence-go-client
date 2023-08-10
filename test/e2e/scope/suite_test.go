@@ -18,21 +18,20 @@ const secure = "SECURE"
 // The entry point for the test suite
 func TestMain(m *testing.M) {
 	var (
-		err      error
-		exitCode int
-		grpcPort = 1408
-		httpPort = 30000
-		restPort = 8080
-		isSecure bool
+		err        error
+		exitCode   int
+		grpcPort   = 1408
+		httpPort   = 30000
+		restPort   = 8080
+		secureMode string
 	)
 
 	if val := os.Getenv(secure); val != "" {
-		isSecure = true
+		secureMode = val
 	}
-
 	context := utils.TestContext{ClusterName: "cluster1", GrpcPort: grpcPort, HTTPPort: httpPort,
 		URL: utils.GetManagementURL(httpPort), ExpectedServers: 2, RestURL: utils.GetRestURL(restPort),
-		HostName: "127.0.0.1", Secure: isSecure}
+		HostName: "127.0.0.1", SecureMode: secureMode}
 	utils.SetTestContext(&context)
 
 	fileName := utils.GetFilePath("docker-compose-2-members.yaml")

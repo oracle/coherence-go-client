@@ -58,17 +58,17 @@ type Session struct {
 
 // SessionOptions holds the session attributes like host, port, tls attributes etc.
 type SessionOptions struct {
-	Address           string
-	TLSEnabled        bool
-	Scope             string
-	Format            string
-	ClientCertPath    string
-	ClientKeyPath     string
-	CaCertPath        string
-	PlainText         bool
-	RequestTimeout    time.Duration
-	DisconnectTimeout time.Duration
-	ReadyTimeout      time.Duration
+	Address            string
+	Scope              string
+	Format             string
+	ClientCertPath     string
+	ClientKeyPath      string
+	CaCertPath         string
+	PlainText          bool
+	IgnoreInvalidCerts bool
+	RequestTimeout     time.Duration
+	DisconnectTimeout  time.Duration
+	ReadyTimeout       time.Duration
 }
 
 // NewSession creates a new Session with the specified sessionOptions.
@@ -91,23 +91,30 @@ type SessionOptions struct {
 //
 //	session, err := coherence.NewSession(ctx)
 //
-// A Session can also be configured using environment variable COHERENCE_SERVER_ADDRESS. See [Grpc Naming]
-// for information on values for this.
+// A Session can also be configured using environment variable COHERENCE_SERVER_ADDRESS.
+// See [gRPC Naming] for information on values for this.
 //
 // To Configure SSL, you must first enable SSL on the gRPC Proxy, see [gRPC Proxy Server] for details.
 //
-// The following environment variables need to be set for the client:
+// You can use the following to set the required TLS options when creating a session:
+//
+//	session, err := coherence.NewSession(ctx, coherence.WithTLSClientCert("/path/to/client/certificate"),
+//	                                          coherence.WithTLSClientKey("/path/path/to/client/key"),
+//	                                          coherence.WithTLSCertsPath("/path/to/cert/to/be/added/for/trust"))
+//
+// You can also use  coherence.[WithIgnoreInvalidCerts]() to ignore self-signed certificates for testing only, not to be used in production.
+//
+// The following environment variables can also be set for the client, and will override any options.
 //
 //	export COHERENCE_TLS_CLIENT_CERT=/path/to/client/certificate
 //	export COHERENCE_TLS_CLIENT_KEY=/path/path/to/client/key
 //	export COHERENCE_TLS_CERTS_PATH=/path/to/cert/to/be/added/for/trust
-//	export COHERENCE_IGNORE_INVALID_CERTS=true    // option to ignore self-signed certificates - for testing only. Not to be used in production
+//	export COHERENCE_IGNORE_INVALID_CERTS=true    // option to ignore self-signed certificates for testing only, not to be used in production
 //
 // Finally, the Close() method can be used to close the [Session]. Once a [Session] is closed, no APIs
 // on the [NamedMap] instances should be invoked. If invoked they will return an error.
 //
 // [gRPC Proxy Server]: https://docs.oracle.com/en/middleware/standalone/coherence/14.1.1.2206/develop-remote-clients/using-coherence-grpc-server.html
-//
 // [gRPC Naming]: https://github.com/grpc/grpc/blob/master/doc/naming.md
 func NewSession(ctx context.Context, options ...func(session *SessionOptions)) (*Session, error) {
 	session := &Session{
@@ -121,11 +128,12 @@ func NewSession(ctx context.Context, options ...func(session *SessionOptions)) (
 		caches:                make(map[string]interface{}, 0),
 		lifecycleListeners:    []*SessionLifecycleListener{},
 		sessOpts: &SessionOptions{
-			PlainText:         false,
-			Format:            defaultFormat,
-			RequestTimeout:    time.Duration(0) * time.Second,
-			ReadyTimeout:      time.Duration(0) * time.Second,
-			DisconnectTimeout: time.Duration(0) * time.Second},
+			PlainText:          false,
+			IgnoreInvalidCerts: false,
+			Format:             defaultFormat,
+			RequestTimeout:     time.Duration(0) * time.Second,
+			ReadyTimeout:       time.Duration(0) * time.Second,
+			DisconnectTimeout:  time.Duration(0) * time.Second},
 	}
 
 	if getBoolValueFromEnvVarOrDefault(envSessionDebug, false) {
@@ -208,6 +216,13 @@ func WithFormat(format string) func(sessionOptions *SessionOptions) {
 func WithScope(scope string) func(sessionOptions *SessionOptions) {
 	return func(s *SessionOptions) {
 		s.Scope = scope
+	}
+}
+
+// WithIgnoreInvalidCerts returns a function to set the connection to ignore invalid certificates for a session.
+func WithIgnoreInvalidCerts() func(sessionOptions *SessionOptions) {
+	return func(s *SessionOptions) {
+		s.IgnoreInvalidCerts = true
 	}
 }
 
@@ -583,27 +598,48 @@ func (s *SessionOptions) createTLSOption() (grpc.DialOption, error) {
 		certificates = make([]tls.Certificate, 0)
 	)
 
-	// check whether to ignore invalid certs
-	ignoreInvalidCertsEnv := getStringValueFromEnvVarOrDefault(envIgnoreInvalidCerts, "false")
+	// check whether to ignore invalid certs, check env then option
+	ignoreInvalidCertsEnv := getStringValueFromEnvVarOrDefault(envIgnoreInvalidCerts, "")
+	if ignoreInvalidCertsEnv == "" {
+		// get value from options
+		ignoreInvalidCertsEnv = fmt.Sprintf("%v", s.IgnoreInvalidCerts)
+	}
+
 	ignoreInvalidCerts := ignoreInvalidCertsEnv == "true"
 	if ignoreInvalidCerts {
 		log.Println("WARNING: you have turned off SSL certificate validation. This is insecure and not recommended.")
 	}
+	s.IgnoreInvalidCerts = ignoreInvalidCerts
 
-	// retrieve the certificate path
-	certPath := getStringValueFromEnvVarOrDefault(envTLSCertPath, "")
+	// search TLS options in ENV first
+	certPathEnv := getStringValueFromEnvVarOrDefault(envTLSCertPath, "")
 	clientCertEnv := getStringValueFromEnvVarOrDefault(envTLSClientCert, "")
 	clientCertKeyEnv := getStringValueFromEnvVarOrDefault(envTLSClientKey, "")
 
-	if certPath != "" {
+	// If the env options are empty then populate them from the options
+	if certPathEnv == "" {
+		certPathEnv = s.CaCertPath
+	}
+	if clientCertEnv == "" {
+		clientCertEnv = s.ClientCertPath
+	}
+	if clientCertKeyEnv == "" {
+		clientCertKeyEnv = s.ClientKeyPath
+	}
+
+	s.CaCertPath = certPathEnv
+	s.ClientKeyPath = clientCertKeyEnv
+	s.ClientCertPath = clientCertEnv
+
+	if s.CaCertPath != "" {
 		cp = x509.NewCertPool()
 
-		log.Println("loading client certificates")
-		if err = validateFilePath(certPath); err != nil {
+		log.Println("loading CA certificate")
+		if err = validateFilePath(s.CaCertPath); err != nil {
 			return nil, err
 		}
 
-		certData, err = os.ReadFile(certPath)
+		certData, err = os.ReadFile(s.CaCertPath)
 		if err != nil {
 			return nil, err
 		}
@@ -613,15 +649,16 @@ func (s *SessionOptions) createTLSOption() (grpc.DialOption, error) {
 		}
 	}
 
-	if clientCertEnv != "" && clientCertKeyEnv != "" {
-		if err = validateFilePath(clientCertEnv); err != nil {
+	if s.ClientCertPath != "" && s.ClientKeyPath != "" {
+		log.Println("loading client certificate and key, cert=", s.ClientCertPath, "key=", s.ClientKeyPath)
+		if err = validateFilePath(s.ClientCertPath); err != nil {
 			return nil, err
 		}
-		if err = validateFilePath(clientCertKeyEnv); err != nil {
+		if err = validateFilePath(s.ClientKeyPath); err != nil {
 			return nil, err
 		}
 		var clientCert tls.Certificate
-		clientCert, err = tls.LoadX509KeyPair(clientCertEnv, clientCertKeyEnv)
+		clientCert, err = tls.LoadX509KeyPair(s.ClientCertPath, s.ClientKeyPath)
 		if err != nil {
 			return nil, err
 		}
@@ -649,12 +686,12 @@ func validateFilePath(file string) error {
 // String returns a string representation of SessionOptions.
 func (s *SessionOptions) String() string {
 	var sb = strings.Builder{}
-	sb.WriteString(fmt.Sprintf("SessionOptions{address=%v, tLSEnabled=%v, scope=%v, format=%v, request timeout=%v, disconnect timeout=%v, ready timeout=%v",
-		s.Address, s.TLSEnabled, s.Scope, s.Format, s.RequestTimeout, s.DisconnectTimeout, s.ReadyTimeout))
+	sb.WriteString(fmt.Sprintf("SessionOptions{address=%v, plainText=%v, scope=%v, format=%v, request timeout=%v, disconnect timeout=%v, ready timeout=%v",
+		s.Address, s.PlainText, s.Scope, s.Format, s.RequestTimeout, s.DisconnectTimeout, s.ReadyTimeout))
 
-	if s.TLSEnabled {
-		sb.WriteString(fmt.Sprintf(" clientCertPath=%v, clientKeyPath=%v, caCertPath=%v,",
-			s.ClientCertPath, s.ClientKeyPath, s.CaCertPath))
+	if !s.PlainText {
+		sb.WriteString(fmt.Sprintf(" clientCertPath=%v, clientKeyPath=%v, caCertPath=%v, igoreInvalidCerts=%v",
+			s.ClientCertPath, s.ClientKeyPath, s.CaCertPath, s.IgnoreInvalidCerts))
 	}
 
 	return sb.String()
