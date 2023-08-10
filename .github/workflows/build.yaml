@@ -58,7 +58,7 @@ jobs:
         restore-keys: ${{ runner.os }}-m2
 
     - name: Set up Go
-      uses: actions/setup-go@vv
+      uses: actions/setup-go@v4
       with:
         go-version: '${{ matrix.go-version }}'
 
