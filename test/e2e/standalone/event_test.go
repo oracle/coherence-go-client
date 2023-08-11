@@ -105,7 +105,9 @@ func TestMapAndLifecycleEventsAll(t *testing.T) {
 }
 
 func TestEventDisconnect(t *testing.T) {
+	t.Setenv("COHERENCE_SESSION_DEBUG", "true")
 	g, session := initTest(t)
+	//g, session := initTest(t, coherence.WithReadyTimeout(time.Duration(120000)*time.Millisecond))
 	defer session.Close()
 
 	namedCache := GetNamedCache[string, string](g, session, "test-reconnect-cache")
