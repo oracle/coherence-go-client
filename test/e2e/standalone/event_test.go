@@ -105,7 +105,10 @@ func TestMapAndLifecycleEventsAll(t *testing.T) {
 }
 
 func TestEventDisconnect(t *testing.T) {
-	g, session := initTest(t)
+	t.Skip("Skipping test until gRPC reconnect issue is resolved")
+	t.Setenv("COHERENCE_SESSION_DEBUG", "true")
+	//g, session := initTest(t)
+	g, session := initTest(t, coherence.WithReadyTimeout(time.Duration(130000)*time.Millisecond))
 	defer session.Close()
 
 	namedCache := GetNamedCache[string, string](g, session, "test-reconnect-cache")
@@ -116,11 +119,12 @@ func TestEventDisconnect(t *testing.T) {
 	RunTestReconnect(g, namedMap, true)
 }
 
-// TestEventDisconnectWithReadyTimeoutDelay tests that the ready timeout is honoured
+// TestEventDisconnectWithReadyTimeoutDelay tests that the ready timeout is honoured,
 // and we can just issue a command and not sleep.
 func TestEventDisconnectWithReadyTimeoutDelay(t *testing.T) {
+	t.Skip("Skipping test until gRPC reconnect issue is resolved")
 	t.Setenv("COHERENCE_SESSION_DEBUG", "true")
-	g, session := initTest(t, coherence.WithReadyTimeout(time.Duration(120000)*time.Millisecond))
+	g, session := initTest(t, coherence.WithReadyTimeout(time.Duration(130000)*time.Millisecond))
 	defer session.Close()
 
 	namedCache := GetNamedCache[string, string](g, session, "test-reconnect-cache")

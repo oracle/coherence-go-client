@@ -15,6 +15,7 @@ import (
 	"github.com/onsi/gomega"
 	coherence "github.com/oracle/coherence-go-client/coherence"
 	"io"
+	"log"
 	"net/http"
 	"net/http/cookiejar"
 	"os"
@@ -36,13 +37,25 @@ type TestContext struct {
 	ExpectedServers int
 	Username        string
 	Password        string
-	Secure          bool
+	SecureMode      string // value of "env" means read from environment and "options" for options to NewSession()
+	ClientCertPath  string
+	ClientKeyPath   string
+	CaCertPath      string
 }
 
 var (
 	currentTestContext *TestContext
 	emptyByte          = make([]byte, 0)
 	ctx                = context.Background()
+)
+
+const (
+	// the following env options are used to set the SSL mode via coherence.With* options rather
+	// than environment variables
+	envTLSCertPath        = "COHERENCE_TLS_CERTS_PATH_OPTION"
+	envTLSClientCert      = "COHERENCE_TLS_CLIENT_CERT_OPTION"
+	envTLSClientKey       = "COHERENCE_TLS_CLIENT_KEY_OPTION"
+	envIgnoreInvalidCerts = "COHERENCE_IGNORE_INVALID_CERTS_OPTION"
 )
 
 // SetTestContext sets the current context
@@ -333,8 +346,22 @@ func GetSession(options ...func(session *coherence.SessionOptions)) (*coherence.
 		sessionOptions = append(sessionOptions, options...)
 	}
 
-	if !testContext.Secure {
+	// If SecureMode is empty then it's plain text
+	if testContext.SecureMode == "" {
 		sessionOptions = append(sessionOptions, coherence.WithPlainText())
+	} else {
+		log.Println("Secure mode is", testContext.SecureMode)
+		// must be TLS so check if we need to read from "env" or "options"
+		if testContext.SecureMode == "options" {
+			// if we read from options we need to store the values from the env
+			sessionOptions = append(sessionOptions, coherence.WithTLSClientCert(os.Getenv(envTLSClientCert)),
+				coherence.WithTLSCertsPath(os.Getenv(envTLSCertPath)),
+				coherence.WithTLSClientKey(os.Getenv(envTLSClientKey)))
+			if os.Getenv(envIgnoreInvalidCerts) == "true" {
+				sessionOptions = append(sessionOptions, coherence.WithIgnoreInvalidCerts())
+			}
+			log.Println(sessionOptions)
+		}
 	}
 
 	return coherence.NewSession(ctx, sessionOptions...)

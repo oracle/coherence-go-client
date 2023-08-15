@@ -24,6 +24,10 @@ jobs:
           - 22.06.5
           - 22.06.6-SNAPSHOT
           - 23.03.2-SNAPSHOT
+        go-version:
+          - 1.19.x
+          - 1.20.x
+          - 1.21.x
 
 #   Checkout the source, we need a depth of zero to fetch all of the history otherwise
 #   the copyright check cannot work out the date of the files from Git.
@@ -54,9 +58,9 @@ jobs:
         restore-keys: ${{ runner.os }}-m2
 
     - name: Set up Go
-      uses: actions/setup-go@v3
+      uses: actions/setup-go@v4
       with:
-        go-version: 1.19
+        go-version: '${{ matrix.go-version }}'
 
     - name: Discovery Compatability Tests
       shell: bash

@@ -18,21 +18,21 @@ const secure = "SECURE"
 // The entry point for the test suite
 func TestMain(m *testing.M) {
 	var (
-		err      error
-		exitCode int
-		grpcPort = 1408
-		httpPort = 30000
-		restPort = 8080
-		isSecure bool
+		httpPort   = 30000
+		restPort   = 8080
+		err        error
+		exitCode   int
+		grpcPort   = 1408
+		secureMode string
 	)
 
 	if val := os.Getenv(secure); val != "" {
-		isSecure = true
+		secureMode = val
 	}
 
 	context := utils.TestContext{ClusterName: "cluster1", GrpcPort: grpcPort, HTTPPort: httpPort,
 		URL: utils.GetManagementURL(httpPort), ExpectedServers: 2, RestURL: utils.GetRestURL(restPort),
-		HostName: "127.0.0.1", Secure: isSecure}
+		HostName: "127.0.0.1", SecureMode: secureMode}
 	utils.SetTestContext(&context)
 
 	fileName := utils.GetFilePath("docker-compose-2-members.yaml")
@@ -41,7 +41,6 @@ func TestMain(m *testing.M) {
 		fmt.Println(err)
 		exitCode = 1
 	} else {
-		//wait for balanced services
 		if err = utils.WaitForHTTPBalancedServices(context.RestURL+"/balanced", 120); err != nil {
 			fmt.Printf("Unable to wait for balanced services: %s\n" + err.Error())
 			exitCode = 1
