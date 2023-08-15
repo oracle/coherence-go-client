@@ -18,17 +18,18 @@ const secure = "SECURE"
 // The entry point for the test suite
 func TestMain(m *testing.M) {
 	var (
+		httpPort   = 30000
+		restPort   = 8080
 		err        error
 		exitCode   int
 		grpcPort   = 1408
-		httpPort   = 30000
-		restPort   = 8080
 		secureMode string
 	)
 
 	if val := os.Getenv(secure); val != "" {
 		secureMode = val
 	}
+
 	context := utils.TestContext{ClusterName: "cluster1", GrpcPort: grpcPort, HTTPPort: httpPort,
 		URL: utils.GetManagementURL(httpPort), ExpectedServers: 2, RestURL: utils.GetRestURL(restPort),
 		HostName: "127.0.0.1", SecureMode: secureMode}
@@ -40,7 +41,6 @@ func TestMain(m *testing.M) {
 		fmt.Println(err)
 		exitCode = 1
 	} else {
-		//wait for balanced services
 		if err = utils.WaitForHTTPBalancedServices(context.RestURL+"/balanced", 120); err != nil {
 			fmt.Printf("Unable to wait for balanced services: %s\n" + err.Error())
 			exitCode = 1
