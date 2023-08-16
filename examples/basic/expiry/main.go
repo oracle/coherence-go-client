@@ -60,5 +60,5 @@ func main() {
 	if value, err = namedCache.Get(ctx, 1); err != nil {
 		panic(err)
 	}
-	fmt.Printf("Value for key 1 is %v, should be nil pointer as entry longer exists\n", value)
+	fmt.Printf("Value for key 1 is %v, should be nil pointer as entry no longer exists\n", value)
 }

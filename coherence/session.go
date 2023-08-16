@@ -285,17 +285,22 @@ func (s *Session) ID() string {
 
 // Close closes a connection.
 func (s *Session) Close() {
+	s.mutex.Lock()
 	if !s.closed {
 		s.maps = make(map[string]interface{}, 0)
 		s.caches = make(map[string]interface{}, 0)
 		err := s.conn.Close()
 		s.closed = true
+		// specifically unlock the mutex as the dispatch locks it
+		s.mutex.Unlock()
 		s.dispatch(Closed, func() SessionLifecycleEvent {
 			return newSessionLifecycleEvent(s, Closed)
 		})
 		if err != nil {
-			log.Printf("Unable to close session %s %v", s.sessionID, err)
+			log.Printf("unable to close session %s %v", s.sessionID, err)
 		}
+	} else {
+		defer s.mutex.Unlock()
 	}
 }
 
@@ -697,8 +702,9 @@ func (s *SessionOptions) String() string {
 	return sb.String()
 }
 
-func (s *Session) dispatch(eventType SessionLifecycleEventType,
-	creator func() SessionLifecycleEvent) {
+func (s *Session) dispatch(eventType SessionLifecycleEventType, creator func() SessionLifecycleEvent) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	if len(s.lifecycleListeners) > 0 {
 		event := creator()
 		for _, l := range s.lifecycleListeners {

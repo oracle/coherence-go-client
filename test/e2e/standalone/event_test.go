@@ -104,10 +104,13 @@ func TestMapAndLifecycleEventsAll(t *testing.T) {
 	runBasicTests(g, namedMap, namedMap.Name(), &expected, -1)
 }
 
+// TestEventDisconnect tests to ensure that if we get a disconnect, then we can
 func TestEventDisconnect(t *testing.T) {
 	t.Setenv("COHERENCE_SESSION_DEBUG", "true")
 	//g, session := initTest(t)
-	g, session := initTest(t, coherence.WithDisconnectTimeout(time.Duration(130000)*time.Millisecond))
+	g, session := initTest(t,
+		coherence.WithDisconnectTimeout(time.Duration(130000)*time.Millisecond),
+		coherence.WithReadyTimeout(time.Duration(70)*time.Second))
 	defer session.Close()
 
 	namedCache := GetNamedCache[string, string](g, session, "test-reconnect-cache")
@@ -119,7 +122,7 @@ func TestEventDisconnect(t *testing.T) {
 }
 
 // TestEventDisconnectWithReadyTimeoutDelay tests that the ready timeout is honoured,
-// as we have stopped the gRPC proxy.
+// as we have stopped the gRPC proxy before the test runs.
 func TestEventDisconnectWithReadyTimeoutDelay(t *testing.T) {
 	t.Setenv("COHERENCE_SESSION_DEBUG", "true")
 
@@ -275,9 +278,6 @@ func RunTestReconnect(g *gomega.WithT, namedMap coherence.NamedMap[string, strin
 		fmt.Println("Issue stop of $GRPC:GrpcProxy")
 		_, err = IssuePostRequest("http://127.0.0.1:30000/management/coherence/cluster/services/$GRPC:GrpcProxy/members/1/stop")
 		g.Expect(err).ShouldNot(gomega.HaveOccurred())
-
-		// sleep for 70 seconds to give the shutdown time to take effect
-		Sleep(70)
 	}
 
 	// add another 'additional' mutations
