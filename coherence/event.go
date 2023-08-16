@@ -17,7 +17,6 @@ import (
 	"log"
 	"reflect"
 	"strings"
-	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -91,7 +90,6 @@ type eventStream struct {
 // The type parameter 'L', defines the event label.
 // Tye type parameter 'E', defines the event type.
 type eventEmitter[L comparable, E any] struct {
-	mutex     sync.RWMutex
 	callbacks map[L][]func(E)
 }
 
@@ -105,9 +103,6 @@ func newEventEmitter[L comparable, E any]() *eventEmitter[L, E] {
 // on registers a callback to be notified when an event associated with
 // the specified label is raised.
 func (ee *eventEmitter[L, E]) on(label L, callback func(E)) {
-	ee.mutex.Lock()
-	defer ee.mutex.Unlock()
-
 	cbs, present := ee.callbacks[label]
 	if !present {
 		cbs = []func(E){}

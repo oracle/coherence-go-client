@@ -291,7 +291,7 @@ func (s *Session) Close() {
 		s.caches = make(map[string]interface{}, 0)
 		err := s.conn.Close()
 		s.closed = true
-		// specifically unlock the mutex as the dispatch locks it
+
 		s.mutex.Unlock()
 		s.dispatch(Closed, func() SessionLifecycleEvent {
 			return newSessionLifecycleEvent(s, Closed)
@@ -703,8 +703,6 @@ func (s *SessionOptions) String() string {
 }
 
 func (s *Session) dispatch(eventType SessionLifecycleEventType, creator func() SessionLifecycleEvent) {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
 	if len(s.lifecycleListeners) > 0 {
 		event := creator()
 		for _, l := range s.lifecycleListeners {
