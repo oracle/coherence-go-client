@@ -280,6 +280,11 @@ func RunTestReconnect(g *gomega.WithT, namedMap coherence.NamedMap[string, strin
 		g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	}
 
+	// get the size to force reconnect
+	fmt.Println("Issue Size() to force reconnect")
+	_, err = namedMap.Size(ctx)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+
 	// add another 'additional' mutations
 	createMutations(g, namedMap, additional)
 

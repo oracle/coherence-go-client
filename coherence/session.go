@@ -691,7 +691,7 @@ func validateFilePath(file string) error {
 // String returns a string representation of SessionOptions.
 func (s *SessionOptions) String() string {
 	var sb = strings.Builder{}
-	sb.WriteString(fmt.Sprintf("SessionOptions{address=%v, plainText=%v, scope=%v, format=%v, request timeout=%v, disconnect timeout=%v, ready timeout=%v",
+	sb.WriteString(fmt.Sprintf("SessionOptions{address=%v, plainText=%v, scope=%v, format=%v, requestTimeout=%v, disconnectTimeout=%v, readyTimeout=%v",
 		s.Address, s.PlainText, s.Scope, s.Format, s.RequestTimeout, s.DisconnectTimeout, s.ReadyTimeout))
 
 	if !s.PlainText {
