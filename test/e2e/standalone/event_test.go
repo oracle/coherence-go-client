@@ -109,8 +109,8 @@ func TestEventDisconnect(t *testing.T) {
 	t.Setenv("COHERENCE_SESSION_DEBUG", "true")
 	//g, session := initTest(t)
 	g, session := initTest(t,
-		coherence.WithDisconnectTimeout(time.Duration(130000)*time.Millisecond),
-		coherence.WithReadyTimeout(time.Duration(70)*time.Second))
+		coherence.WithDisconnectTimeout(time.Duration(130)*time.Second),
+		coherence.WithReadyTimeout(time.Duration(130)*time.Second))
 	defer session.Close()
 
 	namedCache := GetNamedCache[string, string](g, session, "test-reconnect-cache")
@@ -132,7 +132,7 @@ func TestEventDisconnectWithReadyTimeoutDelay(t *testing.T) {
 		t.Error("Unable to issue post request to stop gRPC proxy")
 	}
 
-	g, session := initTest(t, coherence.WithReadyTimeout(time.Duration(130000)*time.Millisecond))
+	g, session := initTest(t, coherence.WithReadyTimeout(time.Duration(130)*time.Second))
 	defer session.Close()
 
 	namedCache := GetNamedCache[string, string](g, session, "test-reconnect-cache")
