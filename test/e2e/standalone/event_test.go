@@ -275,15 +275,18 @@ func RunTestReconnect(g *gomega.WithT, namedMap coherence.NamedMap[string, strin
 		// issue a stop, which better simulates a sudden disconnect
 		// vs shutdown (which is graceful), for the "$GRPC:GrpcProxy" on node 1.
 		// the client should eventually connect
-		fmt.Println("Issue stop of $GRPC:GrpcProxy")
+		log.Println("Issue stop of $GRPC:GrpcProxy")
 		_, err = IssuePostRequest("http://127.0.0.1:30000/management/coherence/cluster/services/$GRPC:GrpcProxy/members/1/stop")
 		g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	}
 
 	// get the size to force reconnect
-	fmt.Println("Issue Size() to force reconnect")
+	log.Println("Issue Size() to force reconnect")
 	_, err = namedMap.Size(ctx)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+
+	log.Println("Sleeping to test re-connect")
+	Sleep(5)
 
 	// add another 'additional' mutations
 	createMutations(g, namedMap, additional)
