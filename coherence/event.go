@@ -100,7 +100,7 @@ func newEventEmitter[L comparable, E any]() *eventEmitter[L, E] {
 	}
 }
 
-// on register a callback to be notified when an event associated with
+// on registers a callback to be notified when an event associated with
 // the specified label is raised.
 func (ee *eventEmitter[L, E]) on(label L, callback func(E)) {
 	cbs, present := ee.callbacks[label]
