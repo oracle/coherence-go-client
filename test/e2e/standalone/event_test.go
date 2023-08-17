@@ -303,6 +303,7 @@ func RunTestReconnect(g *gomega.WithT, namedMap coherence.NamedMap[string, strin
 // createMutations creates a specified number of data mutations.
 func createMutations(g *gomega.WithT, namedMap coherence.NamedMap[string, string], iters int) {
 	var err error
+	log.Println("createMutations, iters=", iters)
 	for i := 0; i < iters; i++ {
 		key := fmt.Sprintf("key-%d", i)
 		value := fmt.Sprintf("value-%d", i)

@@ -216,7 +216,7 @@
                   <jvmFlag>-Dcoherence.security.key=${coherence.security.key}</jvmFlag>
                   <jvmFlag>-Dcoherence.security.cert=${coherence.security.cert}</jvmFlag>
                   <jvmFlag>-Dcoherence.security.ca.cert=${coherence.security.ca.cert}</jvmFlag>
-                  <jvmFlag>-Dcoherence.io.json.debug=true</jvmFlag>
+                  <!-- uncomment for JSSON debug, <jvmFlag>-Dcoherence.io.json.debug=true</jvmFlag>-->
                   <jvmFlag>-Dcoherence.log.level=9</jvmFlag>
                   <jvmFlag>-Dcoherence.distributed.localstorage=true</jvmFlag>
                   <jvmFlag>-Dcoherence.management.refresh.expiry=1s</jvmFlag>
