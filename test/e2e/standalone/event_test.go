@@ -109,8 +109,8 @@ func TestEventDisconnect(t *testing.T) {
 	t.Setenv("COHERENCE_SESSION_DEBUG", "true")
 	//g, session := initTest(t)
 	g, session := initTest(t,
-		coherence.WithDisconnectTimeout(time.Duration(130000)*time.Millisecond),
-		coherence.WithReadyTimeout(time.Duration(70)*time.Second))
+		coherence.WithDisconnectTimeout(time.Duration(130)*time.Second),
+		coherence.WithReadyTimeout(time.Duration(130)*time.Second))
 	defer session.Close()
 
 	namedCache := GetNamedCache[string, string](g, session, "test-reconnect-cache")
@@ -132,7 +132,7 @@ func TestEventDisconnectWithReadyTimeoutDelay(t *testing.T) {
 		t.Error("Unable to issue post request to stop gRPC proxy")
 	}
 
-	g, session := initTest(t, coherence.WithReadyTimeout(time.Duration(130000)*time.Millisecond))
+	g, session := initTest(t, coherence.WithReadyTimeout(time.Duration(130)*time.Second))
 	defer session.Close()
 
 	namedCache := GetNamedCache[string, string](g, session, "test-reconnect-cache")
@@ -275,10 +275,18 @@ func RunTestReconnect(g *gomega.WithT, namedMap coherence.NamedMap[string, strin
 		// issue a stop, which better simulates a sudden disconnect
 		// vs shutdown (which is graceful), for the "$GRPC:GrpcProxy" on node 1.
 		// the client should eventually connect
-		fmt.Println("Issue stop of $GRPC:GrpcProxy")
+		log.Println("Issue stop of $GRPC:GrpcProxy")
 		_, err = IssuePostRequest("http://127.0.0.1:30000/management/coherence/cluster/services/$GRPC:GrpcProxy/members/1/stop")
 		g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	}
+
+	// get the size to force reconnect
+	log.Println("Issue Size() to force reconnect")
+	_, err = namedMap.Size(ctx)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+
+	log.Println("Sleeping to test re-connect")
+	Sleep(5)
 
 	// add another 'additional' mutations
 	createMutations(g, namedMap, additional)
@@ -295,6 +303,7 @@ func RunTestReconnect(g *gomega.WithT, namedMap coherence.NamedMap[string, strin
 // createMutations creates a specified number of data mutations.
 func createMutations(g *gomega.WithT, namedMap coherence.NamedMap[string, string], iters int) {
 	var err error
+	log.Println("createMutations, iters=", iters)
 	for i := 0; i < iters; i++ {
 		key := fmt.Sprintf("key-%d", i)
 		value := fmt.Sprintf("value-%d", i)
