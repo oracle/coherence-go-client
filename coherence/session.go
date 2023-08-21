@@ -613,20 +613,20 @@ func (s *SessionOptions) createTLSOption() (grpc.DialOption, error) {
 		return grpc.WithTransportCredentials(insecure.NewCredentials()), nil
 	}
 
-	var (
-		err          error
-		cp           *x509.CertPool
-		certData     []byte
-		certificates = make([]tls.Certificate, 0)
-	)
-
-	// firstly check if a tls.Config has been set and use this, otherwise continue to check for env and other options
+	// check if a tls.Config has been set and use this, otherwise continue to check for env and other options
 	if s.TlSConfig != nil {
 		if s.TlSConfig.InsecureSkipVerify {
 			log.Println(insecureWarning)
 		}
 		return grpc.WithTransportCredentials(credentials.NewTLS(s.TlSConfig)), nil
 	}
+
+	var (
+		err          error
+		cp           *x509.CertPool
+		certData     []byte
+		certificates = make([]tls.Certificate, 0)
+	)
 
 	// check whether to ignore invalid certs, check env then option
 	ignoreInvalidCertsEnv := getStringValueFromEnvVarOrDefault(envIgnoreInvalidCerts, "")
