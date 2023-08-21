@@ -114,6 +114,15 @@ jobs:
           COHERENCE_TLS_CLIENT_KEY_OPTION=`pwd`/test/utils/certs/star-lord.key \
           COHERENCE_VERSION=22.06.5 PROFILES=,secure,-jakarta,javax,scope make clean certs generate-proto build-test-images test-e2e-standalone-scope
 
+    - name: E2E Local Tests SSL (tlsConfig)
+      shell: bash
+      run: |
+        SECURE=tlsConfig COHERENCE_IGNORE_INVALID_CERTS_OPTION=true \
+          COHERENCE_TLS_CERTS_PATH_OPTION=`pwd`/test/utils/certs/guardians-ca.crt \
+          COHERENCE_TLS_CLIENT_CERT_OPTION=`pwd`/test/utils/certs/star-lord.crt \
+          COHERENCE_TLS_CLIENT_KEY_OPTION=`pwd`/test/utils/certs/star-lord.key \
+          COHERENCE_VERSION=22.06.5 PROFILES=,secure,-jakarta,javax,scope make clean certs generate-proto build-test-images test-e2e-standalone-scope
+
     - uses: actions/upload-artifact@v3
       if: failure()
       with:
