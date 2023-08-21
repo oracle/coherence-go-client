@@ -10,6 +10,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"fmt"
 	"github.com/onsi/gomega"
@@ -50,7 +51,7 @@ var (
 )
 
 const (
-	// the following env options are used to set the SSL mode via coherence.With* options rather
+	// the following env options are used to set the SSL mode via coherence.With* options or tlsCOnfig rather
 	// than environment variables
 	envTLSCertPath        = "COHERENCE_TLS_CERTS_PATH_OPTION"
 	envTLSClientCert      = "COHERENCE_TLS_CLIENT_CERT_OPTION"
@@ -361,10 +362,78 @@ func GetSession(options ...func(session *coherence.SessionOptions)) (*coherence.
 				sessionOptions = append(sessionOptions, coherence.WithIgnoreInvalidCerts())
 			}
 			log.Println(sessionOptions)
+		} else if testContext.SecureMode == "tlsConfig" {
+			// read the environment variables as above and create the TLS options
+			config, err := createTLSOptions(os.Getenv(envTLSClientCert), os.Getenv(envTLSClientKey), os.Getenv(envTLSCertPath),
+				os.Getenv(envIgnoreInvalidCerts) == "true")
+			if err != nil {
+				return nil, err
+			}
+			sessionOptions = append(sessionOptions, coherence.WithTLSConfig(config))
 		}
 	}
 
 	return coherence.NewSession(ctx, sessionOptions...)
+}
+
+// createTLSOptions creates tls.Config for testing.
+func createTLSOptions(clientCertPath, clientKeyPath, certsPath string, ignoreInvalidCerts bool) (*tls.Config, error) {
+	var (
+		cp           *x509.CertPool
+		certData     []byte
+		certificates = make([]tls.Certificate, 0)
+		err          error
+	)
+	log.Println("creating tls.Config")
+	if certsPath != "" {
+		cp = x509.NewCertPool()
+
+		if err = validateFilePath(certsPath); err != nil {
+			return nil, err
+		}
+
+		certData, err = os.ReadFile(certsPath)
+		if err != nil {
+			return nil, err
+		}
+
+		if !cp.AppendCertsFromPEM(certData) {
+			return nil, errors.New("credentials: failed to append certificates")
+		}
+	}
+
+	if clientCertPath != "" && clientKeyPath != "" {
+		log.Println("loading client certificate and key, cert=", clientCertPath, "key=", clientKeyPath)
+		if err = validateFilePath(clientCertPath); err != nil {
+			return nil, err
+		}
+		if err = validateFilePath(clientKeyPath); err != nil {
+			return nil, err
+		}
+		var clientCert tls.Certificate
+		clientCert, err = tls.LoadX509KeyPair(clientCertPath, clientKeyPath)
+		if err != nil {
+			return nil, err
+		}
+		certificates = []tls.Certificate{clientCert}
+	}
+
+	config := &tls.Config{
+		InsecureSkipVerify: ignoreInvalidCerts, //nolint
+		RootCAs:            cp,
+		Certificates:       certificates,
+	}
+
+	return config, nil
+}
+
+// validateFilePath checks to see if a file path is valid.
+func validateFilePath(file string) error {
+	if _, err := os.Stat(file); err == nil {
+		return nil
+	}
+
+	return fmt.Errorf("%s is not a valid file", file)
 }
 
 func GetNamedMapWithScope[K comparable, V any](g *gomega.WithT, session *coherence.Session, cacheName, _ string) coherence.NamedMap[K, V] {

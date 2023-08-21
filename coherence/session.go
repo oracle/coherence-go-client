@@ -35,6 +35,7 @@ const (
 	defaultRequestTimeout    = "30000" // millis
 	defaultDisconnectTimeout = "30000" // millis
 	defaultReadyTimeout      = "0"     // millis
+	insecureWarning          = "WARNING: you have turned off SSL certificate validation. This is insecure and not recommended."
 )
 
 // Session provides APIs to create NamedCaches. The [NewSession] method creates a
@@ -69,6 +70,7 @@ type SessionOptions struct {
 	RequestTimeout     time.Duration
 	DisconnectTimeout  time.Duration
 	ReadyTimeout       time.Duration
+	TlSConfig          *tls.Config
 }
 
 // NewSession creates a new Session with the specified sessionOptions.
@@ -96,7 +98,14 @@ type SessionOptions struct {
 //
 // To Configure SSL, you must first enable SSL on the gRPC Proxy, see [gRPC Proxy Server] for details.
 //
-// You can use the following to set the required TLS options when creating a session:
+// There are a number of ways to set the TLS options when creating a session.
+// You can use [WithTLSConfig] to specify a custom tls.Config or specify the client certificate, key and trust
+// certificate using additional session options or using environment variables. See below for more details.
+//
+//	myTlSConfig = &tls.Config{....}
+//	session, err := coherence.NewSession(ctx, coherence.WithTLSConfig(myTLSConfig))
+//
+// You can also use the following to set the required TLS options when creating a session:
 //
 //	session, err := coherence.NewSession(ctx, coherence.WithTLSClientCert("/path/to/client/certificate"),
 //	                                          coherence.WithTLSClientKey("/path/path/to/client/key"),
@@ -275,6 +284,14 @@ func WithDisconnectTimeout(timeout time.Duration) func(sessionOptions *SessionOp
 func WithReadyTimeout(timeout time.Duration) func(sessionOptions *SessionOptions) {
 	return func(s *SessionOptions) {
 		s.ReadyTimeout = timeout
+	}
+}
+
+// WithTLSConfig returns a function to set the tls.Config directly. This is typically used
+// when you require fine-grained control over these options.
+func WithTLSConfig(tlsConfig *tls.Config) func(sessionOptions *SessionOptions) {
+	return func(s *SessionOptions) {
+		s.TlSConfig = tlsConfig
 	}
 }
 
@@ -596,6 +613,14 @@ func (s *SessionOptions) createTLSOption() (grpc.DialOption, error) {
 		return grpc.WithTransportCredentials(insecure.NewCredentials()), nil
 	}
 
+	// check if a tls.Config has been set and use this, otherwise continue to check for env and other options
+	if s.TlSConfig != nil {
+		if s.TlSConfig.InsecureSkipVerify {
+			log.Println(insecureWarning)
+		}
+		return grpc.WithTransportCredentials(credentials.NewTLS(s.TlSConfig)), nil
+	}
+
 	var (
 		err          error
 		cp           *x509.CertPool
@@ -612,7 +637,7 @@ func (s *SessionOptions) createTLSOption() (grpc.DialOption, error) {
 
 	ignoreInvalidCerts := ignoreInvalidCertsEnv == "true"
 	if ignoreInvalidCerts {
-		log.Println("WARNING: you have turned off SSL certificate validation. This is insecure and not recommended.")
+		log.Println(insecureWarning)
 	}
 	s.IgnoreInvalidCerts = ignoreInvalidCerts
 
@@ -695,8 +720,12 @@ func (s *SessionOptions) String() string {
 		s.Address, s.PlainText, s.Scope, s.Format, s.RequestTimeout, s.DisconnectTimeout, s.ReadyTimeout))
 
 	if !s.PlainText {
-		sb.WriteString(fmt.Sprintf(" clientCertPath=%v, clientKeyPath=%v, caCertPath=%v, igoreInvalidCerts=%v",
-			s.ClientCertPath, s.ClientKeyPath, s.CaCertPath, s.IgnoreInvalidCerts))
+		if s.TlSConfig == nil {
+			sb.WriteString(fmt.Sprintf(" clientCertPath=%v, clientKeyPath=%v, caCertPath=%v, igoreInvalidCerts=%v",
+				s.ClientCertPath, s.ClientKeyPath, s.CaCertPath, s.IgnoreInvalidCerts))
+		} else {
+			sb.WriteString("tls.Config specified")
+		}
 	}
 
 	return sb.String()
