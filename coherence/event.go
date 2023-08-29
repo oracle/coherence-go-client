@@ -17,6 +17,7 @@ import (
 	"log"
 	"reflect"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -697,6 +698,7 @@ type mapEventManager[K comparable, V any] struct {
 	lifecycleListeners   []*MapLifecycleListener[K, V]
 	pendingRegistrations map[string]*pendingListenerOp[K, V]
 	eventStream          *eventStream
+	mutex                sync.RWMutex
 }
 
 // pendingListenerOp is a simple holder for the listener
@@ -731,6 +733,9 @@ func newMapEventManager[K comparable, V any](namedMap *NamedMap[K, V], bc baseCl
 
 // close closes the event stream.
 func (m *mapEventManager[K, V]) close() {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
 	if m.eventStream != nil {
 		m.eventStream.cancel()
 	}
@@ -746,6 +751,9 @@ func (m *mapEventManager[K, V]) close() {
 
 // addLifecycleListener adds the specified [MapLifecycleListener].
 func (m *mapEventManager[K, V]) addLifecycleListener(listener MapLifecycleListener[K, V]) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
 	for _, e := range m.lifecycleListeners {
 		if *e == listener {
 			return
@@ -756,6 +764,9 @@ func (m *mapEventManager[K, V]) addLifecycleListener(listener MapLifecycleListen
 
 // removeLifecycleListener removes the specified [MapLifecycleListener].
 func (m *mapEventManager[K, V]) removeLifecycleListener(listener MapLifecycleListener[K, V]) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
 	idx := -1
 	listeners := m.lifecycleListeners
 	for i, c := range listeners {
@@ -774,6 +785,9 @@ func (m *mapEventManager[K, V]) removeLifecycleListener(listener MapLifecycleLis
 // to the Coherence cluster that an event may omit the old and new
 // values when emitting a MapEvent.
 func (m *mapEventManager[K, V]) addKeyListener(ctx context.Context, listener MapListener[K, V], key K, lite bool) error {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
 	group, lPresent := m.keyListeners[key]
 	if !lPresent {
 		groupInner, err := makeKeyListenerGroup(m, key)
@@ -789,6 +803,9 @@ func (m *mapEventManager[K, V]) addKeyListener(ctx context.Context, listener Map
 
 // removeKeyListener removes the specified key-based listener.
 func (m *mapEventManager[K, V]) removeKeyListener(ctx context.Context, listener MapListener[K, V], key K) error {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
 	group, lPresent := m.keyListeners[key]
 	if lPresent {
 		return group.removeListener(ctx, listener)
@@ -800,6 +817,9 @@ func (m *mapEventManager[K, V]) removeKeyListener(ctx context.Context, listener 
 // to the Coherence cluster that an event may omit the old and new
 // values when emitting a MapEvent.
 func (m *mapEventManager[K, V]) addFilterListener(ctx context.Context, listener MapListener[K, V], filter filters.Filter, lite bool) error {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
 	filterLocal := filter
 	if filterLocal == nil {
 		filterLocal = defaultFilter
@@ -820,6 +840,9 @@ func (m *mapEventManager[K, V]) addFilterListener(ctx context.Context, listener 
 
 // removeFilterListener removes the specified filter-based listener.
 func (m *mapEventManager[K, V]) removeFilterListener(ctx context.Context, listener MapListener[K, V], filter filters.Filter) error {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
 	filterLocal := filter
 	if filterLocal == nil {
 		filterLocal = defaultFilter
@@ -836,6 +859,9 @@ func (m *mapEventManager[K, V]) removeFilterListener(ctx context.Context, listen
 // managing MapEvents raised by Coherence.
 func (m *mapEventManager[K, V]) ensureStream() (*eventStream, error) {
 	if m.eventStream == nil {
+		m.mutex.Lock()
+		defer m.mutex.Unlock()
+
 		// because the event stream is for the lifetime of the cache,
 		// we use context.Background() and ignore any user provided
 		// timeouts
@@ -959,8 +985,7 @@ func (m *mapEventManager[K, V]) newSubscribeRequest(requestType string) proto.Ma
 	}
 }
 
-func (m *mapEventManager[K, V]) dispatch(eventType MapLifecycleEventType,
-	creator func() MapLifecycleEvent[K, V]) {
+func (m *mapEventManager[K, V]) dispatch(eventType MapLifecycleEventType, creator func() MapLifecycleEvent[K, V]) {
 	if len(m.lifecycleListeners) > 0 {
 		event := creator()
 		for _, l := range m.lifecycleListeners {

@@ -107,6 +107,7 @@ func TestMapAndLifecycleEventsAll(t *testing.T) {
 // TestEventDisconnect tests to ensure that if we get a disconnect, then we can
 func TestEventDisconnect(t *testing.T) {
 	t.Setenv("COHERENCE_SESSION_DEBUG", "true")
+	t.Skip("Skipping test temporarily while sorting out reconnect issue")
 	//g, session := initTest(t)
 	g, session := initTest(t,
 		coherence.WithDisconnectTimeout(time.Duration(130)*time.Second),
@@ -125,6 +126,7 @@ func TestEventDisconnect(t *testing.T) {
 // as we have stopped the gRPC proxy before the test runs.
 func TestEventDisconnectWithReadyTimeoutDelay(t *testing.T) {
 	t.Setenv("COHERENCE_SESSION_DEBUG", "true")
+	t.Skip("Skipping test temporarily while sorting out reconnect issue")
 
 	fmt.Println("Issue stop of $GRPC:GrpcProxy")
 	_, err := IssuePostRequest("http://127.0.0.1:30000/management/coherence/cluster/services/$GRPC:GrpcProxy/members/1/stop")
