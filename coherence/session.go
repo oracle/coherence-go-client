@@ -487,7 +487,7 @@ func (s *Session) ensureConnection() error {
 
 // waitForReady waits until the connection is ready up to the ready session timeout and will
 // return nil if the session was connected, otherwise an error is returned.
-// We intentionally do no use the gRPC WaitForReady as this can cause a race condition in the session
+// We intentionally do not use the gRPC WaitForReady as this can cause a race condition in the session
 // events code.
 func waitForReady(s *Session) error {
 	var (
