@@ -452,12 +452,6 @@ func executeGetAll[K comparable, V any](ctx context.Context, bc *baseClient[K, V
 				return
 			}
 
-			if err1 != nil {
-				ch <- &StreamedEntry[K, V]{Err: err1}
-				close(ch)
-				return
-			}
-
 			// deserialize key and value
 			if key, err1 = bc.keySerializer.Deserialize(response.Key); err1 != nil {
 				ch <- &StreamedEntry[K, V]{Err: err1}
@@ -1182,12 +1176,6 @@ func executeEntrySetFilter[K comparable, V any](ctx context.Context, bc *baseCli
 				close(ch)
 				return
 			} else if err1 != nil {
-				ch <- &StreamedEntry[K, V]{Err: err1}
-				close(ch)
-				return
-			}
-
-			if err1 != nil {
 				ch <- &StreamedEntry[K, V]{Err: err1}
 				close(ch)
 				return
