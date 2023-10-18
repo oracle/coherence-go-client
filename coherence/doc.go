@@ -231,7 +231,7 @@ EntrySet, KeySet, Values, InvokeAll and InvokeAllFilter.
 	ch := namedMap.EntrySetFilter(ctx, filters.Greater(age, 20))
 	for result := range ch {
 	    if result.Err != nil {
-	        log.Fatal(err)
+	        log.Fatal(result.Err)
 	    }
 	    fmt.Println("Key:", result.Key, "Value:", result.Value)
 	}
