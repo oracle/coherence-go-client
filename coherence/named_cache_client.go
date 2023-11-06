@@ -28,7 +28,7 @@ func (nc *NamedCacheClient[K, V]) getBaseClient() *baseClient[K, V] { // nolint
 	return &nc.baseClient
 }
 
-// AddLifecycleListener Adds a MapLifecycleListener that will receive events (truncated or released) that occur
+// AddLifecycleListener Adds a [MapLifecycleListener] that will receive events (truncated or released) that occur
 // against the [NamedCache].
 func (nc *NamedCacheClient[K, V]) AddLifecycleListener(listener MapLifecycleListener[K, V]) {
 	registerLifecycleListener(nc.getBaseClient(), listener)
@@ -522,8 +522,9 @@ func (nc *NamedCacheClient[K, V]) String() string {
 		nc.Name(), nc.format, nc.destroyed, nc.released)
 }
 
-// newNamedCache creates a new [NamedCache] of the generic type specified.
-func newNamedCache[K comparable, V any](session *Session, name string, sOpts *SessionOptions, options ...func(cache *CacheOptions)) (*NamedCacheClient[K, V], error) {
+// getNamedCache gets a [NamedCache] of the generic type specified or if a cache already exists with the
+// same type parameters, it will return it otherwise it will create a new one.
+func getNamedCache[K comparable, V any](session *Session, name string, sOpts *SessionOptions, options ...func(cache *CacheOptions)) (*NamedCacheClient[K, V], error) {
 	var (
 		format        = sOpts.Format
 		existingCache interface{}
@@ -590,7 +591,7 @@ func newNamedCache[K comparable, V any](session *Session, name string, sOpts *Se
 	// unlock before adding reconnect listener
 	session.AddSessionLifecycleListener(newCache.namedCacheReconnectListener.listener)
 
-	session.debug("newNamedCache", namedCache, "session:", session)
+	session.debug("getNamedCache", namedCache, "session:", session)
 	return newCache, nil
 }
 

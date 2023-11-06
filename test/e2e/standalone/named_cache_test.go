@@ -43,6 +43,10 @@ func TestPutWithExpiry(t *testing.T) {
 	time.Sleep(6 * time.Second)
 
 	AssertSize[int, Person](g, namedCache, 0)
+
+	// check that expiry is not > 2147483647 or Integer.MAX_VALUE in Java
+	oldValue, err = namedCache.PutWithExpiry(ctx, person1.ID, person1, time.Duration(2147483647+1)*time.Millisecond)
+	g.Expect(err).To(gomega.HaveOccurred())
 }
 
 // TestPutWithExpiryUsingCacheOption tests that we can se an overall expiry for the cache and this is applied
