@@ -25,7 +25,7 @@ import (
 // locking an entire map in a way to prevent all access.  Retrievals reflect the results of the most recently completed
 // update operations holding upon their onset.
 //
-// The type parameters are K = type of the key and V= type of the value.
+// The type parameters are K = type of the key and V = type of the value.
 type NamedMap[K comparable, V any] interface {
 	// AddLifecycleListener Adds a MapLifecycleListener that will receive events (truncated, released) that occur
 	// against the NamedMap.
@@ -188,7 +188,7 @@ type NamedMap[K comparable, V any] interface {
 
 	getBaseClient() *baseClient[K, V]
 
-	// IsReady returns whether this [NamedMap] is ready to be used.
+	// IsReady returns whether this NamedMap is ready to be used.
 	// An example of when this method would return false would
 	// be where a partitioned cache service that owns this cache has no
 	// storage-enabled members.

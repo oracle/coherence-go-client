@@ -570,7 +570,7 @@ func (s *Session) RemoveSessionLifecycleListener(listener SessionLifecycleListen
 //	    log.Fatal(err)
 //	}
 func GetNamedMap[K comparable, V any](session *Session, cacheName string, options ...func(session *CacheOptions)) (NamedMap[K, V], error) {
-	return newNamedMap[K, V](session, cacheName, session.sessOpts, options...)
+	return getNamedMap[K, V](session, cacheName, session.sessOpts, options...)
 }
 
 // GetNamedCache returns a [NamedCache] from a session.  [NamedCache] is syntactically identical in behaviour to a [NamedMap],
@@ -595,7 +595,7 @@ func GetNamedMap[K comparable, V any](session *Session, cacheName string, option
 //
 //	namedCache, err := coherence.GetNamedCache[int, Person](session, "cache-expiry", coherence.WithExpiry(time.Duration(5)*time.Second))
 func GetNamedCache[K comparable, V any](session *Session, cacheName string, options ...func(session *CacheOptions)) (NamedCache[K, V], error) {
-	return newNamedCache[K, V](session, cacheName, session.sessOpts, options...)
+	return getNamedCache[K, V](session, cacheName, session.sessOpts, options...)
 }
 
 // IsClosed returns true if the Session is closed. Returns false otherwise.

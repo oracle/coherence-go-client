@@ -22,7 +22,7 @@ import (
 var _ NamedMap[string, string] = &NamedMapClient[string, string]{}
 
 // NamedMapClient is the implementation of the [NamedMap] interface.
-// The type parameters are K = type of the key and V= type of the value.
+// The type parameters are K = type of the key and V = type of the value.
 type NamedMapClient[K comparable, V any] struct {
 	NamedMap[K, V]
 	baseClient[K, V]
@@ -46,7 +46,7 @@ func (nm *NamedMapClient[K, V]) getBaseClient() *baseClient[K, V] { //nolint
 //
 //	newAge, err := coherence.Invoke[int, Person, int](ctx, namedMap, 1, processors.Increment("age", 1))
 //	fmt.Println("New age is", *newAge)
-func Invoke[K comparable, V any, R any](ctx context.Context, nm NamedMap[K, V], key K, proc processors.Processor) (*R, error) {
+func Invoke[K comparable, V, R any](ctx context.Context, nm NamedMap[K, V], key K, proc processors.Processor) (*R, error) {
 	return executeInvoke[K, V, R](ctx, nm.getBaseClient(), key, proc)
 }
 
@@ -732,8 +732,9 @@ func (nm *NamedMapClient[K, V]) String() string {
 		nm.Name(), nm.format, nm.destroyed, nm.released)
 }
 
-// newNamedMap creates a new NamedMap.
-func newNamedMap[K comparable, V any](session *Session, name string, sOpts *SessionOptions, options ...func(cache *CacheOptions)) (*NamedMapClient[K, V], error) {
+// getNamedMap gets a [NamedMap] of the generic type specified or if a cache already exists with the
+// same type parameters, it will return it otherwise it will create a new one.
+func getNamedMap[K comparable, V any](session *Session, name string, sOpts *SessionOptions, options ...func(cache *CacheOptions)) (*NamedMapClient[K, V], error) {
 	var (
 		format        = sOpts.Format
 		existingCache interface{}

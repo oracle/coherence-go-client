@@ -36,6 +36,9 @@ const (
 
 	// envSessionDebug enabled session debug messages to be displayed.
 	envSessionDebug = "COHERENCE_SESSION_DEBUG"
+
+	// Integer.MAX_VALUE on Java
+	integerMaxValue = 2147483647
 )
 
 var (
@@ -865,6 +868,11 @@ func executePutWithExpiry[K comparable, V any](ctx context.Context, bc *baseClie
 		err       = bc.ensureClientConnection()
 		zeroValue *V
 	)
+
+	// check that the expiry value is no > Integer.MAX_VALUE millis on Java, which is 2147483647
+	if ttl.Milliseconds() > integerMaxValue {
+		return zeroValue, fmt.Errorf("expiry cannot be greater than %d millis or %v", integerMaxValue, integerMaxValue*time.Millisecond)
+	}
 
 	if err != nil {
 		return zeroValue, err
