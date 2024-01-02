@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2023 Oracle and/or its affiliates.
+ * Copyright (c) 2022, 2024 Oracle and/or its affiliates.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * https://oss.oracle.com/licenses/upl.
  */
@@ -45,7 +45,7 @@ func TestPutWithExpiry(t *testing.T) {
 	AssertSize[int, Person](g, namedCache, 0)
 
 	// check that expiry is not > 2147483647 or Integer.MAX_VALUE in Java
-	oldValue, err = namedCache.PutWithExpiry(ctx, person1.ID, person1, time.Duration(2147483647+1)*time.Millisecond)
+	_, err = namedCache.PutWithExpiry(ctx, person1.ID, person1, time.Duration(2147483647+1)*time.Millisecond)
 	g.Expect(err).To(gomega.HaveOccurred())
 }
 

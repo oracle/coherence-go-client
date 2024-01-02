@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2023 Oracle and/or its affiliates.
+ * Copyright (c) 2022, 2024 Oracle and/or its affiliates.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * https://oss.oracle.com/licenses/upl.
  */
@@ -47,11 +47,13 @@ type Session struct {
 	conn                  *grpc.ClientConn
 	dialOptions           []grpc.DialOption
 	closed                bool
+	mapMutex              sync.RWMutex
 	caches                map[string]interface{}
 	maps                  map[string]interface{}
+	lifecycleMutex        sync.RWMutex
 	lifecycleListeners    []*SessionLifecycleListener
 	sessionConnectCtx     context.Context
-	mutex                 sync.RWMutex
+	connectMutex          sync.RWMutex   // mutes for connection attempts
 	firstConnectAttempted bool           // indicates if the first connection has been attempted
 	hasConnected          bool           // indicates if the session has ever connected
 	debug                 func(v ...any) // a function to output debug messages
@@ -302,14 +304,14 @@ func (s *Session) ID() string {
 
 // Close closes a connection.
 func (s *Session) Close() {
-	s.mutex.Lock()
+	s.mapMutex.Lock()
 	if !s.closed {
 		s.maps = make(map[string]interface{}, 0)
 		s.caches = make(map[string]interface{}, 0)
 		err := s.conn.Close()
 		s.closed = true
 
-		s.mutex.Unlock()
+		s.mapMutex.Unlock()
 		s.dispatch(Closed, func() SessionLifecycleEvent {
 			return newSessionLifecycleEvent(s, Closed)
 		})
@@ -317,7 +319,7 @@ func (s *Session) Close() {
 			log.Printf("unable to close session %s %v", s.sessionID, err)
 		}
 	} else {
-		defer s.mutex.Unlock()
+		defer s.mapMutex.Unlock()
 	}
 }
 
@@ -343,6 +345,9 @@ func (s *Session) GetReadyTimeout() time.Duration {
 
 // ensureConnection ensures a session has a valid connection
 func (s *Session) ensureConnection() error {
+	s.connectMutex.Lock()
+	defer s.connectMutex.Unlock()
+
 	if s.firstConnectAttempted {
 		// We have previously tried to connect so check that the connect state is connected
 		if s.conn.GetState() != connectivity.Ready {
@@ -356,14 +361,6 @@ func (s *Session) ensureConnection() error {
 		}
 		return nil
 	}
-
-	var locked = false
-
-	defer func() {
-		if locked {
-			s.mutex.Unlock()
-		}
-	}()
 
 	s.dialOptions = []grpc.DialOption{}
 
@@ -384,9 +381,6 @@ func (s *Session) ensureConnection() error {
 		MinConnectTimeout: 10 * time.Second,
 	})
 	s.dialOptions = append(s.dialOptions, connOpt)
-
-	s.mutex.Lock()
-	locked = true
 
 	newCtx, cancel := s.ensureContext(s.sessionConnectCtx)
 	if cancel != nil {
@@ -525,8 +519,8 @@ func (s *Session) GetOptions() *SessionOptions {
 // AddSessionLifecycleListener adds a SessionLifecycleListener that will receive events (connected, closed,
 // disconnected or reconnected) that occur against the session.
 func (s *Session) AddSessionLifecycleListener(listener SessionLifecycleListener) {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
+	s.lifecycleMutex.Lock()
+	defer s.lifecycleMutex.Unlock()
 
 	for _, e := range s.lifecycleListeners {
 		if *e == listener {
@@ -538,8 +532,8 @@ func (s *Session) AddSessionLifecycleListener(listener SessionLifecycleListener)
 
 // RemoveSessionLifecycleListener removes SessionLifecycleListener for a session.
 func (s *Session) RemoveSessionLifecycleListener(listener SessionLifecycleListener) {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
+	s.lifecycleMutex.Lock()
+	defer s.lifecycleMutex.Unlock()
 
 	idx := -1
 	listeners := s.lifecycleListeners
@@ -732,6 +726,8 @@ func (s *SessionOptions) String() string {
 }
 
 func (s *Session) dispatch(eventType SessionLifecycleEventType, creator func() SessionLifecycleEvent) {
+	s.lifecycleMutex.Lock()
+	defer s.lifecycleMutex.Unlock()
 	if len(s.lifecycleListeners) > 0 {
 		event := creator()
 		for _, l := range s.lifecycleListeners {

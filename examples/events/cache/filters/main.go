@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2023 Oracle and/or its affiliates.
+ * Copyright (c) 2022, 2024 Oracle and/or its affiliates.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * https://oss.oracle.com/licenses/upl.
  */
@@ -16,6 +16,7 @@ import (
 	"github.com/oracle/coherence-go-client/coherence/extractors"
 	"github.com/oracle/coherence-go-client/coherence/filters"
 	"github.com/oracle/coherence-go-client/coherence/processors"
+	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -104,10 +105,10 @@ func main() {
 
 	fmt.Println("Ensuring events are delivered")
 	time.Sleep(time.Duration(5) * time.Second)
-	fmt.Println("listenerAgeLess30:          inserts=", listenerAgeLess30.insertCount, "updates=", listenerAgeLess30.updateCount,
-		"deletes=", listenerAgeLess30.deleteCount)
-	fmt.Println("listenerSalaryGreater17000: inserts=", listenerSalaryGreater17000.insertCount, "updates=", listenerSalaryGreater17000.updateCount,
-		"deletes=", listenerSalaryGreater17000.deleteCount)
+	fmt.Println("listenerAgeLess30:          inserts=", listenerAgeLess30.GetInsertCount(), "updates=", listenerAgeLess30.GetUpdateCount(),
+		"deletes=", listenerAgeLess30.GetDeleteCount())
+	fmt.Println("listenerSalaryGreater17000: inserts=", listenerSalaryGreater17000.GetInsertCount(), "updates=", listenerSalaryGreater17000.GetUpdateCount(),
+		"deletes=", listenerSalaryGreater17000.GetDeleteCount())
 }
 
 func unregisterListener(ctx context.Context, namedMap coherence.NamedMap[int, Person], listener *CountingEventsListener[int, Person]) {
@@ -118,9 +119,28 @@ func unregisterListener(ctx context.Context, namedMap coherence.NamedMap[int, Pe
 
 type CountingEventsListener[K comparable, V any] struct {
 	listener    coherence.MapListener[K, V]
+	mutex       sync.RWMutex
 	insertCount int32
 	deleteCount int32
 	updateCount int32
+}
+
+func (c *CountingEventsListener[K, V]) GetInsertCount() int32 {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	return c.insertCount
+}
+
+func (c *CountingEventsListener[K, V]) GetDeleteCount() int32 {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	return c.deleteCount
+}
+
+func (c *CountingEventsListener[K, V]) GetUpdateCount() int32 {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	return c.updateCount
 }
 
 func NewCountingEventsListener[K comparable, V any]() *CountingEventsListener[K, V] {
@@ -129,6 +149,9 @@ func NewCountingEventsListener[K comparable, V any]() *CountingEventsListener[K,
 	}
 
 	countingListener.listener.OnAny(func(e coherence.MapEvent[K, V]) {
+		countingListener.mutex.Lock()
+		defer countingListener.mutex.Unlock()
+
 		switch e.Type() {
 		case coherence.EntryInserted:
 			atomic.AddInt32(&countingListener.insertCount, 1)
