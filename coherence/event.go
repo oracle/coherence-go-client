@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2023 Oracle and/or its affiliates.
+ * Copyright (c) 2022, 2024 Oracle and/or its affiliates.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * https://oss.oracle.com/licenses/upl.
  */
@@ -91,6 +91,7 @@ type eventStream struct {
 // The type parameter 'L', defines the event label.
 // Tye type parameter 'E', defines the event type.
 type eventEmitter[L comparable, E any] struct {
+	mutex     sync.RWMutex
 	callbacks map[L][]func(E)
 }
 
@@ -104,6 +105,9 @@ func newEventEmitter[L comparable, E any]() *eventEmitter[L, E] {
 // on registers a callback to be notified when an event associated with
 // the specified label is raised.
 func (ee *eventEmitter[L, E]) on(label L, callback func(E)) {
+	ee.mutex.Lock()
+	defer ee.mutex.Unlock()
+
 	cbs, present := ee.callbacks[label]
 	if !present {
 		cbs = []func(E){}
@@ -115,6 +119,9 @@ func (ee *eventEmitter[L, E]) on(label L, callback func(E)) {
 // emit dispatches the specified event for all listeners associated with
 // the specified label.
 func (ee *eventEmitter[L, E]) emit(label L, event E) {
+	ee.mutex.Lock()
+	defer ee.mutex.Unlock()
+
 	for _, f := range ee.callbacks[label] {
 		f(event)
 	}
@@ -476,6 +483,7 @@ func (l *mapListener[K, V]) OnAny(callback func(MapEvent[K, V])) MapListener[K, 
 // required to register/deregister listeners in the same group.
 type listenerGroup[K comparable, V any] struct {
 	registeredLite  bool
+	mutex           sync.RWMutex
 	listeners       map[MapListener[K, V]]bool
 	liteFalseCount  int32
 	manager         *mapEventManager[K, V]
@@ -488,6 +496,9 @@ type listenerGroup[K comparable, V any] struct {
 // flag is a hint to the Coherence cluster that an event may omit the old
 // and new values when emitting a [MapEvent].
 func (lg *listenerGroup[K, V]) addListener(ctx context.Context, listener MapListener[K, V], lite bool) error {
+	lg.mutex.Lock()
+	defer lg.mutex.Unlock()
+
 	prevLiteStatus, hasKey := lg.listeners[listener]
 	if hasKey && prevLiteStatus == lite {
 		return nil
@@ -518,6 +529,9 @@ func (lg *listenerGroup[K, V]) addListener(ctx context.Context, listener MapList
 // results in no remaining registered listeners, the listener will be
 // unregistered from the Coherence cluster.
 func (lg *listenerGroup[K, V]) removeListener(ctx context.Context, listener MapListener[K, V]) error {
+	lg.mutex.Lock()
+	defer lg.mutex.Unlock()
+
 	prevLiteStatus, hasKey := lg.listeners[listener]
 	if !hasKey || len(lg.listeners) == 0 {
 		return nil
@@ -544,6 +558,9 @@ func (lg *listenerGroup[K, V]) removeListener(ctx context.Context, listener MapL
 
 // notify notifies all listeners of the provided [MapEvent].
 func (lg *listenerGroup[K, V]) notify(event MapEvent[K, V]) {
+	lg.mutex.Lock()
+	defer lg.mutex.Unlock()
+
 	if len(lg.listeners) > 0 {
 		for l := range lg.listeners {
 			l.dispatch(event)
@@ -572,17 +589,23 @@ func (lg *listenerGroup[K, V]) subscribe(ctx context.Context, lite bool) error {
 	lg.request.Lite = lite
 	lg.request.Subscribe = true
 
+	lg.manager.pendingMutex.Lock()
+
 	ctxOp, cancel := context.WithCancel(ctx)
 	lg.manager.pendingRegistrations[lg.request.Uid] = &pendingListenerOp[K, V]{cancel, lg}
 	err := lg.write(&lg.request)
 	if err != nil {
 		return err
 	}
+	lg.manager.pendingMutex.Unlock()
 
 	<-ctxOp.Done()
 	if errInner := ctxOp.Err(); errInner != nil && errInner == context.DeadlineExceeded {
 		err = errInner
 	}
+
+	lg.manager.pendingMutex.Lock()
+	defer lg.manager.pendingMutex.Unlock()
 
 	delete(lg.manager.pendingRegistrations, lg.request.Uid)
 
@@ -597,11 +620,15 @@ func (lg *listenerGroup[K, V]) subscribe(ctx context.Context, lite bool) error {
 func (lg *listenerGroup[K, V]) unsubscribe(ctx context.Context) error {
 	lg.request.Subscribe = false
 	ctxOp, cancel := context.WithCancel(ctx)
+
+	lg.manager.pendingMutex.Lock()
+
 	lg.manager.pendingRegistrations[lg.request.Uid] = &pendingListenerOp[K, V]{cancel, lg}
 	err := lg.write(&lg.request)
 	if err != nil {
 		return err
 	}
+	lg.manager.pendingMutex.Unlock()
 
 	<-ctxOp.Done()
 	if errInner := ctxOp.Err(); errInner != nil && errInner == context.DeadlineExceeded {
@@ -692,13 +719,14 @@ type mapEventManager[K comparable, V any] struct {
 	namedMap             *NamedMap[K, V]
 	session              *Session
 	serializer           Serializer[any]
+	mutex                sync.RWMutex
 	keyListeners         map[K]*listenerGroup[K, V]
 	filterListeners      map[filters.Filter]*listenerGroup[K, V]
 	filterIDToGroup      map[int64]*listenerGroup[K, V]
 	lifecycleListeners   []*MapLifecycleListener[K, V]
+	pendingMutex         sync.RWMutex
 	pendingRegistrations map[string]*pendingListenerOp[K, V]
 	eventStream          *eventStream
-	mutex                sync.RWMutex
 }
 
 // pendingListenerOp is a simple holder for the listener
@@ -735,6 +763,8 @@ func newMapEventManager[K comparable, V any](namedMap *NamedMap[K, V], bc baseCl
 func (m *mapEventManager[K, V]) close() {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
+	m.pendingMutex.Lock()
+	defer m.pendingMutex.Unlock()
 
 	if m.eventStream != nil {
 		m.eventStream.cancel()
@@ -925,7 +955,11 @@ func (m *mapEventManager[K, V]) ensureStream() (*eventStream, error) {
 				case *proto.MapListenerResponse_Subscribed:
 					{
 						uid := response.GetSubscribed().GetUid()
+
+						m.pendingMutex.Lock()
 						regOp, groupPresent := m.pendingRegistrations[uid]
+						m.pendingMutex.Unlock()
+
 						if groupPresent {
 							regOp.cancel()
 						}
@@ -933,7 +967,10 @@ func (m *mapEventManager[K, V]) ensureStream() (*eventStream, error) {
 				case *proto.MapListenerResponse_Unsubscribed:
 					{
 						uid := response.GetUnsubscribed().GetUid()
+						m.pendingMutex.Lock()
 						regOp, groupPresent := m.pendingRegistrations[uid]
+						m.pendingMutex.Unlock()
+
 						if groupPresent {
 							regOp.cancel()
 						}

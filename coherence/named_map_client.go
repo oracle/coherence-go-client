@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2023 Oracle and/or its affiliates.
+ * Copyright (c) 2022, 2024 Oracle and/or its affiliates.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * https://oss.oracle.com/licenses/upl.
  */
@@ -316,21 +316,19 @@ func (nm *NamedMapClient[K, V]) Destroy(ctx context.Context) error {
 	bc := &nm.baseClient
 	s := bc.session
 
-	// protect updates to maps - specifically don't defer unlock as we need to unlock below
-	s.mutex.Lock()
+	// protect updates to maps
+	s.mapMutex.Lock()
+	defer s.mapMutex.Unlock()
 
 	namedMap := convertNamedMapClient[K, V](nm)
 
 	if err := executeDestroy(ctx, bc, namedMap); err != nil {
-		s.mutex.Unlock()
 		return err
 	}
 
 	// remove the cache from the session.cache map
 	delete(s.maps, nm.Name())
 
-	// unlock session to unregister any listeners
-	s.mutex.Unlock()
 	if nm.namedMapReconnectListener.listener != nil {
 		s.RemoveSessionLifecycleListener(nm.namedMapReconnectListener.listener)
 	}
@@ -345,15 +343,13 @@ func (nm *NamedMapClient[K, V]) Release() {
 	s := nm.session
 
 	// protect updates to maps
-	s.mutex.Lock()
+	s.mapMutex.Lock()
+	defer s.mapMutex.Unlock()
 
 	executeRelease[K, V](&nm.baseClient, nm.NamedMap)
 
 	// remove the NamedMap from the session.maps map
 	delete(s.maps, nm.Name())
-
-	// unlock before removing session listeners
-	s.mutex.Unlock()
 
 	if nm.namedMapReconnectListener.listener != nil {
 		s.RemoveSessionLifecycleListener(nm.namedMapReconnectListener.listener)
@@ -739,7 +735,6 @@ func getNamedMap[K comparable, V any](session *Session, name string, sOpts *Sess
 		format        = sOpts.Format
 		existingCache interface{}
 		ok            bool
-		unlocked      = false
 	)
 
 	if session.closed {
@@ -747,17 +742,13 @@ func getNamedMap[K comparable, V any](session *Session, name string, sOpts *Sess
 	}
 
 	// protect updates to maps
-	session.mutex.Lock()
-	defer func() {
-		if !unlocked {
-			session.mutex.Unlock()
-		}
-	}()
+	session.mapMutex.Lock()
+	defer session.mapMutex.Unlock()
 
 	// check to see if we already have an entry for the map
 	if existingCache, ok = session.maps[name]; ok {
-		existing, ok := existingCache.(*NamedMapClient[K, V])
-		if !ok {
+		existing, ok2 := existingCache.(*NamedMapClient[K, V])
+		if !ok2 {
 			// the casting failed so return an error indicating the NamedMap exists with different type mappings
 			return nil, getExistingError("NamedMap", name)
 		}
@@ -796,14 +787,9 @@ func getNamedMap[K comparable, V any](session *Session, name string, sOpts *Sess
 	// store the new cache
 	session.maps[name] = newMap
 
-	// unlock the session and add the session event listener on reconnect
-	unlocked = true
-	session.mutex.Unlock()
-
 	listener := newNamedMapReconnectListener[K, V](*newMap)
 	newMap.namedMapReconnectListener = *listener
 
-	// unlock before adding reconnect listener
 	session.AddSessionLifecycleListener(newMap.namedMapReconnectListener.listener)
 
 	session.debug("newNamedMap", newMap, "session:", session)

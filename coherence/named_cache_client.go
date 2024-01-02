@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2023 Oracle and/or its affiliates.
+ * Copyright (c) 2022, 2024 Oracle and/or its affiliates.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * https://oss.oracle.com/licenses/upl.
  */
@@ -97,20 +97,18 @@ func (nc *NamedCacheClient[K, V]) Destroy(ctx context.Context) error {
 	s := bc.session
 
 	// protect updates to maps - specifically don't defer unlock as we need to unlock below
-	s.mutex.Lock()
+	s.mapMutex.Lock()
+	defer s.mapMutex.Unlock()
 
 	nameMap := convertNamedCacheClient[K, V](nc)
 
 	if err := executeDestroy(ctx, bc, nameMap); err != nil {
-		s.mutex.Unlock()
 		return err
 	}
 
 	// remove the cache from the session.cache map
 	delete(s.caches, nc.Name())
 
-	// unlock session to unregister any listeners
-	s.mutex.Unlock()
 	if nc.namedCacheReconnectListener.listener != nil {
 		s.RemoveSessionLifecycleListener(nc.namedCacheReconnectListener.listener)
 	}
@@ -125,15 +123,13 @@ func (nc *NamedCacheClient[K, V]) Release() {
 	s := nc.session
 
 	// protect updates to maps
-	s.mutex.Lock()
+	s.mapMutex.Lock()
+	defer s.mapMutex.Unlock()
 
 	executeRelease[K, V](&nc.baseClient, nc)
 
 	// remove the NamedCache from the session.cache map
 	delete(s.caches, nc.Name())
-
-	// unlock before removing reconnect listener
-	s.mutex.Unlock()
 
 	if nc.namedCacheReconnectListener.listener != nil {
 		s.RemoveSessionLifecycleListener(nc.namedCacheReconnectListener.listener)
@@ -529,7 +525,6 @@ func getNamedCache[K comparable, V any](session *Session, name string, sOpts *Se
 		format        = sOpts.Format
 		existingCache interface{}
 		ok            bool
-		unlocked      = false
 	)
 
 	if session.closed {
@@ -537,12 +532,8 @@ func getNamedCache[K comparable, V any](session *Session, name string, sOpts *Se
 	}
 
 	// protect updates to maps
-	session.mutex.Lock()
-	defer func() {
-		if !unlocked {
-			session.mutex.Unlock()
-		}
-	}()
+	session.mapMutex.Lock()
+	defer session.mapMutex.Unlock()
 
 	// check to see if we already have an entry for the cache
 	if existingCache, ok = session.caches[name]; ok {
@@ -580,10 +571,6 @@ func getNamedCache[K comparable, V any](session *Session, name string, sOpts *Se
 
 	// store the new cache
 	session.caches[name] = newCache
-
-	// unlock the session and add the session event listener on reconnect
-	unlocked = true
-	session.mutex.Unlock()
 
 	listener := newNamedCacheReconnectListener[K, V](*newCache)
 	newCache.namedCacheReconnectListener = *listener
