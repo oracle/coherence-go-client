@@ -2,7 +2,7 @@
 
 <!--
 
-    Copyright (c) 2022, 2023 Oracle and/or its affiliates.
+    Copyright (c) 2022, 2024 Oracle and/or its affiliates.
     Licensed under the Universal Permissive License v 1.0 as shown at
     https://oss.oracle.com/licenses/upl.
 
@@ -34,7 +34,7 @@
     <maven.compiler.target>11</maven.compiler.target>
 
     <coherence.group.id>com.oracle.coherence.ce</coherence.group.id>
-    <coherence.version>22.06.4</coherence.version>
+    <coherence.version>22.06.7</coherence.version>
 
     <!-- The version of Coherence to use in the test images -->
     <coherence.test.groupId>com.oracle.coherence.ce</coherence.test.groupId>

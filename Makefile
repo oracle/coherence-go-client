@@ -1,5 +1,5 @@
 # ----------------------------------------------------------------------------------------------------------------------
-# Copyright (c) 2021, 2023 Oracle and/or its affiliates.
+# Copyright (c) 2021, 2024 Oracle and/or its affiliates.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # https://oss.oracle.com/licenses/upl.
 #
@@ -32,7 +32,7 @@ override ENV_FILE            := test/utils/.env
 MVN_VERSION ?= 1.0.0
 
 # Coherence CE version to run base tests against
-COHERENCE_VERSION ?= 22.06.5
+COHERENCE_VERSION ?= 22.06.7
 COHERENCE_GROUP_ID ?= com.oracle.coherence.ce
 COHERENCE_WKA1 ?= server1
 COHERENCE_WKA2 ?= server1
@@ -202,8 +202,8 @@ golangci: $(TOOLS_BIN)/golangci-lint ## Go code review
 .PHONY: generate-proto
 generate-proto: $(TOOLS_BIN)/protoc ## Generate Proto Files
 	mkdir -p $(PROTO_DIR) || true
-	curl -o $(PROTO_DIR)/services.proto https://raw.githubusercontent.com/oracle/coherence/22.06.6/prj/coherence-grpc/src/main/proto/services.proto
-	curl -o $(PROTO_DIR)/messages.proto https://raw.githubusercontent.com/oracle/coherence/22.06.6/prj/coherence-grpc/src/main/proto/messages.proto
+	curl -o $(PROTO_DIR)/services.proto https://raw.githubusercontent.com/oracle/coherence/22.06.7/prj/coherence-grpc/src/main/proto/services.proto
+	curl -o $(PROTO_DIR)/messages.proto https://raw.githubusercontent.com/oracle/coherence/22.06.7/prj/coherence-grpc/src/main/proto/messages.proto
 	echo "" >> $(PROTO_DIR)/services.proto
 	echo "" >> $(PROTO_DIR)/messages.proto
 	echo 'option go_package = "github.com/oracle/coherence-go-client/proto";' >> $(PROTO_DIR)/services.proto
