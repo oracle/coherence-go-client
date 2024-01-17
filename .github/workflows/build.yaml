@@ -1,4 +1,4 @@
-# Copyright 2022, 2023 Oracle Corporation and/or its affiliates.
+# Copyright 2022, 2024 Oracle Corporation and/or its affiliates.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # https://oss.oracle.com/licenses/upl.
 
@@ -103,7 +103,7 @@ jobs:
           COHERENCE_TLS_CERTS_PATH=`pwd`/test/utils/certs/guardians-ca.crt \
           COHERENCE_TLS_CLIENT_CERT=`pwd`/test/utils/certs/star-lord.crt \
           COHERENCE_TLS_CLIENT_KEY=`pwd`/test/utils/certs/star-lord.key \
-          COHERENCE_VERSION=22.06.6 PROFILES=,secure,-jakarta,javax make clean certs generate-proto build-test-images test-e2e-standalone
+          COHERENCE_VERSION=22.06.7 PROFILES=,secure,-jakarta,javax make clean certs generate-proto build-test-images test-e2e-standalone
 
     - name: E2E Local Tests SSL (options)
       shell: bash
@@ -112,7 +112,7 @@ jobs:
           COHERENCE_TLS_CERTS_PATH_OPTION=`pwd`/test/utils/certs/guardians-ca.crt \
           COHERENCE_TLS_CLIENT_CERT_OPTION=`pwd`/test/utils/certs/star-lord.crt \
           COHERENCE_TLS_CLIENT_KEY_OPTION=`pwd`/test/utils/certs/star-lord.key \
-          COHERENCE_VERSION=22.06.6 PROFILES=,secure,-jakarta,javax,scope make clean certs generate-proto build-test-images test-e2e-standalone-scope
+          COHERENCE_VERSION=22.06.7 PROFILES=,secure,-jakarta,javax,scope make clean certs generate-proto build-test-images test-e2e-standalone-scope
 
     - name: E2E Local Tests SSL (tlsConfig)
       shell: bash
@@ -121,7 +121,7 @@ jobs:
           COHERENCE_TLS_CERTS_PATH_OPTION=`pwd`/test/utils/certs/guardians-ca.crt \
           COHERENCE_TLS_CLIENT_CERT_OPTION=`pwd`/test/utils/certs/star-lord.crt \
           COHERENCE_TLS_CLIENT_KEY_OPTION=`pwd`/test/utils/certs/star-lord.key \
-          COHERENCE_VERSION=22.06.6 PROFILES=,secure,-jakarta,javax,scope make clean certs generate-proto build-test-images test-e2e-standalone-scope
+          COHERENCE_VERSION=22.06.7 PROFILES=,secure,-jakarta,javax,scope make clean certs generate-proto build-test-images test-e2e-standalone-scope
 
     - uses: actions/upload-artifact@v3
       if: failure()
