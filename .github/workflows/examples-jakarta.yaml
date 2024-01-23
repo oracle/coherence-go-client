@@ -1,4 +1,4 @@
-# Copyright 2023 Oracle Corporation and/or its affiliates.
+# Copyright 2023, 2024 Oracle Corporation and/or its affiliates.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # https://oss.oracle.com/licenses/upl.
 
@@ -20,9 +20,9 @@ jobs:
       fail-fast: false
       matrix:
         coherenceVersion:
-          - 23.09
           - 23.09.1
-          - 23.09.2-SNAPSHOT
+          - 23.09.2
+          - 23.09.3-SNAPSHOT
         go-version:
           - 1.19.x
           - 1.20.x
