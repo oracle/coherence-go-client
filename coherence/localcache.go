@@ -66,8 +66,11 @@ func (l *localCache[K, V]) PutWithExpiry(key K, value V, ttl time.Duration) *V {
 
 	newEntry := newLocalCacheEntry[K, V](key, value, ttl)
 
-	prev, loaded := l.data.Swap(key, newEntry)
-	if loaded {
+	// can't use Swap as not introduced until go 1.20, so have to check prev value
+	prev, ok := l.data.Load(key)
+	l.data.Store(key, newEntry)
+
+	if ok {
 		return &prev.(*localCacheEntry[K, V]).value
 	}
 	return nil

@@ -16,11 +16,12 @@ import (
 func TestBasicLocalCacheOperations(t *testing.T) {
 	g := NewWithT(t)
 
-	cache := newLocalCache[int, string]("my-cache")
+	cache := newLocalCache[int, string]("my-cache-1")
 	g.Expect(cache.Size()).To(Equal(0))
 
-	cache.Put(1, "one")
+	old := cache.Put(1, "one")
 	g.Expect(cache.Size()).To(Equal(1))
+	g.Expect(old).To(BeNil())
 
 	value := cache.Get(1)
 	g.Expect(*value).To(Equal("one"))
@@ -80,7 +81,7 @@ func TestBasicLocalCacheWithDefaultExpiry(t *testing.T) {
 func TestLocalCacheGoRoutines(t *testing.T) {
 	var (
 		g     = NewWithT(t)
-		cache = newLocalCache[int, string]("my-cache")
+		cache = newLocalCache[int, string]("my-cache-2")
 		wg    sync.WaitGroup
 	)
 
