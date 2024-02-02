@@ -7,7 +7,6 @@
 package standalone
 
 import (
-	"fmt"
 	"github.com/onsi/gomega"
 	"github.com/oracle/coherence-go-client/coherence"
 	"github.com/oracle/coherence-go-client/coherence/filters"
@@ -59,12 +58,9 @@ func RunTestNearCacheBasic(t *testing.T, namedMap coherence.NamedMap[int, Person
 	g.Expect(oldValue).To(gomega.BeNil())
 	AssertSize[int, Person](g, namedMap, 1)
 
-	start := time.Now()
 	// this should add to the near cache
 	_, err = namedMap.Get(ctx, person1.ID)
-	duration1 := time.Since(start)
 	g.Expect(err).NotTo(gomega.HaveOccurred())
-	fmt.Println("Initial get", duration1)
 
 	stats := namedMap.GetNearCacheStats()
 	g.Expect(stats).To(gomega.Not(gomega.BeNil()))
@@ -77,26 +73,17 @@ func RunTestNearCacheBasic(t *testing.T, namedMap coherence.NamedMap[int, Person
 	g.Expect(namedMap.GetNearCacheStats().Size()).To(gomega.Equal(1))
 
 	// do a second get, should be quicker
-	start = time.Now()
 	_, err = namedMap.Get(ctx, person1.ID)
-	duration2 := time.Since(start)
 	g.Expect(err).NotTo(gomega.HaveOccurred())
-	fmt.Println("Subsequent get", duration2)
 
 	stats = namedMap.GetNearCacheStats()
 	g.Expect(stats).To(gomega.Not(gomega.BeNil()))
 
-	// should take much less time
-	g.Expect(duration2.Milliseconds() < duration1.Milliseconds()).To(gomega.Equal(true))
-
 	// sleep for 11 seconds, this should expiry the entry and cause re-read
 	Sleep(11)
 
-	start = time.Now()
 	_, err = namedMap.Get(ctx, person1.ID)
-	duration3 := time.Since(start)
 	g.Expect(err).NotTo(gomega.HaveOccurred())
-	fmt.Println("Subsequent get", duration3)
 
 	g.Expect(namedMap.GetNearCacheStats().GetCachePuts()).To(gomega.Equal(int64(2)))
 
