@@ -28,9 +28,10 @@ type LocalCache[K comparable, V any] interface {
 }
 
 type localCache[K comparable, V any] struct {
-	Name              string
-	options           *LocalCacheOptions
-	data              sync.Map
+	Name    string
+	options *LocalCacheOptions
+	sync.Mutex
+	data              map[K]*localCacheEntry[K, V]
 	cacheStats        CacheStats
 	cacheHits         int64
 	cacheMisses       int64
@@ -60,63 +61,73 @@ func (l *localCache[K, V]) Put(key K, value V) *V {
 // function allows the caller to specify an expiry (or "time to live")
 // for the cache entry. V will be nil if there was no previous value.
 func (l *localCache[K, V]) PutWithExpiry(key K, value V, ttl time.Duration) *V {
-	l.checkExpiry()
-
 	defer l.registerPut()
+
+	l.Lock()
+	defer l.Unlock()
+
+	l.checkExpiry()
 
 	newEntry := newLocalCacheEntry[K, V](key, value, ttl)
 
-	// can't use Swap as not introduced until go 1.20, so have to check prev value
-	prev, ok := l.data.Load(key)
-	l.data.Store(key, newEntry)
+	prev, ok := l.data[key]
+
+	l.data[key] = newEntry
 
 	if ok {
-		return &prev.(*localCacheEntry[K, V]).value
+		return &prev.value
 	}
 	return nil
 }
 
 // Get returns the value to which the specified key is mapped. V will be nil if there was no previous value.
 func (l *localCache[K, V]) Get(key K) *V {
+	l.Lock()
+	defer l.Unlock()
+
 	l.checkExpiry()
 
-	v, ok := l.data.Load(key)
+	v, ok := l.data[key]
 	if !ok {
 		return nil
 	}
 
-	return &v.(*localCacheEntry[K, V]).value
+	return &v.value
 }
 
 // Remove removes the mapping for a key from the cache if it is present and returns the previously
 // mapped value, if any. V will be nil if there was no previous value.
 func (l *localCache[K, V]) Remove(key K) *V {
+	l.Lock()
+	defer l.Unlock()
+
 	l.checkExpiry()
 
-	prev, loaded := l.data.LoadAndDelete(key)
-	if loaded {
-		return &prev.(*localCacheEntry[K, V]).value
+	v, ok := l.data[key]
+
+	if ok {
+		delete(l.data, key)
+		return &v.value
 	}
+
 	return nil
 }
 
 // Size returns the number of mappings contained within the cache.
 func (l *localCache[K, V]) Size() int {
+	l.Lock()
+	defer l.Unlock()
+
 	l.checkExpiry()
-	size := 0
-	l.data.Range(func(key, value any) bool {
-		size++
-		return true
-	})
-	return size
+	return len(l.data)
 }
 
 // Clear removes all mappings from the cache.
 func (l *localCache[K, V]) Clear() {
-	l.data.Range(func(key, value any) bool {
-		l.data.Delete(key)
-		return true
-	})
+	l.Lock()
+	defer l.Unlock()
+
+	l.data = make(map[K]*localCacheEntry[K, V], 0)
 }
 
 // Release releases the cache.
@@ -132,19 +143,23 @@ func (l *localCache[K, V]) GetStats() CacheStats {
 // TODO: Size based eviction
 func (l *localCache[K, V]) checkExpiry() {
 	start := time.Now()
-	var prunes int64
+	var (
+		prunes       int64
+		keysToDelete = make([]K, 0)
+	)
 
-	l.data.Range(func(key, value any) bool {
-		entry := value.(*localCacheEntry[K, V])
-		if entry.ttl > 0 && time.Since(entry.insertTime) > entry.ttl {
-			l.data.Delete(key)
+	defer l.registerPrune(time.Since(start).Milliseconds())
+
+	for k, v := range l.data {
+		if v.ttl > 0 && time.Since(v.insertTime) > v.ttl {
+			keysToDelete = append(keysToDelete, k)
 			prunes++
 		}
-		return true
-	})
+	}
 
-	if prunes > 0 {
-		l.registerPrune(time.Since(start).Milliseconds())
+	// now delete all the keys that were flagged
+	for _, k := range keysToDelete {
+		delete(l.data, k)
 	}
 }
 
@@ -160,7 +175,7 @@ func newLocalCacheEntry[K comparable, V any](key K, value V, ttl time.Duration) 
 func newLocalCache[K comparable, V any](name string, options ...func(localCache *LocalCacheOptions)) *localCache[K, V] {
 	cache := &localCache[K, V]{
 		Name: name,
-		data: sync.Map{},
+		data: make(map[K]*localCacheEntry[K, V], 0),
 		options: &LocalCacheOptions{
 			Expiry:    0,
 			HighUnits: 0,
