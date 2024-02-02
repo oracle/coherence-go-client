@@ -722,10 +722,16 @@ func (nm *NamedMapClient[K, V]) IsReady(ctx context.Context) (bool, error) {
 	return executeIsReady[K, V](ctx, &nm.baseClient)
 }
 
+// GetNearCacheStats returns the [CacheStats] for a near cache for a [NamedMap].
+// If no near cache is defined, nil is returned.
+func (nm *NamedMapClient[K, V]) GetNearCacheStats() CacheStats {
+	return nm.getBaseClient().nearCache
+}
+
 // String returns a string representation of a NamedMapClient.
 func (nm *NamedMapClient[K, V]) String() string {
-	return fmt.Sprintf("NamedMap{name=%s, format=%s, destroyed=%v, released=%v}",
-		nm.Name(), nm.format, nm.destroyed, nm.released)
+	return fmt.Sprintf("NamedMap{name=%s, format=%s, destroyed=%v, released=%v, options=%v}",
+		nm.Name(), nm.format, nm.destroyed, nm.released, nm.cacheOpts.NearCacheOptions)
 }
 
 // getNamedMap gets a [NamedMap] of the generic type specified or if a cache already exists with the
@@ -792,6 +798,16 @@ func getNamedMap[K comparable, V any](session *Session, name string, sOpts *Sess
 
 	session.AddSessionLifecycleListener(newMap.namedMapReconnectListener.listener)
 
+	// if near cache then add listener
+	if newMap.baseClient.nearCache != nil {
+		nearCacheListener := newNearNamedMapMapLister[K, V](*newMap, newMap.baseClient.nearCache)
+		newMap.baseClient.nearCacheListener = nearCacheListener
+		err = newMap.AddListener(context.Background(), newMap.baseClient.nearCacheListener.listener)
+		if err != nil {
+			return nil, fmt.Errorf("unable to add listener to near cache: %v", err)
+		}
+	}
+
 	session.debug("newNamedMap", newMap, "session:", session)
 	return newMap, nil
 }
@@ -819,7 +835,7 @@ func newNamedMapReconnectListener[K comparable, V any](nm NamedMapClient[K, V]) 
 }
 
 func newBaseClient[K comparable, V any](session *Session, name string, format string, sOpts *SessionOptions, cOpts *CacheOptions) baseClient[K, V] {
-	return baseClient[K, V]{
+	bc := baseClient[K, V]{
 		session:         session,
 		name:            name,
 		sessionOpts:     sOpts,
@@ -829,6 +845,37 @@ func newBaseClient[K comparable, V any](session *Session, name string, format st
 		mutex:           &sync.RWMutex{},
 		cacheOpts:       cOpts,
 	}
+
+	// if near cache options specified then setup internal local cache
+	if bc.cacheOpts.NearCacheOptions != nil {
+		var options = make([]func(localCache *LocalCacheOptions), 0)
+		if bc.cacheOpts.NearCacheOptions.TTL != 0 {
+			options = append(options, WithLocalCacheExpiry(bc.cacheOpts.NearCacheOptions.TTL))
+		}
+		if bc.cacheOpts.NearCacheOptions.HighUnits != 0 {
+			options = append(options, WithLocalCacheExpiry(bc.cacheOpts.NearCacheOptions.TTL))
+		}
+		nearCache := newLocalCache[K, V](bc.name, options...)
+		bc.nearCache = nearCache
+	}
+
+	return bc
+}
+
+func newNearNamedMapMapLister[K comparable, V any](nc NamedMapClient[K, V], cache *localCache[K, V]) *namedCacheNearCacheListener[K, V] {
+	listener := namedCacheNearCacheListener[K, V]{
+		listener:  NewMapListener[K, V](),
+		nearCache: cache,
+	}
+
+	listener.listener.OnAny(func(e MapEvent[K, V]) {
+		err := processNearCacheEvent(nc.baseClient.nearCache, e)
+		if err != nil {
+			log.Println("Error processing near cache MapEvent", e)
+		}
+	})
+
+	return &listener
 }
 
 // getExistingError returns an error indicating a [NamedMap] or [NamedCache] exists with different type parameters

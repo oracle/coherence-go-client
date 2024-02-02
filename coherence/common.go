@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2023 Oracle and/or its affiliates.
+ * Copyright (c) 2022, 2024 Oracle and/or its affiliates.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * https://oss.oracle.com/licenses/upl.
  */
@@ -19,6 +19,7 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	"io"
+	"log"
 	"os"
 	"sync"
 	"time"
@@ -57,29 +58,48 @@ var (
 
 // baseClient is a struct that is used for both NamedMap and NamedCache
 type baseClient[K comparable, V any] struct {
-	session         *Session
-	name            string          // Name of the NamedMap or NamedCache
-	sessionOpts     *SessionOptions // Options for the sessions
-	cacheOpts       *CacheOptions   // Options for the cache or map
-	client          pb.NamedCacheServiceClient
-	format          string
-	keySerializer   Serializer[K]
-	valueSerializer Serializer[V]
-	eventManager    *mapEventManager[K, V]
-	destroyed       bool
-	released        bool
-	mutex           *sync.RWMutex
+	session           *Session
+	name              string          // Name of the NamedMap or NamedCache
+	sessionOpts       *SessionOptions // Options for the sessions
+	cacheOpts         *CacheOptions   // Options for the cache or map
+	client            pb.NamedCacheServiceClient
+	format            string
+	keySerializer     Serializer[K]
+	valueSerializer   Serializer[V]
+	eventManager      *mapEventManager[K, V]
+	destroyed         bool
+	released          bool
+	mutex             *sync.RWMutex
+	nearCache         *localCache[K, V]
+	nearCacheListener *namedCacheNearCacheListener[K, V]
 }
 
 // CacheOptions holds various cache options.
 type CacheOptions struct {
-	DefaultExpiry time.Duration
+	DefaultExpiry    time.Duration
+	NearCacheOptions *NearCacheOptions
+}
+
+type NearCacheOptions struct {
+	TTL       time.Duration
+	HighUnits int64
+}
+
+func (n NearCacheOptions) String() string {
+	return fmt.Sprintf("NearCacheOptions{TTL=%v, HighUnits=%v}", n.TTL, n.HighUnits)
 }
 
 // WithExpiry returns a function to set the default expiry for a [NamedCache]. This option is not valid on [NamedMap].
 func WithExpiry(ttl time.Duration) func(cacheOptions *CacheOptions) {
 	return func(s *CacheOptions) {
 		s.DefaultExpiry = ttl
+	}
+}
+
+// WithNearCache returns a function to set [NearCacheOptions].
+func WithNearCache(options *NearCacheOptions) func(cacheOptions *CacheOptions) {
+	return func(s *CacheOptions) {
+		s.NearCacheOptions = options
 	}
 }
 
@@ -236,6 +256,12 @@ func executeRelease[K comparable, V any](bc *baseClient[K, V], nm NamedMap[K, V]
 		return newMapLifecycleEvent(nm, Released)
 	})
 
+	if bc.nearCacheListener != nil {
+		err := nm.RemoveListener(context.Background(), bc.nearCacheListener.listener)
+		if err != nil {
+			log.Printf("unable to add listener to near cache: %v", err)
+		}
+	}
 	bc.released = true
 
 	if manager := bc.eventManager; manager != nil {
@@ -369,6 +395,7 @@ func executeGet[K comparable, V any](ctx context.Context, bc *baseClient[K, V], 
 		binKey    []byte
 		err       = bc.ensureClientConnection()
 		zeroValue *V
+		nearCache = bc.nearCache
 	)
 
 	if err != nil {
@@ -380,21 +407,50 @@ func executeGet[K comparable, V any](ctx context.Context, bc *baseClient[K, V], 
 		defer cancel()
 	}
 
+	// check near cache
+	if nearCache != nil {
+		ncValue := bc.nearCache.Get(key)
+		if ncValue != nil {
+			nearCache.registerHit()
+			return ncValue, nil
+		}
+	}
+
 	binKey, err = bc.keySerializer.Serialize(key)
 
 	if err != nil {
 		return zeroValue, err
 	}
 
+	if nearCache != nil {
+		// if we get here then it must be a near cache miss because if it was a hit
+		// we would have returned already, so save total time we have spent getting
+		// the value from Coherence. registerMiss() has already been called
+		defer func(start time.Time) {
+			nearCache.registerMissesMillis(time.Since(start).Milliseconds())
+			nearCache.registerMiss()
+		}(time.Now())
+	}
+
 	getRequest := pb.GetRequest{Key: binKey, Cache: bc.name, Format: bc.format, Scope: bc.sessionOpts.Scope}
 
 	result, err := bc.client.Get(newCtx, &getRequest)
+
 	if err != nil {
 		return zeroValue, err
 	}
 
 	if result.Present {
-		return bc.valueSerializer.Deserialize(result.Value)
+		v, err1 := bc.valueSerializer.Deserialize(result.Value)
+		if err1 != nil {
+			return nil, err1
+		}
+
+		// Add to near cache if one is configured, and we found a value
+		if nearCache != nil && v != nil {
+			bc.nearCache.Put(key, *v)
+		}
+		return v, nil
 	}
 
 	return nil, nil
@@ -911,6 +967,7 @@ func executeRemove[K comparable, V any](ctx context.Context, bc *baseClient[K, V
 		oldValue  *wrapperspb.BytesValue
 		binKey    []byte
 		zeroValue *V
+		nearCache = bc.nearCache
 	)
 	if err != nil {
 		return zeroValue, err
@@ -926,6 +983,10 @@ func executeRemove[K comparable, V any](ctx context.Context, bc *baseClient[K, V
 		return zeroValue, err
 	}
 
+	if nearCache != nil {
+		_ = nearCache.Remove(key)
+	}
+
 	removeRequest := pb.RemoveRequest{Key: binKey, Cache: bc.name, Format: bc.format, Scope: bc.sessionOpts.Scope}
 
 	oldValue, err = bc.client.Remove(newCtx, &removeRequest)
@@ -939,10 +1000,11 @@ func executeRemove[K comparable, V any](ctx context.Context, bc *baseClient[K, V
 // executeRemoveMapping executes the RemoveMapping operation against a baseClient.
 func executeRemoveMapping[K comparable, V any](ctx context.Context, bc *baseClient[K, V], key K, value V) (bool, error) {
 	var (
-		result   *wrapperspb.BoolValue
-		err      = bc.ensureClientConnection()
-		binKey   []byte
-		binValue []byte
+		result    *wrapperspb.BoolValue
+		err       = bc.ensureClientConnection()
+		binKey    []byte
+		binValue  []byte
+		nearCache = bc.nearCache
 	)
 
 	if err != nil {
@@ -970,6 +1032,10 @@ func executeRemoveMapping[K comparable, V any](ctx context.Context, bc *baseClie
 	if err != nil {
 		return false, err
 	}
+	if nearCache != nil && result.Value {
+		nearCache.Remove(key)
+	}
+
 	return result.Value, nil
 }
 
