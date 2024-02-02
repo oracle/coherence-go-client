@@ -99,8 +99,9 @@ go run basic/expiry_cache/main.go
 #### Using Near Caches
 
 This example shows how to specify a near-cache for either NamedMap or NamedCache which will
-cache frequently accessed data on the Go client and invalidate data when it has been changed on the server
-
+cache data accessed via Get() operations on the Go client for fast local access for a specified time-to-live (TTL). 
+Any updates of data from the back-end will update the data in the near cache or any 
+data removals will invalidate the near cache.
 
 Source code: [basic/near_cache/main.go](basic/near_cache/main.go)
 
