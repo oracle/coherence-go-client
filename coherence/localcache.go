@@ -35,10 +35,10 @@ type localCache[K comparable, V any] struct {
 	cacheStats        CacheStats
 	cacheHits         int64
 	cacheMisses       int64
-	cacheMissesMillis int64
+	cacheMissesNannos int64
 	cachePuts         int64
 	cachePrunes       int64
-	cachePrunesMillis int64
+	cachePrunesNannos int64
 }
 
 type localCacheEntry[K comparable, V any] struct {
@@ -148,7 +148,7 @@ func (l *localCache[K, V]) checkExpiry() {
 		keysToDelete = make([]K, 0)
 	)
 
-	defer l.registerPrune(time.Since(start).Milliseconds())
+	defer l.registerPruneNanos(time.Since(start).Nanoseconds())
 
 	for k, v := range l.data {
 		if v.ttl > 0 && time.Since(v.insertTime) > v.ttl {
@@ -219,10 +219,10 @@ var _ CacheStats = &localCache[string, string]{}
 type CacheStats interface {
 	GetCacheHits() int64
 	GetCacheMisses() int64
-	GetCacheMissesMillis() int64
+	GetCacheMissesDuration() time.Duration
 	GetCachePuts() int64
 	GetCachePrunes() int64
-	GetCachePrunesMillis() int64
+	GetCachePrunesDuration() time.Duration
 	GetTotalGets() int64
 	GetHitRate() float32
 	Size() int
@@ -241,13 +241,13 @@ func (l *localCache[K, V]) registerPut() {
 	atomic.AddInt64(&l.cachePuts, 1)
 }
 
-func (l *localCache[K, V]) registerPrune(millis int64) {
+func (l *localCache[K, V]) registerPruneNanos(nanos int64) {
 	atomic.AddInt64(&l.cachePrunes, 1)
-	atomic.AddInt64(&l.cachePrunesMillis, millis)
+	atomic.AddInt64(&l.cachePrunesNannos, nanos)
 }
 
-func (l *localCache[K, V]) registerMissesMillis(millis int64) {
-	atomic.AddInt64(&l.cacheMissesMillis, millis)
+func (l *localCache[K, V]) registerMissesNanos(nanos int64) {
+	atomic.AddInt64(&l.cacheMissesNannos, nanos)
 }
 
 func (l *localCache[K, V]) GetCacheHits() int64 {
@@ -258,8 +258,8 @@ func (l *localCache[K, V]) GetCacheMisses() int64 {
 	return l.cacheMisses
 }
 
-func (l *localCache[K, V]) GetCacheMissesMillis() int64 {
-	return l.cacheMissesMillis
+func (l *localCache[K, V]) GetCacheMissesDuration() time.Duration {
+	return time.Duration(l.cacheMissesNannos) * time.Nanosecond
 }
 
 func (l *localCache[K, V]) GetCachePuts() int64 {
@@ -270,8 +270,8 @@ func (l *localCache[K, V]) GetCachePrunes() int64 {
 	return l.cachePrunes
 }
 
-func (l *localCache[K, V]) GetCachePrunesMillis() int64 {
-	return l.cachePrunesMillis
+func (l *localCache[K, V]) GetCachePrunesDuration() time.Duration {
+	return time.Duration(l.cachePrunesNannos) * time.Nanosecond
 }
 
 func (l *localCache[K, V]) GetTotalGets() int64 {
@@ -287,8 +287,8 @@ func (l *localCache[K, V]) GetHitRate() float32 {
 }
 
 func (l *localCache[K, V]) ResetStats() {
-	atomic.StoreInt64(&l.cachePrunesMillis, 0)
-	atomic.StoreInt64(&l.cacheMissesMillis, 0)
+	atomic.StoreInt64(&l.cachePrunesNannos, 0)
+	atomic.StoreInt64(&l.cacheMissesNannos, 0)
 	atomic.StoreInt64(&l.cachePrunes, 0)
 	atomic.StoreInt64(&l.cacheHits, 0)
 	atomic.StoreInt64(&l.cacheMisses, 0)
@@ -298,5 +298,5 @@ func (l *localCache[K, V]) ResetStats() {
 func (l *localCache[K, V]) String() string {
 	return fmt.Sprintf("LocalCache{name=%s, options=%v, stats=CacheStats{puts=%v, gets=%v, hits=%v, misses=%v, missesMillis=%v, hitRate=%v, prunes=%v, prunesMillis=%v}}",
 		l.Name, l.options, l.GetCachePuts(), l.GetTotalGets(), l.GetCacheHits(), l.GetCacheMisses(),
-		l.GetCacheMissesMillis(), l.GetHitRate()*100, l.GetCachePrunes(), l.GetCachePrunesMillis())
+		l.GetCacheMissesDuration(), l.GetHitRate()*100, l.GetCachePrunes(), l.GetCachePrunesDuration())
 }

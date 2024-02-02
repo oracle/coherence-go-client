@@ -96,6 +96,18 @@ Source code: [basic/expiry_cache/main.go](basic/expiry_cache/main.go)
 go run basic/expiry_cache/main.go
 ```
 
+#### Using Near Caches
+
+This example shows how to specify a near-cache for either NamedMap or NamedCache which will
+cache frequently accessed data on the Go client and invalidate data when it has been changed on the server
+
+
+Source code: [basic/near_cache/main.go](basic/near_cache/main.go)
+
+```go
+go run basic/near_cache/main.go
+```
+
 ### <a name="querying"></a> Querying data
 
 These examples shows how to query data operations against a NamedMap or NamedCache.

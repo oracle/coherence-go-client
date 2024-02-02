@@ -117,6 +117,12 @@ func executeClear[K comparable, V any](ctx context.Context, bc *baseClient[K, V]
 	clearRequest := pb.ClearRequest{Cache: bc.name, Scope: bc.sessionOpts.Scope}
 
 	_, err = bc.client.Clear(newCtx, &clearRequest)
+
+	if bc.nearCache != nil {
+		// also clearn the named cache
+		bc.nearCache.Clear()
+	}
+
 	return err
 }
 
@@ -420,7 +426,7 @@ func executeGet[K comparable, V any](ctx context.Context, bc *baseClient[K, V], 
 		// we would have returned already, so save total time we have spent getting
 		// the value from Coherence. registerMiss() has already been called
 		defer func(start time.Time) {
-			nearCache.registerMissesMillis(time.Since(start).Milliseconds())
+			nearCache.registerMissesNanos(time.Since(start).Nanoseconds())
 			nearCache.registerMiss()
 		}(time.Now())
 	}
