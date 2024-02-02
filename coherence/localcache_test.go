@@ -78,6 +78,32 @@ func TestBasicLocalCacheWithDefaultExpiry(t *testing.T) {
 	g.Expect(cache.Size()).To(Equal(0))
 }
 
+func TestBasicLocalCacheClear(t *testing.T) {
+	g := NewWithT(t)
+
+	cache := newLocalCache[int, string]("my-cache-clear", WithLocalCacheExpiry(time.Duration(2)*time.Second))
+	g.Expect(cache.Size()).To(Equal(0))
+
+	cache.Put(1, "one")
+	g.Expect(cache.Size()).To(Equal(1))
+	cache.Clear()
+
+	g.Expect(cache.Size()).To(Equal(0))
+}
+
+func TestBasicLocalCacheRelease(t *testing.T) {
+	g := NewWithT(t)
+
+	cache := newLocalCache[int, string]("my-cache-clear", WithLocalCacheExpiry(time.Duration(2)*time.Second))
+	g.Expect(cache.Size()).To(Equal(0))
+
+	cache.Put(1, "one")
+	g.Expect(cache.Size()).To(Equal(1))
+	cache.Release()
+
+	g.Expect(cache.Size()).To(Equal(0))
+}
+
 func TestLocalCacheGoRoutines(t *testing.T) {
 	var (
 		g     = NewWithT(t)

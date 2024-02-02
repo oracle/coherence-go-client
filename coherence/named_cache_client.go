@@ -126,6 +126,13 @@ func (nc *NamedCacheClient[K, V]) Release() {
 	s.mapMutex.Lock()
 	defer s.mapMutex.Unlock()
 
+	if nc.baseClient.nearCacheListener != nil {
+		err := nc.RemoveListener(context.Background(), nc.baseClient.nearCacheListener.listener)
+		if err != nil {
+			log.Printf("unable to remove listener to near cache: %v", err)
+		}
+	}
+
 	executeRelease[K, V](&nc.baseClient, nc)
 
 	// remove the NamedCache from the session.cache map

@@ -109,6 +109,8 @@ func RunTestNearCacheBasic(t *testing.T, namedMap coherence.NamedMap[int, Person
 
 	Sleep(5)
 	g.Expect(namedMap.GetNearCacheStats().Size()).To(gomega.Equal(0))
+
+	namedMap.Release()
 }
 
 func RunTestNearCacheRemoves(t *testing.T, namedMap coherence.NamedMap[int, Person]) {

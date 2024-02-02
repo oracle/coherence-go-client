@@ -19,7 +19,6 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	"io"
-	"log"
 	"os"
 	"sync"
 	"time"
@@ -256,12 +255,6 @@ func executeRelease[K comparable, V any](bc *baseClient[K, V], nm NamedMap[K, V]
 		return newMapLifecycleEvent(nm, Released)
 	})
 
-	if bc.nearCacheListener != nil {
-		err := nm.RemoveListener(context.Background(), bc.nearCacheListener.listener)
-		if err != nil {
-			log.Printf("unable to add listener to near cache: %v", err)
-		}
-	}
 	bc.released = true
 
 	if manager := bc.eventManager; manager != nil {
