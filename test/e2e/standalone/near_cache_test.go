@@ -7,6 +7,7 @@
 package standalone
 
 import (
+	"fmt"
 	"github.com/onsi/gomega"
 	"github.com/oracle/coherence-go-client/coherence"
 	"github.com/oracle/coherence-go-client/coherence/filters"
@@ -214,6 +215,92 @@ func RunTestNearCacheRemoves(t *testing.T, namedMap coherence.NamedMap[int, Pers
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	g.Expect(removed).Should(gomega.Equal(true))
 	g.Expect(namedMap.GetNearCacheStats().Size()).To(gomega.Equal(0))
+}
+
+// TestDuplicateNamedCache runs tests to ensure that we can't create a cache and try to get the
+// same cache name without named cache.
+func TestDuplicateNamedCache(t *testing.T) {
+	var (
+		err        error
+		session    *coherence.Session
+		g          = gomega.NewWithT(t)
+		namedCache coherence.NamedCache[int, string]
+		namedMap   coherence.NamedMap[int, string]
+	)
+
+	session, err = GetSession()
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	defer session.Close()
+
+	nearCacheOptions10Seconds := coherence.NearCacheOptions{TTL: time.Duration(10) * time.Second}
+
+	// test creating a NamedCache with near cache and then trying to get a NamedCache without near cache
+	namedCache, err = coherence.GetNamedCache[int, string](session, "near-cache", coherence.WithNearCache(&nearCacheOptions10Seconds))
+	g.Expect(namedCache).To(gomega.Not(gomega.BeNil()))
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+
+	// try to get the same cache name with no near cache config, should fail
+	_, err = coherence.GetNamedCache[int, string](session, "near-cache")
+	fmt.Println(err)
+	g.Expect(err).Should(gomega.HaveOccurred())
+
+	namedCache.Release()
+
+	// test creating a NamedMap with near cache and then trying to get a NamedMap without near cache
+	namedMap, err = coherence.GetNamedMap[int, string](session, "near-map", coherence.WithNearCache(&nearCacheOptions10Seconds))
+	g.Expect(namedMap).To(gomega.Not(gomega.BeNil()))
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+
+	// try to get the same map name with no near cache config, should fail
+	_, err = coherence.GetNamedMap[int, string](session, "near-map")
+	g.Expect(err).Should(gomega.HaveOccurred())
+
+	namedMap.Release()
+
+	// test creating a NamedCache WITHOUT near cache and then trying to get a NamedCache WITH near cache
+	namedCache, err = coherence.GetNamedCache[int, string](session, "no-near-cache")
+	g.Expect(namedCache).To(gomega.Not(gomega.BeNil()))
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+
+	// try to get the same cache name with near cache config, should fail
+	_, err = coherence.GetNamedCache[int, string](session, "no-near-cache", coherence.WithNearCache(&nearCacheOptions10Seconds))
+	fmt.Println(err)
+	g.Expect(err).Should(gomega.HaveOccurred())
+
+	namedCache.Release()
+
+	// test creating a NamedMap with WITHOUT cache and then trying to get a NamedMap WITH near cache
+	namedMap, err = coherence.GetNamedMap[int, string](session, "no-near-map")
+	g.Expect(namedMap).To(gomega.Not(gomega.BeNil()))
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+
+	// try to get the same map name with near cache config, should fail
+	_, err = coherence.GetNamedMap[int, string](session, "no-near-map", coherence.WithNearCache(&nearCacheOptions10Seconds))
+	g.Expect(err).Should(gomega.HaveOccurred())
+
+	namedMap.Release()
+}
+
+// TestInvalidNearCacheOptions runs tests to ensure that we can't create a named cache with invalid options.
+func TestInvalidNearCacheOptions(t *testing.T) {
+	var (
+		err     error
+		session *coherence.Session
+		g       = gomega.NewWithT(t)
+	)
+
+	session, err = GetSession()
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	defer session.Close()
+
+	nearCacheOptions10Seconds := coherence.NearCacheOptions{}
+
+	_, err = coherence.GetNamedCache[int, string](session, "near-cache", coherence.WithNearCache(&nearCacheOptions10Seconds))
+	g.Expect(err).Should(gomega.HaveOccurred())
+
+	_, err = coherence.GetNamedMap[int, string](session, "near-map", coherence.WithNearCache(&nearCacheOptions10Seconds))
+	g.Expect(err).Should(gomega.HaveOccurred())
+
 }
 
 func RunTestNearCacheReplaces(t *testing.T, namedMap coherence.NamedMap[int, Person]) {

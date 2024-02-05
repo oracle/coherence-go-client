@@ -758,17 +758,6 @@ func getNamedMap[K comparable, V any](session *Session, name string, sOpts *Sess
 	session.mapMutex.Lock()
 	defer session.mapMutex.Unlock()
 
-	// check to see if we already have an entry for the map
-	if existingCache, ok = session.maps[name]; ok {
-		existing, ok2 := existingCache.(*NamedMapClient[K, V])
-		if !ok2 {
-			// the casting failed so return an error indicating the NamedMap exists with different type mappings
-			return nil, getExistingError("NamedMap", name)
-		}
-		session.debug("using existing NamedMap", existing)
-		return existing, nil
-	}
-
 	cacheOptions := &CacheOptions{
 		DefaultExpiry: time.Duration(0),
 	}
@@ -778,8 +767,33 @@ func getNamedMap[K comparable, V any](session *Session, name string, sOpts *Sess
 		f(cacheOptions)
 	}
 
+	err := validateNearCacheOptions(cacheOptions.NearCacheOptions)
+	if err != nil {
+		return nil, err
+	}
+
 	if cacheOptions.DefaultExpiry != time.Duration(0) {
 		return nil, errors.New("you cannot use a non-zero expiry for a NamedMap")
+	}
+
+	// check to see if we already have an entry for the map
+	if existingCache, ok = session.maps[name]; ok {
+		existing, ok2 := existingCache.(*NamedMapClient[K, V])
+		if !ok2 {
+			// the casting failed so return an error indicating the NamedMap exists with different type mappings
+			return nil, getExistingError("NamedMap", name)
+		}
+
+		// check if there is a difference in cache options wrt near cache.
+		// e.g. user has asked for a cache with near cache and previously
+		// cache does not have this, or visa-versa
+		if existing.baseClient.nearCache == nil && cacheOptions.NearCacheOptions != nil ||
+			existing.baseClient.nearCache != nil && cacheOptions.NearCacheOptions == nil {
+			return nil, getExistingNearCacheError("NamedMap", name)
+		}
+
+		session.debug("using existing NamedMap", existing)
+		return existing, nil
 	}
 
 	newMap := &NamedMapClient[K, V]{
@@ -885,9 +899,14 @@ func newNearNamedMapMapLister[K comparable, V any](nc NamedMapClient[K, V], cach
 	return &listener
 }
 
-// getExistingError returns an error indicating a [NamedMap] or [NamedCache] exists with different type parameters
+// getExistingError returns an error indicating a [NamedMap] or [NamedCache] exists with different type parameters.
 func getExistingError(cacheType, name string) error {
 	return fmt.Errorf(mapOrCacheExists, cacheType, name)
+}
+
+// getExistingError returns an error indicating a [NamedMap] or [NamedCache] exists with different near cache options.
+func getExistingNearCacheError(cacheType, name string) error {
+	return fmt.Errorf(mapOrCacheExistsNearCache, cacheType, name)
 }
 
 func convertNamedMapClient[K comparable, V any](client *NamedMapClient[K, V]) NamedMap[K, V] {

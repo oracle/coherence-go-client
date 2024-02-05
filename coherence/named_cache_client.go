@@ -548,17 +548,6 @@ func getNamedCache[K comparable, V any](session *Session, name string, sOpts *Se
 	session.mapMutex.Lock()
 	defer session.mapMutex.Unlock()
 
-	// check to see if we already have an entry for the cache
-	if existingCache, ok = session.caches[name]; ok {
-		existing, ok2 := existingCache.(*NamedCacheClient[K, V])
-		if !ok2 {
-			// the casting failed so return an error indicating the cache exists with different type mappings
-			return nil, getExistingError("NamedCache", name)
-		}
-		session.debug("using existing NamedCache", existing)
-		return existing, nil
-	}
-
 	cacheOptions := &CacheOptions{
 		DefaultExpiry: time.Duration(0),
 	}
@@ -566,6 +555,31 @@ func getNamedCache[K comparable, V any](session *Session, name string, sOpts *Se
 	// apply any cache options
 	for _, f := range options {
 		f(cacheOptions)
+	}
+
+	err := validateNearCacheOptions(cacheOptions.NearCacheOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	// check to see if we already have an entry for the cache
+	if existingCache, ok = session.caches[name]; ok {
+		existing, ok2 := existingCache.(*NamedCacheClient[K, V])
+		if !ok2 {
+			// the casting failed so return an error indicating the cache exists with different type mappings
+			return nil, getExistingError("NamedCache", name)
+		}
+
+		// check if there is a difference in cache options wrt near cache.
+		// e.g. user has asked for a cache with near cache and previously
+		// cache does not have this, or visa-versa
+		if existing.baseClient.nearCache == nil && cacheOptions.NearCacheOptions != nil ||
+			existing.baseClient.nearCache != nil && cacheOptions.NearCacheOptions == nil {
+			return nil, getExistingNearCacheError("NamedCache", name)
+		}
+
+		session.debug("using existing NamedCache", existing)
+		return existing, nil
 	}
 
 	newCache := &NamedCacheClient[K, V]{
@@ -684,4 +698,16 @@ func processNearCacheEvent[K comparable, V any](l *localCache[K, V], e MapEvent[
 
 func convertNamedCacheClient[K comparable, V any](client *NamedCacheClient[K, V]) NamedMap[K, V] {
 	return client
+}
+
+func validateNearCacheOptions(options *NearCacheOptions) error {
+	if options == nil {
+		return nil
+	}
+
+	if options.TTL == 0 && options.HighUnits == 0 {
+		return ErrInvalidNearCache
+	}
+
+	return nil
 }
