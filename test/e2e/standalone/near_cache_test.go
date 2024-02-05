@@ -17,6 +17,11 @@ import (
 	"time"
 )
 
+const (
+	nearCacheName = "near-cache"
+	nearMapName   = "near-map"
+)
+
 // TestNearCacheOperationsAgainstMapAndCache runs all near cache tests against NamedMap and NamedCache.
 func TestNearCacheOperationsAgainstMapAndCache(t *testing.T) {
 	g := gomega.NewWithT(t)
@@ -235,24 +240,24 @@ func TestDuplicateNamedCache(t *testing.T) {
 	nearCacheOptions10Seconds := coherence.NearCacheOptions{TTL: time.Duration(10) * time.Second}
 
 	// test creating a NamedCache with near cache and then trying to get a NamedCache without near cache
-	namedCache, err = coherence.GetNamedCache[int, string](session, "near-cache", coherence.WithNearCache(&nearCacheOptions10Seconds))
+	namedCache, err = coherence.GetNamedCache[int, string](session, nearCacheName, coherence.WithNearCache(&nearCacheOptions10Seconds))
 	g.Expect(namedCache).To(gomega.Not(gomega.BeNil()))
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 	// try to get the same cache name with no near cache config, should fail
-	_, err = coherence.GetNamedCache[int, string](session, "near-cache")
+	_, err = coherence.GetNamedCache[int, string](session, nearCacheName)
 	fmt.Println(err)
 	g.Expect(err).Should(gomega.HaveOccurred())
 
 	namedCache.Release()
 
 	// test creating a NamedMap with near cache and then trying to get a NamedMap without near cache
-	namedMap, err = coherence.GetNamedMap[int, string](session, "near-map", coherence.WithNearCache(&nearCacheOptions10Seconds))
+	namedMap, err = coherence.GetNamedMap[int, string](session, nearMapName, coherence.WithNearCache(&nearCacheOptions10Seconds))
 	g.Expect(namedMap).To(gomega.Not(gomega.BeNil()))
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 	// try to get the same map name with no near cache config, should fail
-	_, err = coherence.GetNamedMap[int, string](session, "near-map")
+	_, err = coherence.GetNamedMap[int, string](session, nearMapName)
 	g.Expect(err).Should(gomega.HaveOccurred())
 
 	namedMap.Release()
@@ -295,10 +300,10 @@ func TestInvalidNearCacheOptions(t *testing.T) {
 
 	nearCacheOptions10Seconds := coherence.NearCacheOptions{}
 
-	_, err = coherence.GetNamedCache[int, string](session, "near-cache", coherence.WithNearCache(&nearCacheOptions10Seconds))
+	_, err = coherence.GetNamedCache[int, string](session, nearCacheName, coherence.WithNearCache(&nearCacheOptions10Seconds))
 	g.Expect(err).Should(gomega.HaveOccurred())
 
-	_, err = coherence.GetNamedMap[int, string](session, "near-map", coherence.WithNearCache(&nearCacheOptions10Seconds))
+	_, err = coherence.GetNamedMap[int, string](session, nearMapName, coherence.WithNearCache(&nearCacheOptions10Seconds))
 	g.Expect(err).Should(gomega.HaveOccurred())
 
 }
