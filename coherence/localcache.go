@@ -20,6 +20,7 @@ type LocalCache[K comparable, V any] interface {
 	Put(key K, value V) *V
 	PutWithExpiry(key K, value V, ttl time.Duration) *V
 	Get(key K) *V
+	GetAll(keys []K) map[K]*V
 	Remove(key K) *V
 	Size() int
 	Clear()
@@ -93,6 +94,26 @@ func (l *localCache[K, V]) Get(key K) *V {
 	}
 
 	return &v.value
+}
+
+// GetAll returns the entries for each key if it exists.
+func (l *localCache[K, V]) GetAll(keys []K) map[K]*V {
+	l.Lock()
+	defer l.Unlock()
+
+	l.checkExpiry()
+
+	results := make(map[K]*V, 0)
+
+	for _, key := range keys {
+		v, ok := l.data[key]
+		if ok {
+			// have entry so add to the results
+			results[key] = &v.value
+		}
+	}
+
+	return results
 }
 
 // Remove removes the mapping for a key from the cache if it is present and returns the previously

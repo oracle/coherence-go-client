@@ -133,7 +133,7 @@ func (nc *NamedCacheClient[K, V]) Release() {
 		}
 	}
 
-	executeRelease[K, V](&nc.baseClient, nc)
+	executeRelease[K, V](&nc.baseClient, nc.NamedCache)
 
 	// remove the NamedCache from the session.cache map
 	delete(s.caches, nc.Name())

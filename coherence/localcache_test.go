@@ -104,6 +104,36 @@ func TestBasicLocalCacheRelease(t *testing.T) {
 	g.Expect(cache.Size()).To(Equal(0))
 }
 
+func TestBasicLocalCacheGetAll(t *testing.T) {
+	g := NewWithT(t)
+
+	cache := newLocalCache[int, string]("my-cache-get-all", WithLocalCacheExpiry(time.Duration(10)*time.Second))
+	g.Expect(cache.Size()).To(Equal(0))
+	g.Expect(len(cache.GetAll([]int{1, 2, 3}))).To(Equal(0))
+
+	cache.Put(1, "one")
+	cache.Put(2, "two")
+	cache.Put(3, "three")
+	cache.Put(4, "four")
+	cache.Put(5, "five")
+	g.Expect(cache.Size()).To(Equal(5))
+
+	results := cache.GetAll([]int{1, 5})
+	g.Expect(len(results)).To(Equal(2))
+
+	v, ok := results[1]
+	g.Expect(ok).To(Equal(true))
+	g.Expect(*v).To(Equal("one"))
+
+	v, ok = results[5]
+	g.Expect(ok).To(Equal(true))
+	g.Expect(*v).To(Equal("five"))
+
+	v, ok = results[6]
+	g.Expect(ok).To(Equal(false))
+	g.Expect(v).To(BeNil())
+}
+
 func TestLocalCacheGoRoutines(t *testing.T) {
 	var (
 		g     = NewWithT(t)

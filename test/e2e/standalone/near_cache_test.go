@@ -37,6 +37,8 @@ func TestNearCacheOperationsAgainstMapAndCache(t *testing.T) {
 		{"RunTestNearCacheRemovesNamedCache", GetNearCacheNamedCache[int, Person](g, session, "near-cache-removes-cache", coherence.WithNearCache(&nearCacheOptions120Seconds)), RunTestNearCacheRemoves},
 		{"RunTestNearCacheReplacesNamedMap", GetNearCacheNamedMap[int, Person](g, session, "near-cache-replaces-map", coherence.WithNearCache(&nearCacheOptions120Seconds)), RunTestNearCacheReplaces},
 		{"RunTestNearCacheReplacesNamedCache", GetNearCacheNamedCache[int, Person](g, session, "near-cache-replaces-cache", coherence.WithNearCache(&nearCacheOptions120Seconds)), RunTestNearCacheReplaces},
+		{"RunTestNearCacheGetAllNamedMap", GetNearCacheNamedMap[int, Person](g, session, "near-cache-get-all-map", coherence.WithNearCache(&nearCacheOptions120Seconds)), RunTestNearCacheGetAll},
+		{"RunTestNearCacheGetAllNamedCache", GetNearCacheNamedCache[int, Person](g, session, "near-cache-get-all-cache", coherence.WithNearCache(&nearCacheOptions120Seconds)), RunTestNearCacheGetAll},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.testName, func(t *testing.T) {
@@ -111,6 +113,72 @@ func RunTestNearCacheBasic(t *testing.T, namedMap coherence.NamedMap[int, Person
 	g.Expect(namedMap.GetNearCacheStats().Size()).To(gomega.Equal(0))
 
 	namedMap.Release()
+}
+
+func RunTestNearCacheGetAll(t *testing.T, namedMap coherence.NamedMap[int, Person]) {
+	var (
+		g       = gomega.NewWithT(t)
+		err     error
+		person1 = Person{ID: 1, Name: "Tim1"}
+		person2 = Person{ID: 2, Name: "Tim1"}
+		person3 = Person{ID: 3, Name: "Tim3"}
+	)
+
+	people := make(map[int]Person, 0)
+	people[1] = person1
+	people[2] = person2
+	people[3] = person3
+
+	// populate
+	err = namedMap.PutAll(ctx, people)
+	g.Expect(err).NotTo(gomega.HaveOccurred())
+	AssertSize[int, Person](g, namedMap, 3)
+
+	count := 0
+	// issue a GetAll for all keys, should be no hits
+	for ch := range namedMap.GetAll(ctx, []int{1, 2, 3}) {
+		count++
+		g.Expect(ch.Err).ShouldNot(gomega.HaveOccurred())
+		g.Expect(ch.Value).ShouldNot(gomega.BeNil())
+	}
+
+	g.Expect(count).To(gomega.Equal(3))
+
+	// we should have no hits but have size of 3
+	g.Expect(namedMap.GetNearCacheStats().GetCacheHits()).To(gomega.Equal(int64(0)))
+	g.Expect(namedMap.GetNearCacheStats().Size()).To(gomega.Equal(3))
+
+	err = namedMap.Clear(ctx)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	namedMap.GetNearCacheStats().ResetStats()
+
+	// add the entries back
+	err = namedMap.PutAll(ctx, people)
+	g.Expect(err).NotTo(gomega.HaveOccurred())
+	AssertSize[int, Person](g, namedMap, 3)
+
+	// issue a Get for key 1 and 2 only
+	_, err = namedMap.Get(ctx, 1)
+	g.Expect(err).NotTo(gomega.HaveOccurred())
+	_, err = namedMap.Get(ctx, 2)
+	g.Expect(err).NotTo(gomega.HaveOccurred())
+
+	g.Expect(namedMap.GetNearCacheStats().GetCacheHits()).To(gomega.Equal(int64(0)))
+	g.Expect(namedMap.GetNearCacheStats().Size()).To(gomega.Equal(2))
+
+	// issue GetAll() should have 2 hits and 1 miss
+	count = 0
+	for ch := range namedMap.GetAll(ctx, []int{1, 2, 3}) {
+		count++
+		g.Expect(ch.Err).ShouldNot(gomega.HaveOccurred())
+		g.Expect(ch.Value).ShouldNot(gomega.BeNil())
+	}
+
+	g.Expect(count).To(gomega.Equal(3))
+
+	g.Expect(namedMap.GetNearCacheStats().GetCacheHits()).To(gomega.Equal(int64(2)))
+	g.Expect(namedMap.GetNearCacheStats().GetCacheMisses()).To(gomega.Equal(int64(3)))
+	g.Expect(namedMap.GetNearCacheStats().Size()).To(gomega.Equal(3))
 }
 
 func RunTestNearCacheRemoves(t *testing.T, namedMap coherence.NamedMap[int, Person]) {

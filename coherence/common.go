@@ -255,7 +255,7 @@ func executeDestroy[K comparable, V any](ctx context.Context, bc *baseClient[K, 
 	return nil
 }
 
-// executeRelease releases a NamedCache or NamedMap
+// executeRelease releases a NamedCache or NamedMap.
 func executeRelease[K comparable, V any](bc *baseClient[K, V], nm NamedMap[K, V]) {
 	bc.eventManager.dispatch(Released, func() MapLifecycleEvent[K, V] {
 		return newMapLifecycleEvent(nm, Released)
@@ -458,9 +458,12 @@ func executeGet[K comparable, V any](ctx context.Context, bc *baseClient[K, V], 
 // executeGet executes the GetAll operation against a baseClient.
 func executeGetAll[K comparable, V any](ctx context.Context, bc *baseClient[K, V], keys []K) <-chan *StreamedEntry[K, V] {
 	var (
-		err     = bc.ensureClientConnection()
-		binKeys = make([][]byte, 0)
-		ch      = make(chan *StreamedEntry[K, V])
+		err              = bc.ensureClientConnection()
+		binKeys          = make([][]byte, 0)
+		ch               = make(chan *StreamedEntry[K, V])
+		nearCache        = bc.nearCache
+		nearCacheEntries = make(map[K]*V) // entries found in near cache
+		finalKeys        []K
 	)
 
 	if err != nil {
@@ -470,8 +473,34 @@ func executeGetAll[K comparable, V any](ctx context.Context, bc *baseClient[K, V
 
 	newCtx, cancel := bc.session.ensureContext(ctx)
 
+	// if we have a near cache and size > 0 then check to see if we can get any of
+	// the keys and values from the near cache
+	if nearCache != nil && nearCache.Size() > 0 {
+		nearCacheEntries = nearCache.GetAll(keys)
+	}
+
+	if len(nearCacheEntries) == 0 {
+		// no keys in near cache so fetch all keys
+		finalKeys = keys
+	} else {
+		// we have some keys that were fetched from the near cache, so only
+		// include the keys not found in near cache in the finalKeys list to fetch from cluster
+		finalKeys = make([]K, 0)
+
+		for _, key := range keys {
+			// if we cannot find the key in the near cache entries, then add to final keys to fetch
+			if _, ok := nearCacheEntries[key]; !ok {
+				finalKeys = append(finalKeys, key)
+				nearCache.registerMiss()
+			} else {
+				// we found the key so increment cache hits
+				nearCache.registerHit()
+			}
+		}
+	}
+
 	// serialize the array of keys
-	binKeys, err = serializeKeys[K](bc.keySerializer, keys)
+	binKeys, err = serializeKeys[K](bc.keySerializer, finalKeys)
 	if err != nil {
 		ch <- &StreamedEntry[K, V]{Err: err}
 		return ch
@@ -480,6 +509,11 @@ func executeGetAll[K comparable, V any](ctx context.Context, bc *baseClient[K, V
 	go func() {
 		if cancel != nil {
 			defer cancel()
+		}
+
+		// if we have any entries in the nearCacheEntries then stream these first
+		for k, v := range nearCacheEntries {
+			ch <- &StreamedEntry[K, V]{Key: k, Value: *v}
 		}
 
 		var (
@@ -520,6 +554,11 @@ func executeGetAll[K comparable, V any](ctx context.Context, bc *baseClient[K, V
 				ch <- &StreamedEntry[K, V]{Err: err1}
 				close(ch)
 				return
+			}
+
+			if nearCache != nil {
+				// add to near cache
+				nearCache.Put(*key, *value)
 			}
 
 			ch <- &StreamedEntry[K, V]{Key: *key, Value: *value}

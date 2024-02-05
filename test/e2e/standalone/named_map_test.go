@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2023 Oracle and/or its affiliates.
+ * Copyright (c) 2022, 2024 Oracle and/or its affiliates.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * https://oss.oracle.com/licenses/upl.
  */
@@ -813,6 +813,8 @@ func RunTestGetAll(t *testing.T, namedMap coherence.NamedMap[int, Person]) {
 		results = append(results, se.Key)
 	}
 	g.Expect(len(results)).To(gomega.Equal(0))
+
+	// GetAll keys that don't exist
 }
 
 func RunTestInvokeAllKeys(t *testing.T, namedMap coherence.NamedMap[int, Person]) {
