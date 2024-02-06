@@ -179,8 +179,8 @@ func TestLocalCacheWithHighUnitsOnlyAccessTime(t *testing.T) {
 
 	g.Expect(cache.Size()).To(Equal(100))
 
-	time.Sleep(time.Duration(100) * time.Millisecond)
-	// access key 1,2 and 3, when we prune we should not see these entries be removed
+	time.Sleep(time.Duration(5) * time.Second)
+	// access key 1, 2 and 3, when we prune we should not see these entries be removed
 	// as they were most recently accessed
 
 	// put a new entry which should cause prune of 20 entries
