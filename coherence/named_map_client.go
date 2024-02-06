@@ -869,12 +869,15 @@ func newBaseClient[K comparable, V any](session *Session, name string, format st
 
 	// if near cache options specified then setup internal local cache
 	if bc.cacheOpts.NearCacheOptions != nil {
-		var options = make([]func(localCache *LocalCacheOptions), 0)
+		var options = make([]func(localCache *localCacheOptions), 0)
 		if bc.cacheOpts.NearCacheOptions.TTL != 0 {
-			options = append(options, WithLocalCacheExpiry(bc.cacheOpts.NearCacheOptions.TTL))
+			options = append(options, withLocalCacheExpiry(bc.cacheOpts.NearCacheOptions.TTL))
 		}
 		if bc.cacheOpts.NearCacheOptions.HighUnits != 0 {
-			options = append(options, WithLocalCacheExpiry(bc.cacheOpts.NearCacheOptions.TTL))
+			options = append(options, withLocalCacheHighUnits(bc.cacheOpts.NearCacheOptions.HighUnits))
+		}
+		if bc.cacheOpts.NearCacheOptions.HighUnitsMemory != 0 {
+			options = append(options, withLocalCacheHighUnitsMemory(bc.cacheOpts.NearCacheOptions.HighUnitsMemory))
 		}
 		nearCache := newLocalCache[K, V](bc.name, options...)
 		bc.nearCache = nearCache

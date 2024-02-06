@@ -705,8 +705,23 @@ func validateNearCacheOptions(options *NearCacheOptions) error {
 		return nil
 	}
 
-	if options.TTL == 0 && options.HighUnits == 0 {
+	// You can have the following:
+	// TTL only
+	// TTL + HighUnits
+	// TTL + HighUnitsMemory
+	// HighUnits
+	// HighUnitsMemory
+
+	if options.TTL == 0 && options.HighUnits == 0 && options.HighUnitsMemory == 0 {
 		return ErrInvalidNearCache
+	}
+
+	if options.TTL != 0 && options.HighUnits != 0 && options.HighUnitsMemory != 0 {
+		return ErrInvalidNearCacheWithTTL
+	}
+
+	if options.TTL == 0 && options.HighUnits != 0 && options.HighUnitsMemory != 0 {
+		return ErrInvalidNearCacheWithNoTTL
 	}
 
 	return nil

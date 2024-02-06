@@ -62,13 +62,13 @@ func TestBasicLocalCacheOperations(t *testing.T) {
 	time.Sleep(time.Duration(4) * time.Millisecond)
 	g.Expect(cache.Size()).To(Equal(0))
 
-	fmt.Println(cache.GetStats())
+	fmt.Println(cache)
 }
 
 func TestBasicLocalCacheWithDefaultExpiry(t *testing.T) {
 	g := NewWithT(t)
 
-	cache := newLocalCache[int, string]("my-cache", WithLocalCacheExpiry(time.Duration(2)*time.Second))
+	cache := newLocalCache[int, string]("my-cache", withLocalCacheExpiry(time.Duration(2)*time.Second))
 	g.Expect(cache.Size()).To(Equal(0))
 
 	cache.Put(1, "one")
@@ -81,7 +81,7 @@ func TestBasicLocalCacheWithDefaultExpiry(t *testing.T) {
 func TestBasicLocalCacheClear(t *testing.T) {
 	g := NewWithT(t)
 
-	cache := newLocalCache[int, string]("my-cache-clear", WithLocalCacheExpiry(time.Duration(2)*time.Second))
+	cache := newLocalCache[int, string]("my-cache-clear", withLocalCacheExpiry(time.Duration(2)*time.Second))
 	g.Expect(cache.Size()).To(Equal(0))
 
 	cache.Put(1, "one")
@@ -94,7 +94,7 @@ func TestBasicLocalCacheClear(t *testing.T) {
 func TestBasicLocalCacheRelease(t *testing.T) {
 	g := NewWithT(t)
 
-	cache := newLocalCache[int, string]("my-cache-clear", WithLocalCacheExpiry(time.Duration(2)*time.Second))
+	cache := newLocalCache[int, string]("my-cache-clear", withLocalCacheExpiry(time.Duration(2)*time.Second))
 	g.Expect(cache.Size()).To(Equal(0))
 
 	cache.Put(1, "one")
@@ -107,7 +107,7 @@ func TestBasicLocalCacheRelease(t *testing.T) {
 func TestBasicLocalCacheGetAll(t *testing.T) {
 	g := NewWithT(t)
 
-	cache := newLocalCache[int, string]("my-cache-get-all", WithLocalCacheExpiry(time.Duration(10)*time.Second))
+	cache := newLocalCache[int, string]("my-cache-get-all", withLocalCacheExpiry(time.Duration(10)*time.Second))
 	g.Expect(cache.Size()).To(Equal(0))
 	g.Expect(len(cache.GetAll([]int{1, 2, 3}))).To(Equal(0))
 
@@ -132,6 +132,98 @@ func TestBasicLocalCacheGetAll(t *testing.T) {
 	v, ok = results[6]
 	g.Expect(ok).To(Equal(false))
 	g.Expect(v).To(BeNil())
+}
+
+func TestLocalCacheWithHighUnitsOnly(t *testing.T) {
+	g := NewWithT(t)
+
+	cache := newLocalCache[int, string]("my-cache-high-unit", withLocalCacheHighUnits(100))
+
+	for i := 0; i < 100; i++ {
+		cache.Put(i, fmt.Sprintf("value-%v", i))
+	}
+
+	g.Expect(cache.Size()).To(Equal(100))
+
+	// put a new entry which should cause prune of 20 entries
+	cache.Put(100, "one hundred")
+
+	g.Expect(cache.Size()).To(Equal(80))
+	g.Expect(cache.GetCachePrunes()).To(Equal(int64(1)))
+	fmt.Println(cache)
+}
+
+func TestLocalCacheWithHighUnitsMemoryOnly(t *testing.T) {
+	g := NewWithT(t)
+
+	cache := newLocalCache[int, string]("my-cache-high-unit", withLocalCacheHighUnitsMemory(1024*100))
+
+	for i := 0; i < 10_000; i++ {
+		cache.Put(i, fmt.Sprintf("value-%v", i))
+	}
+
+	// cache size should be less than 10,000 as it would not all fit in under 100K
+	g.Expect(cache.Size() < 10_000).To(Equal(true))
+
+	fmt.Println(cache)
+}
+
+func TestLocalCacheWithHighUnitsOnlyAccessTime(t *testing.T) {
+	g := NewWithT(t)
+
+	cache := newLocalCache[int, string]("my-cache-high-unit", withLocalCacheHighUnits(100))
+
+	for i := 0; i < 100; i++ {
+		cache.Put(i, fmt.Sprintf("value-%v", i))
+	}
+
+	g.Expect(cache.Size()).To(Equal(100))
+
+	time.Sleep(time.Duration(100) * time.Millisecond)
+	// access key 1,2 and 3, when we prune we should not see these entries be removed
+	// as they were most recently accessed
+
+	// put a new entry which should cause prune of 20 entries
+	cache.Put(100, "one hundred")
+
+	g.Expect(cache.Size()).To(Equal(80))
+	g.Expect(cache.GetCachePrunes()).To(Equal(int64(1)))
+
+	// entries 1, 2 and three should not be removed as they were accessed
+	g.Expect(cache.Get(1)).To(Not(BeNil()))
+	g.Expect(cache.Get(2)).To(Not(BeNil()))
+	g.Expect(cache.Get(3)).To(Not(BeNil()))
+}
+
+func TestLocalCacheWithHighUnitsAndTTL(t *testing.T) {
+	g := NewWithT(t)
+
+	cache := newLocalCache[int, string]("my-cache-high-unit", withLocalCacheHighUnits(100), withLocalCacheExpiry(time.Duration(2)*time.Second))
+
+	for i := 0; i < 100; i++ {
+		cache.Put(i, fmt.Sprintf("value-%v", i))
+	}
+
+	g.Expect(cache.Size()).To(Equal(100))
+
+	// sleep for 1 second and add a new entry
+	time.Sleep(time.Duration(1) * time.Second)
+
+	cache.Put(100, "one hundred")
+	cache.Put(101, "one hundred and one")
+
+	g.Expect(cache.Size()).To(Equal(81))
+	g.Expect(cache.Get(100)).To(Not(BeNil()))
+	g.Expect(cache.Get(101)).To(Not(BeNil()))
+
+	time.Sleep(time.Duration(2) * time.Second)
+	// put 20 new entries, all the entries, all entries < 100 should be expired
+
+	for i := 110; i < 130; i++ {
+		cache.Put(i, fmt.Sprintf("value-%v", i))
+	}
+
+	g.Expect(cache.Size()).To(Equal(20))
 }
 
 func TestLocalCacheGoRoutines(t *testing.T) {

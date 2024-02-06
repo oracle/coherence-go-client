@@ -80,8 +80,9 @@ type CacheOptions struct {
 }
 
 type NearCacheOptions struct {
-	TTL       time.Duration
-	HighUnits int64
+	TTL             time.Duration
+	HighUnits       int64
+	HighUnitsMemory int64
 }
 
 func (n NearCacheOptions) String() string {
@@ -271,9 +272,10 @@ func executeRelease[K comparable, V any](bc *baseClient[K, V], nm NamedMap[K, V]
 // executeContainsKey executes the containsKey operation against a baseClient.
 func executeContainsKey[K comparable, V any](ctx context.Context, bc *baseClient[K, V], key K) (bool, error) {
 	var (
-		result *wrapperspb.BoolValue
-		err    = bc.ensureClientConnection()
-		binKey []byte
+		result    *wrapperspb.BoolValue
+		err       = bc.ensureClientConnection()
+		binKey    []byte
+		nearCache = bc.nearCache
 	)
 	if err != nil {
 		return false, err
@@ -282,6 +284,15 @@ func executeContainsKey[K comparable, V any](ctx context.Context, bc *baseClient
 	newCtx, cancel := bc.session.ensureContext(ctx)
 	if cancel != nil {
 		defer cancel()
+	}
+
+	// check near cache
+	if nearCache != nil {
+		ncValue := bc.nearCache.Get(key)
+		if ncValue != nil {
+			nearCache.registerHit()
+			return true, nil
+		}
 	}
 
 	binKey, err = bc.keySerializer.Serialize(key)

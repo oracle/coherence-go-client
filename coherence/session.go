@@ -28,8 +28,10 @@ import (
 
 // ErrInvalidFormat indicates that the serialization format can only be JSON.
 var (
-	ErrInvalidFormat    = errors.New("format can only be 'json'")
-	ErrInvalidNearCache = errors.New("you must specify at least one near cache option")
+	ErrInvalidFormat             = errors.New("format can only be 'json'")
+	ErrInvalidNearCache          = errors.New("you must specify at least one near cache option")
+	ErrInvalidNearCacheWithTTL   = errors.New("when using TTL for near cache you can only specify highUnits or highUnitsMemory")
+	ErrInvalidNearCacheWithNoTTL = errors.New("you can only specify highUnits or highUnitsMemory, not both")
 )
 
 const (
