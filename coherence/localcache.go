@@ -225,7 +225,7 @@ func (l *localCache[K, V]) pruneEntries() {
 		currentCacheMemory = l.getMemoryOfMapEntries()
 	}
 
-	// Check 2 - if highUnits or highUnitsMemory are set then check
+	// if highUnits or highUnitsMemory are set then check
 	if (l.options.HighUnits > 0 && currentCacheSize+1 > l.options.HighUnits) ||
 		(l.options.HighUnitsMemory > 0 && currentCacheMemory+1 > l.options.HighUnitsMemory) {
 

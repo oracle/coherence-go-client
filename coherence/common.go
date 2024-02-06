@@ -435,7 +435,7 @@ func executeGet[K comparable, V any](ctx context.Context, bc *baseClient[K, V], 
 	if nearCache != nil {
 		// if we get here then it must be a near cache miss because if it was a hit
 		// we would have returned already, so save total time we have spent getting
-		// the value from Coherence. registerMiss() has already been called
+		// the value from Coherence.
 		defer func(start time.Time) {
 			nearCache.registerMissesNanos(time.Since(start).Nanoseconds())
 			nearCache.registerMiss()
