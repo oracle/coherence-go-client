@@ -67,7 +67,7 @@ type pairList[K comparable] []pair[K]
 func (p pairList[K]) Len() int      { return len(p) }
 func (p pairList[K]) Swap(i, j int) { p[i], p[j] = p[j], p[i] }
 func (p pairList[K]) Less(i, j int) bool {
-	return p[i].timeStamp.Nanosecond() > p[j].timeStamp.Nanosecond()
+	return p[i].timeStamp.Nanosecond() < p[j].timeStamp.Nanosecond()
 }
 
 // Put associates the specified value with the specified key returning the previously
@@ -106,7 +106,7 @@ func (l *localCache[K, V]) Get(key K) *V {
 	l.Lock()
 	defer l.Unlock()
 
-	l.pruneEntries()
+	l.expireEntries()
 
 	v, ok := l.data[key]
 	if !ok {
