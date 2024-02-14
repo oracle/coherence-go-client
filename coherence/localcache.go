@@ -47,7 +47,6 @@ type localCache[K comparable, V any] struct {
 	cachePuts         int64
 	cachePrunes       int64
 	cachePrunesNannos int64
-	statsMutex        sync.Mutex
 }
 
 type localCacheEntry[K comparable, V any] struct {
@@ -342,33 +341,23 @@ type CacheStats interface {
 }
 
 func (l *localCache[K, V]) registerHit() {
-	l.statsMutex.Lock()
-	defer l.statsMutex.Unlock()
 	atomic.AddInt64(&l.cacheHits, 1)
 }
 
 func (l *localCache[K, V]) registerMiss() {
-	l.statsMutex.Lock()
-	defer l.statsMutex.Unlock()
 	atomic.AddInt64(&l.cacheMisses, 1)
 }
 
 func (l *localCache[K, V]) registerPut() {
-	l.statsMutex.Lock()
-	defer l.statsMutex.Unlock()
 	atomic.AddInt64(&l.cachePuts, 1)
 }
 
 func (l *localCache[K, V]) registerPruneNanos(nanos int64) {
-	l.statsMutex.Lock()
-	defer l.statsMutex.Unlock()
 	atomic.AddInt64(&l.cachePrunes, 1)
 	atomic.AddInt64(&l.cachePrunesNannos, nanos)
 }
 
 func (l *localCache[K, V]) registerMissesNanos(nanos int64) {
-	l.statsMutex.Lock()
-	defer l.statsMutex.Unlock()
 	atomic.AddInt64(&l.cacheMissesNannos, nanos)
 }
 
@@ -409,8 +398,6 @@ func (l *localCache[K, V]) GetHitRate() float32 {
 }
 
 func (l *localCache[K, V]) ResetStats() {
-	l.statsMutex.Lock()
-	defer l.statsMutex.Unlock()
 	atomic.StoreInt64(&l.cachePrunesNannos, 0)
 	atomic.StoreInt64(&l.cacheMissesNannos, 0)
 	atomic.StoreInt64(&l.cachePrunes, 0)

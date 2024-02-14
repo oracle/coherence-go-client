@@ -22,6 +22,7 @@ jobs:
           - 1.19.x
           - 1.20.x
           - 1.21.x
+          - 1.22.x
 
 #   Checkout the source, we need a depth of zero to fetch all of the history otherwise
 #   the copyright check cannot work out the date of the files from Git.
