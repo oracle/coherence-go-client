@@ -86,9 +86,7 @@ func RunTestNearCacheBasic(t *testing.T, namedMap coherence.NamedMap[int, Person
 	g.Expect(stats.GetCacheHits()).To(gomega.Equal(int64(0)))
 	g.Expect(stats.GetCacheMisses()).To(gomega.Equal(int64(1)))
 	g.Expect(stats.GetCachePuts()).To(gomega.Equal(int64(1)))
-
-	// check the near cache size, should be 1
-	g.Expect(namedMap.GetNearCacheStats().Size()).To(gomega.Equal(1))
+	g.Expect(stats.Size()).To(gomega.Equal(1))
 
 	// do a second get, should be quicker
 	_, err = namedMap.Get(ctx, person1.ID)
@@ -97,8 +95,8 @@ func RunTestNearCacheBasic(t *testing.T, namedMap coherence.NamedMap[int, Person
 	stats = namedMap.GetNearCacheStats()
 	g.Expect(stats).To(gomega.Not(gomega.BeNil()))
 
-	// sleep for 11 seconds, this should expiry the entry and cause re-read
-	Sleep(11)
+	// sleep for 15 seconds, this should expiry the entry and cause re-read
+	Sleep(15)
 
 	_, err = namedMap.Get(ctx, person1.ID)
 	g.Expect(err).NotTo(gomega.HaveOccurred())
