@@ -80,7 +80,7 @@ func (l *localCache[K, V]) Put(key K, value V) *V {
 // PutWithExpiry associates the specified value with the specified key. If the cache
 // previously contained a value for this key, the old value is replaced.
 // This variation of the Put()
-// function allows the caller to specify an expiry (or "time to live")
+// function that allows the caller to specify an expiry (or "time to live")
 // for the cache entry. V will be nil if there was no previous value.
 func (l *localCache[K, V]) PutWithExpiry(key K, value V, ttl time.Duration) *V {
 	defer l.registerPut()
@@ -251,6 +251,7 @@ func (l *localCache[K, V]) pruneEntries() {
 					timestamp = v.lastAccess
 				}
 			}
+			log.Printf("key=%v, insert=%v, lastAccess=%v, timestamp=%v", v.key, v.insertTime, v.lastAccess, timestamp)
 			sortData[index] = pair[K]{key: k, timeStamp: timestamp}
 
 			index++
@@ -263,7 +264,7 @@ func (l *localCache[K, V]) pruneEntries() {
 				break
 			}
 			delete(l.data, v.key)
-			log.Println("prune key", v.key)
+			log.Printf("prune %v, timestamp=%v", v.key, sortData[i])
 		}
 	}
 }
