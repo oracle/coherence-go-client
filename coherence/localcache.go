@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
-	"log"
 	"math"
 	"sort"
 	"sync"
@@ -65,8 +64,14 @@ type pair[K comparable] struct {
 
 type pairList[K comparable] []pair[K]
 
-func (p pairList[K]) Len() int      { return len(p) }
-func (p pairList[K]) Swap(i, j int) { p[i], p[j] = p[j], p[i] }
+func (p pairList[K]) Len() int {
+	return len(p)
+}
+
+func (p pairList[K]) Swap(i, j int) {
+	p[i], p[j] = p[j], p[i]
+}
+
 func (p pairList[K]) Less(i, j int) bool {
 	return p[i].timeStamp.Nanosecond() < p[j].timeStamp.Nanosecond()
 }
@@ -249,7 +254,6 @@ func (l *localCache[K, V]) pruneEntries() {
 				// we will prune entries that are older first
 				timestamp = v.insertTime
 			}
-			log.Printf("key=%v, insert=%v, lastAccess=%v, timestamp=%v", v.key, v.insertTime, v.lastAccess, timestamp)
 			sortData[index] = pair[K]{key: k, timeStamp: timestamp}
 
 			index++
@@ -262,7 +266,6 @@ func (l *localCache[K, V]) pruneEntries() {
 				break
 			}
 			delete(l.data, v.key)
-			log.Printf("prune %v, timestamp=%v", v.key, sortData[i].timeStamp)
 		}
 	}
 }
