@@ -987,8 +987,10 @@ func (m *mapEventManager[K, V]) ensureStream() (*eventStream, error) {
 					}
 				case *proto.MapListenerResponse_Destroyed:
 					{
+						m.mutex.Lock()
 						if m.namedMap == nil {
 							// namedMap is already destroyed, cannot do anything
+							m.mutex.Unlock()
 							cancel()
 							return
 						}
@@ -999,6 +1001,7 @@ func (m *mapEventManager[K, V]) ensureStream() (*eventStream, error) {
 							e := *l
 							e.getEmitter().emit(Destroyed, event)
 						}
+						m.mutex.Unlock()
 					}
 				case *proto.MapListenerResponse_Error:
 				}

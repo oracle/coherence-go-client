@@ -312,7 +312,7 @@ func RunTestNearCacheWithHighUnitsAccess(t *testing.T, namedMap coherence.NamedM
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	AssertSize[int, Person](g, namedMap, 200)
 
-	// issue 50 gets
+	// issue 50 gets, should add entries to the near cache
 	for i := 1; i <= 50; i++ {
 		_, err = namedMap.Get(ctx, i)
 		g.Expect(err).ShouldNot(gomega.HaveOccurred())
@@ -327,10 +327,12 @@ func RunTestNearCacheWithHighUnitsAccess(t *testing.T, namedMap coherence.NamedM
 		g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	}
 
+	time.Sleep(time.Duration(1) * time.Second)
+
 	// should have 100 entries in near cache
 	g.Expect(namedMap.GetNearCacheStats().Size()).To(gomega.Equal(100))
 
-	// issue a Get() for an entry not in the cache which will trigger the HighUnits and prune to 80 entries
+	// issue a Get() for an entry not in the near cache which will trigger the HighUnits and prune to 80 entries
 	// but only entries that have not been accessed should be removed. The first 1-50 should still remain
 	_, err = namedMap.Get(ctx, 110)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())

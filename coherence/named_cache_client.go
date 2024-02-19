@@ -680,7 +680,6 @@ func processNearCacheEvent[K comparable, V any](l *localCache[K, V], e MapEvent[
 		// check to see if the near cache contains this key and if it does then update
 		localCacheValue := l.Get(*key)
 		if localCacheValue != nil {
-			//log.Printf("NearCache: Put key=%v, value=%v", *key, *value)
 			l.Put(*key, *value)
 		}
 
@@ -688,8 +687,8 @@ func processNearCacheEvent[K comparable, V any](l *localCache[K, V], e MapEvent[
 	}
 
 	// type must be EntryDeleted, so delete if the near cache contains the entry
-	calCacheValue := l.Get(*key)
-	if calCacheValue != nil {
+	delCacheValue := l.Get(*key)
+	if delCacheValue != nil {
 		l.Remove(*key)
 	}
 

@@ -200,12 +200,13 @@ func (l *localCache[K, V]) expireEntries() {
 		}
 	}
 
-	if len(keysToDelete) > 0 {
-		defer l.registerPruneNanos(time.Since(start).Nanoseconds())
-	}
 	// delete all the keys that were flagged from the expiry, this may be enough to free up space
 	for _, k := range keysToDelete {
 		delete(l.data, k)
+	}
+
+	if len(keysToDelete) > 0 {
+		l.registerPruneNanos(time.Since(start).Nanoseconds())
 	}
 }
 
@@ -407,9 +408,10 @@ func (l *localCache[K, V]) ResetStats() {
 }
 
 func (l *localCache[K, V]) String() string {
-	return fmt.Sprintf("LocalCache{name=%s, options=%v, stats=CacheStats{puts=%v, gets=%v, hits=%v, misses=%v, missesMillis=%v, hitRate=%v, prunes=%v, prunesMillis=%v, memoryUsed=%v}}",
+	return fmt.Sprintf("LocalCache{name=%s, options=%v, stats=CacheStats{puts=%v, gets=%v, hits=%v, misses=%v, "+
+		"missesDuration=%v, hitRate=%v, prunes=%v, prunesDuration=%v, size=%v, memoryUsed=%v}}",
 		l.Name, l.options, l.GetCachePuts(), l.GetTotalGets(), l.GetCacheHits(), l.GetCacheMisses(),
-		l.GetCacheMissesDuration(), l.GetHitRate()*100, l.GetCachePrunes(), l.GetCachePrunesDuration(), formatMemory(l.getMemoryOfMapEntries()))
+		l.GetCacheMissesDuration(), l.GetHitRate()*100, l.GetCachePrunes(), l.GetCachePrunesDuration(), l.Size(), formatMemory(l.getMemoryOfMapEntries()))
 }
 
 func (l *localCache[K, V]) getMemoryOfMapEntries() int64 {
