@@ -244,12 +244,10 @@ func (l *localCache[K, V]) pruneEntries() {
 		for k, v := range l.data {
 			var timestamp = v.lastAccess
 
-			if !timestamp.IsZero() {
-				if v.insertTime.Nanosecond() < v.lastAccess.Nanosecond() {
-					timestamp = v.insertTime
-				} else {
-					timestamp = v.lastAccess
-				}
+			if timestamp.IsZero() {
+				// has not been accessed so set the timestamp to the insert time, so when we prune
+				// we will prune entries that are older first
+				timestamp = v.insertTime
 			}
 			log.Printf("key=%v, insert=%v, lastAccess=%v, timestamp=%v", v.key, v.insertTime, v.lastAccess, timestamp)
 			sortData[index] = pair[K]{key: k, timeStamp: timestamp}
@@ -264,7 +262,7 @@ func (l *localCache[K, V]) pruneEntries() {
 				break
 			}
 			delete(l.data, v.key)
-			log.Printf("prune %v, timestamp=%v", v.key, sortData[i])
+			log.Printf("prune %v, timestamp=%v", v.key, sortData[i].timeStamp)
 		}
 	}
 }

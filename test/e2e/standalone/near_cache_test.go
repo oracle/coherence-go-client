@@ -319,21 +319,21 @@ func RunTestNearCacheWithHighUnitsAccess(t *testing.T, namedMap coherence.NamedM
 	}
 	g.Expect(namedMap.GetNearCacheStats().Size()).To(gomega.Equal(50))
 
-	time.Sleep(time.Duration(1) * time.Second)
-
 	//Issue another 50 gets
 	for i := 51; i <= 100; i++ {
 		_, err = namedMap.Get(ctx, i)
 		g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	}
 
-	time.Sleep(time.Duration(1) * time.Second)
-
 	// should have 100 entries in near cache
 	g.Expect(namedMap.GetNearCacheStats().Size()).To(gomega.Equal(100))
 
+	// issue a Get for key 10, this will be a hit and update the accessTime so it will not be removed
+	_, err = namedMap.Get(ctx, 10)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+
 	// issue a Get() for an entry not in the near cache which will trigger the HighUnits and prune to 80 entries
-	// but only entries that have not been accessed should be removed. The first 1-50 should still remain
+	// but only entries that have not been accessed should be removed. The entry with key 10 should remain as it was accessed
 	_, err = namedMap.Get(ctx, 110)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
