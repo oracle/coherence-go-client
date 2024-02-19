@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
+	"log"
 	"math"
 	"sort"
 	"sync"
@@ -101,7 +102,7 @@ func (l *localCache[K, V]) PutWithExpiry(key K, value V, ttl time.Duration) *V {
 	return nil
 }
 
-// Get returns the value to which the specified key is mapped. V will be nil if there was no previous value.
+// Get returns the value to which the specified key is mapped. V will be nil if there was no mapped value.
 func (l *localCache[K, V]) Get(key K) *V {
 	l.Lock()
 	defer l.Unlock()
@@ -262,6 +263,7 @@ func (l *localCache[K, V]) pruneEntries() {
 				break
 			}
 			delete(l.data, v.key)
+			log.Println("prune key", v.key)
 		}
 	}
 }

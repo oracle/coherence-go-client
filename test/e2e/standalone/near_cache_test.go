@@ -341,11 +341,12 @@ func RunTestNearCacheWithHighUnitsAccess(t *testing.T, namedMap coherence.NamedM
 	g.Expect(namedMap.GetNearCacheStats().GetCachePrunes()).To(gomega.Equal(int64(1)))
 
 	hits := namedMap.GetNearCacheStats().GetCacheHits()
+	t.Log("near cache stats before additional get", namedMap.GetNearCacheStats())
 
-	// issue a get for id = 10 this should cause a hit as it should not be removed
+	// issue a get for id = 10 this should cause a hit as it should not have been removed
 	_, err = namedMap.Get(ctx, 10)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-	fmt.Println("near cache stats", namedMap.GetNearCacheStats())
+	fmt.Println("near cache stats after get", namedMap.GetNearCacheStats())
 	g.Expect(namedMap.GetNearCacheStats().GetCacheHits()).To(gomega.Equal(hits + 1))
 
 	namedMap.Release()
