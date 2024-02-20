@@ -268,12 +268,13 @@ func RunTestNearCacheWithHighUnits(t *testing.T, namedMap coherence.NamedMap[int
 	err = namedMap.Clear(ctx)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
-	buffer := make(map[int]Person)
 	for i := 1; i <= 200; i++ {
-		buffer[i] = Person{ID: 1, Name: fmt.Sprintf("person-%v", i)}
+		person := Person{ID: i, Name: fmt.Sprintf("person-%v", i)}
+		_, err = namedMap.Put(ctx, person.ID, person)
+		g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	}
-	err = namedMap.PutAll(ctx, buffer)
-	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+
+	AssertSize[int, Person](g, namedMap, 200)
 
 	// issue 100 gets to fill the near cache
 	for i := 1; i <= 100; i++ {
