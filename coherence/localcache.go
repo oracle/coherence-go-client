@@ -47,7 +47,6 @@ type localCache[K comparable, V any] struct {
 	cachePuts         int64
 	cachePrunes       int64
 	cachePrunesNannos int64
-	cachePrunesNannos int64
 }
 
 type localCacheEntry[K comparable, V any] struct {
