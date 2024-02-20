@@ -302,12 +302,12 @@ func RunTestNearCacheWithHighUnitsAccess(t *testing.T, namedMap coherence.NamedM
 	err = namedMap.Clear(ctx)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
-	buffer := make(map[int]Person)
 	for i := 1; i <= 200; i++ {
-		buffer[i] = Person{ID: 1, Name: fmt.Sprintf("person-%v", i)}
+		person := Person{ID: i, Name: fmt.Sprintf("person-%v", i)}
+		_, err = namedMap.Put(ctx, person.ID, person)
+		g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	}
-	err = namedMap.PutAll(ctx, buffer)
-	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+
 	AssertSize[int, Person](g, namedMap, 200)
 
 	// issue 50 gets, should add entries to the near cache

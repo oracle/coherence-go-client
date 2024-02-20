@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
-	"log"
 	"math"
 	"sort"
 	"sync"
@@ -48,7 +47,7 @@ type localCache[K comparable, V any] struct {
 	cachePuts         int64
 	cachePrunes       int64
 	cachePrunesNannos int64
-	debug             func(v ...any) // a function to output debug messages
+	cachePrunesNannos int64
 }
 
 type localCacheEntry[K comparable, V any] struct {
@@ -241,8 +240,6 @@ func (l *localCache[K, V]) pruneEntries() {
 
 		entriesToDelete := int(math.Round(float64(currentCacheSize * prunePercent / 100.0)))
 
-		l.debug("pruning", entriesToDelete, "entries")
-
 		// prune to default of 80% of the cache size.
 		// we first sort the map by lastAccess time / then insert time, so we remove all
 		// entries firstly that have never been accessed.
@@ -268,7 +265,6 @@ func (l *localCache[K, V]) pruneEntries() {
 			if i > entriesToDelete {
 				break
 			}
-			l.debug("removing key", v.key, "with timestamp", v.timeStamp)
 			delete(l.data, v.key)
 		}
 	}
@@ -292,14 +288,6 @@ func newLocalCache[K comparable, V any](name string, options ...func(localCache 
 			HighUnits:       0,
 			HighUnitsMemory: 0,
 		},
-		debug: func(v ...any) {},
-	}
-
-	if getBoolValueFromEnvVarOrDefault("COHERENCE_NEAR_CACHE_DEBUG", true) {
-		// enable near cache debugging
-		cache.debug = func(v ...any) {
-			log.Println("DEBUG NEAR CACHE:", v)
-		}
 	}
 
 	// apply any options
