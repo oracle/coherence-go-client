@@ -96,17 +96,35 @@ Source code: [basic/expiry_cache/main.go](basic/expiry_cache/main.go)
 go run basic/expiry_cache/main.go
 ```
 
-#### Using Near Caches
+### Using Near Caches
 
-This example shows how to specify a near-cache for either NamedMap or NamedCache which will
-cache data accessed via Get() operations on the Go client for fast local access for a specified time-to-live (TTL). 
-Any updates of data from the back-end will update the data in the near cache or any 
+These example shows how to specify a near-cache for either NamedMap or NamedCache which will
+cache data accessed via Get() operations on the Go client for fast subsequent local access.
+Near caches can specify time-to-live (TTL) for entries in a cache as well as number of entries or size of entryes.
+Any updates of data from the back-end will update the data in the near cache or any
 data removals will invalidate the near cache.
 
-Source code: [basic/near_cache/main.go](basic/near_cache/main.go)
+#### Near cache with 10 second TTL
+
+Source code: [basic/near_cache/ttl/main.go](basic/near_cache/ttl/main.go)
 
 ```go
-go run basic/near_cache/main.go
+go run basic/near_cache/ttl/main.go
+```
+#### Near cache with high units of 1000
+
+Source code: [basic/near_cache/high_units/main.go](basic/near_cache/high_units/main.go)
+
+```go
+go run basic/near_cache/high_units/main.go
+```
+
+#### Near cache with high units memory of 5K
+
+Source code: [basic/near_cache/memory/main.go](basic/near_cache/memory/main.go)
+
+```go
+go run basic/near_cache/memory/main.go
 ```
 
 ### <a name="querying"></a> Querying data

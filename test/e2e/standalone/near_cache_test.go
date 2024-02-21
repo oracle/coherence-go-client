@@ -82,6 +82,7 @@ func RunTestNearCacheBasic(t *testing.T, namedMap coherence.NamedMap[int, Person
 
 	stats := namedMap.GetNearCacheStats()
 	g.Expect(stats).To(gomega.Not(gomega.BeNil()))
+
 	// should be no hits, 1 miss and 1 put
 	g.Expect(stats.GetCacheHits()).To(gomega.Equal(int64(0)))
 	g.Expect(stats.GetCacheMisses()).To(gomega.Equal(int64(1)))
@@ -100,7 +101,6 @@ func RunTestNearCacheBasic(t *testing.T, namedMap coherence.NamedMap[int, Person
 
 	_, err = namedMap.Get(ctx, person1.ID)
 	g.Expect(err).NotTo(gomega.HaveOccurred())
-
 	g.Expect(namedMap.GetNearCacheStats().GetCachePuts()).To(gomega.Equal(int64(2)))
 
 	// now remove the entry from the cache and the delete event should remove from the near cache immediately
@@ -165,6 +165,9 @@ func RunTestNearCacheGetAll(t *testing.T, namedMap coherence.NamedMap[int, Perso
 	err = namedMap.Clear(ctx)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	namedMap.GetNearCacheStats().ResetStats()
+
+	// sleep tp wait for map events to be delivered
+	Sleep(10)
 
 	// add the entries back
 	err = namedMap.PutAll(ctx, people)
@@ -447,7 +450,7 @@ func TestDuplicateNamedCache(t *testing.T) {
 	namedMap.Release()
 }
 
-// TestInvalidNearCacheOptions runs tests to ensure that we can't create a named cache with invalid options.
+// TestInvalidNearCacheOptions runs tests to ensure that we can't create a named cache/map with invalid options.
 func TestInvalidNearCacheOptions(t *testing.T) {
 	var (
 		err     error
@@ -491,7 +494,85 @@ func TestInvalidNearCacheOptions(t *testing.T) {
 	_, err = coherence.GetNamedMap[int, string](session, nearMapName, coherence.WithNearCache(&nearCacheOptionsBad3))
 	g.Expect(err).Should(gomega.HaveOccurred())
 	g.Expect(err).Should(gomega.Equal(coherence.ErrInvalidNearCacheWithNoTTL))
+}
 
+// TestIncompatibleNearCacheOptions runs tests to ensure that we can't create a named cache/map with incompatible.
+func TestIncompatibleNearCacheOptions(t *testing.T) {
+	const (
+		namedMap   = "named-map"
+		namedCache = "named-cache"
+	)
+
+	var (
+		nearCacheOptions1 = coherence.NearCacheOptions{TTL: time.Duration(10) * time.Second}
+		nearCacheOptions2 = coherence.NearCacheOptions{TTL: time.Duration(5) * time.Second}
+	)
+
+	g := gomega.NewWithT(t)
+
+	session, err := GetSession()
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	defer session.Close()
+
+	// get a namedMap without near cache
+	namedMapNoNearCache, err := coherence.GetNamedMap[int, string](session, namedMap)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	g.Expect(namedMapNoNearCache).To(gomega.Not(gomega.BeNil()))
+
+	// try to create a new namedMap with same name but using near cache, should not work
+	_, err = coherence.GetNamedMap[int, string](session, namedMap, coherence.WithNearCache(&nearCacheOptions1))
+	g.Expect(err).Should(gomega.HaveOccurred())
+
+	// destroy and re-create namedMap with near cache options
+	err = namedMapNoNearCache.Destroy(ctx)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+
+	namedMapNoNearCache, err = coherence.GetNamedMap[int, string](session, namedMap, coherence.WithNearCache(&nearCacheOptions1))
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	g.Expect(namedMapNoNearCache).To(gomega.Not(gomega.BeNil()))
+
+	// try and create a new cache with the same name without near cache
+	_, err = coherence.GetNamedMap[int, string](session, namedMap)
+	g.Expect(err).Should(gomega.HaveOccurred())
+
+	// try and create a new cache with different near cache options
+	_, err = coherence.GetNamedMap[int, string](session, namedMap, coherence.WithNearCache(&nearCacheOptions2))
+	g.Expect(err).Should(gomega.HaveOccurred())
+
+	// get the cache with same options, should work
+	namedMap2, err := coherence.GetNamedMap[int, string](session, namedMap, coherence.WithNearCache(&nearCacheOptions1))
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	g.Expect(namedMap2).To(gomega.Equal(namedMapNoNearCache))
+
+	// get a namedCache without near cache
+	namedCacheNoNearCache, err := coherence.GetNamedCache[int, string](session, namedCache)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	g.Expect(namedCacheNoNearCache).To(gomega.Not(gomega.BeNil()))
+
+	// try to create a new namedCache with same name but using near cache, should not work
+	_, err = coherence.GetNamedCache[int, string](session, namedCache, coherence.WithNearCache(&nearCacheOptions1))
+	g.Expect(err).Should(gomega.HaveOccurred())
+
+	// destroy and re-create namedMap with near cache options
+	err = namedCacheNoNearCache.Destroy(ctx)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+
+	namedCacheNoNearCache, err = coherence.GetNamedCache[int, string](session, namedCache, coherence.WithNearCache(&nearCacheOptions1))
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	g.Expect(namedCacheNoNearCache).To(gomega.Not(gomega.BeNil()))
+
+	// try and create a new cache with the same name without near cache
+	_, err = coherence.GetNamedCache[int, string](session, namedCache)
+	g.Expect(err).Should(gomega.HaveOccurred())
+
+	// try and create a new cache with different near cache options
+	_, err = coherence.GetNamedCache[int, string](session, namedCache, coherence.WithNearCache(&nearCacheOptions2))
+	g.Expect(err).Should(gomega.HaveOccurred())
+
+	// get the cache with same options, should work
+	namedCache2, err := coherence.GetNamedCache[int, string](session, namedCache, coherence.WithNearCache(&nearCacheOptions1))
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	g.Expect(namedCache2).To(gomega.Equal(namedCacheNoNearCache))
 }
 
 func RunTestNearCacheReplaces(t *testing.T, namedMap coherence.NamedMap[int, Person]) {

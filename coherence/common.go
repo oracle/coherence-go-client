@@ -39,6 +39,8 @@ const (
 
 	// Integer.MAX_VALUE on Java
 	integerMaxValue = 2147483647
+
+	ListenAll InvalidationStrategyType = 0
 )
 
 var (
@@ -55,22 +57,26 @@ var (
 	ErrShutdown = errors.New("gRPC channel has been shutdown")
 )
 
+// InvalidationStrategyType described the type if invalidation strategies for near cache.
+type InvalidationStrategyType int
+
 // baseClient is a struct that is used for both NamedMap and NamedCache
 type baseClient[K comparable, V any] struct {
-	session           *Session
-	name              string          // Name of the NamedMap or NamedCache
-	sessionOpts       *SessionOptions // Options for the sessions
-	cacheOpts         *CacheOptions   // Options for the cache or map
-	client            pb.NamedCacheServiceClient
-	format            string
-	keySerializer     Serializer[K]
-	valueSerializer   Serializer[V]
-	eventManager      *mapEventManager[K, V]
-	destroyed         bool
-	released          bool
-	mutex             *sync.RWMutex
-	nearCache         *localCache[K, V]
-	nearCacheListener *namedCacheNearCacheListener[K, V]
+	session                    *Session
+	name                       string          // Name of the NamedMap or NamedCache
+	sessionOpts                *SessionOptions // Options for the sessions
+	cacheOpts                  *CacheOptions   // Options for the cache or map
+	client                     pb.NamedCacheServiceClient
+	format                     string
+	keySerializer              Serializer[K]
+	valueSerializer            Serializer[V]
+	eventManager               *mapEventManager[K, V]
+	destroyed                  bool
+	released                   bool
+	mutex                      *sync.RWMutex
+	nearCache                  *localCacheImpl[K, V]
+	nearCacheListener          *namedCacheNearCacheListener[K, V]
+	nearCacheLifecycleListener *namedCacheNearLifecyleListener[K, V]
 }
 
 // CacheOptions holds various cache options.
@@ -80,13 +86,15 @@ type CacheOptions struct {
 }
 
 type NearCacheOptions struct {
-	TTL             time.Duration
-	HighUnits       int64
-	HighUnitsMemory int64
+	TTL                  time.Duration
+	HighUnits            int64
+	HighUnitsMemory      int64
+	InvalidationStrategy InvalidationStrategyType
 }
 
 func (n NearCacheOptions) String() string {
-	return fmt.Sprintf("NearCacheOptions{TTL=%v, HighUnits=%v}", n.TTL, n.HighUnits)
+	return fmt.Sprintf("NearCacheOptions{TTL=%v, HighUnits=%v, HighUnitsMemory=%v, invalidationStrategy=%v}",
+		n.TTL, n.HighUnits, n.HighUnitsMemory, getInvalidationStrategyString(n.InvalidationStrategy))
 }
 
 // WithExpiry returns a function to set the default expiry for a [NamedCache]. This option is not valid on [NamedMap].
@@ -118,11 +126,6 @@ func executeClear[K comparable, V any](ctx context.Context, bc *baseClient[K, V]
 	clearRequest := pb.ClearRequest{Cache: bc.name, Scope: bc.sessionOpts.Scope}
 
 	_, err = bc.client.Clear(newCtx, &clearRequest)
-
-	if bc.nearCache != nil {
-		// also clearn the named cache
-		bc.nearCache.Clear()
-	}
 
 	return err
 }
@@ -1016,7 +1019,6 @@ func executeRemove[K comparable, V any](ctx context.Context, bc *baseClient[K, V
 		oldValue  *wrapperspb.BytesValue
 		binKey    []byte
 		zeroValue *V
-		nearCache = bc.nearCache
 	)
 	if err != nil {
 		return zeroValue, err
@@ -1032,10 +1034,6 @@ func executeRemove[K comparable, V any](ctx context.Context, bc *baseClient[K, V
 		return zeroValue, err
 	}
 
-	if nearCache != nil {
-		_ = nearCache.Remove(key)
-	}
-
 	removeRequest := pb.RemoveRequest{Key: binKey, Cache: bc.name, Format: bc.format, Scope: bc.sessionOpts.Scope}
 
 	oldValue, err = bc.client.Remove(newCtx, &removeRequest)
@@ -1049,11 +1047,10 @@ func executeRemove[K comparable, V any](ctx context.Context, bc *baseClient[K, V
 // executeRemoveMapping executes the RemoveMapping operation against a baseClient.
 func executeRemoveMapping[K comparable, V any](ctx context.Context, bc *baseClient[K, V], key K, value V) (bool, error) {
 	var (
-		result    *wrapperspb.BoolValue
-		err       = bc.ensureClientConnection()
-		binKey    []byte
-		binValue  []byte
-		nearCache = bc.nearCache
+		result   *wrapperspb.BoolValue
+		err      = bc.ensureClientConnection()
+		binKey   []byte
+		binValue []byte
 	)
 
 	if err != nil {
@@ -1080,9 +1077,6 @@ func executeRemoveMapping[K comparable, V any](ctx context.Context, bc *baseClie
 	result, err = bc.client.RemoveMapping(newCtx, &request)
 	if err != nil {
 		return false, err
-	}
-	if nearCache != nil && result.Value {
-		nearCache.Remove(key)
 	}
 
 	return result.Value, nil
@@ -1494,4 +1488,11 @@ func ensureError(err error) error {
 		return fmt.Errorf("this operation is not supported by the current gRPC proxy, either upgrade the version of Coherence on the gRPC proxy or connect to a gRPC proxy that supports the operation: %w", err)
 	}
 	return err
+}
+
+func getInvalidationStrategyString(strategy InvalidationStrategyType) string {
+	if strategy == ListenAll {
+		return "ListenAll"
+	}
+	return "UNKNOWN"
 }

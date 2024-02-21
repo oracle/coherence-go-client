@@ -5,7 +5,7 @@
  */
 
 /*
-Package main shows how to use a near-cache with a [NamedMap] or [NamedCache].
+Package main shows how to use a near-cache with a [NamedMap] or [NamedCache] with an expiry of 10 seconds.
 */
 package main
 
@@ -39,16 +39,17 @@ func main() {
 
 	// create a new NamedCache with key of int and value of string which has a
 	// near cache that will keep local entries for up to 10 seconds
-	namedCache, err := coherence.GetNamedCache[int, string](session, "my-near-cache",
-		coherence.WithNearCache(&nearCacheOptions))
+	namedCache, err := coherence.GetNamedCache[int, string](session, "my-near-cache", coherence.WithNearCache(&nearCacheOptions))
 	if err != nil {
 		panic(err)
 	}
 
+	defer namedCache.Release()
+
 	fmt.Println("Adding", maxEntries, "entries")
 	// add maxEntries entries
 	buffer := make(map[int]string, 0)
-	for i := 1; i <= 100; i++ {
+	for i := 1; i <= maxEntries; i++ {
 		buffer[i] = fmt.Sprintf("value-%v", i)
 	}
 
@@ -75,7 +76,7 @@ func main() {
 		fmt.Printf("\nLoop %d, near cache size is %d\n\n", loop, namedCache.GetNearCacheStats().Size())
 
 		start := time.Now()
-		for i := 1; i <= 100; i++ {
+		for i := 1; i <= maxEntries; i++ {
 			value, err = namedCache.Get(ctx, i)
 			if err != nil || value == nil {
 				panic(err)
@@ -86,13 +87,7 @@ func main() {
 		fmt.Printf("Total duration of 100 Get() is: %v. Time per individual Get()=%v\n", duration, duration/maxEntries)
 		stats := namedCache.GetNearCacheStats()
 
-		fmt.Println("Near Cache Stats")
-
-		fmt.Printf("Total Gets:      %v\n", stats.GetTotalGets())
-		fmt.Printf("Total Misses:    %v\n", stats.GetCacheMisses())
-		fmt.Printf("Misses Duration: %v\n", stats.GetCacheMissesDuration())
-		fmt.Printf("Total Hits:      %v\n", stats.GetCacheHits())
-		fmt.Printf("Hit Rate:        %.2f%%\n\n", stats.GetHitRate()*100)
+		fmt.Println("Near Cache Stats", stats)
 	}
 
 	fmt.Println("Clearing the cache")

@@ -346,11 +346,17 @@ func (nm *NamedMapClient[K, V]) Release() {
 	s.mapMutex.Lock()
 	defer s.mapMutex.Unlock()
 
+	// remove near cache Map Listener
 	if nm.baseClient.nearCacheListener != nil {
 		err := nm.RemoveListener(context.Background(), nm.baseClient.nearCacheListener.listener)
 		if err != nil {
 			log.Printf("unable to remove listener to near cache: %v", err)
 		}
+	}
+
+	// remove near cache Lifecycle Listener
+	if nm.baseClient.nearCacheLifecycleListener != nil {
+		nm.RemoveLifecycleListener(nm.baseClient.nearCacheLifecycleListener.listener)
 	}
 
 	executeRelease[K, V](&nm.baseClient, nm.NamedMap)
@@ -787,8 +793,7 @@ func getNamedMap[K comparable, V any](session *Session, name string, sOpts *Sess
 		// check if there is a difference in cache options wrt near cache.
 		// e.g. user has asked for a cache with near cache and previously
 		// cache does not have this, or visa-versa
-		if existing.baseClient.nearCache == nil && cacheOptions.NearCacheOptions != nil ||
-			existing.baseClient.nearCache != nil && cacheOptions.NearCacheOptions == nil {
+		if !isNearCacheEqual[K, V](existing.baseClient.nearCache, cacheOptions.NearCacheOptions) {
 			return nil, getExistingNearCacheError("NamedMap", name)
 		}
 
@@ -819,7 +824,7 @@ func getNamedMap[K comparable, V any](session *Session, name string, sOpts *Sess
 
 	session.AddSessionLifecycleListener(newMap.namedMapReconnectListener.listener)
 
-	// if near cache then add listener
+	// if near cache then add listener and lifecycle listener
 	if newMap.baseClient.nearCache != nil {
 		nearCacheListener := newNearNamedMapMapLister[K, V](*newMap, newMap.baseClient.nearCache)
 		newMap.baseClient.nearCacheListener = nearCacheListener
@@ -827,6 +832,10 @@ func getNamedMap[K comparable, V any](session *Session, name string, sOpts *Sess
 		if err != nil {
 			return nil, fmt.Errorf("unable to add listener to near cache: %v", err)
 		}
+
+		nearCacheLifecycleListener := newNamedMapNearLifecycleListener[K, V](*newMap, newMap.baseClient.nearCache)
+		newMap.baseClient.nearCacheLifecycleListener = nearCacheLifecycleListener
+		newMap.AddLifecycleListener(newMap.baseClient.nearCacheLifecycleListener.listener)
 	}
 
 	session.debug("newNamedMap", newMap, "session:", session)
@@ -886,7 +895,7 @@ func newBaseClient[K comparable, V any](session *Session, name string, format st
 	return bc
 }
 
-func newNearNamedMapMapLister[K comparable, V any](nc NamedMapClient[K, V], cache *localCache[K, V]) *namedCacheNearCacheListener[K, V] {
+func newNearNamedMapMapLister[K comparable, V any](nc NamedMapClient[K, V], cache *localCacheImpl[K, V]) *namedCacheNearCacheListener[K, V] {
 	listener := namedCacheNearCacheListener[K, V]{
 		listener:  NewMapListener[K, V](),
 		nearCache: cache,
@@ -897,6 +906,19 @@ func newNearNamedMapMapLister[K comparable, V any](nc NamedMapClient[K, V], cach
 		if err != nil {
 			log.Println("Error processing near cache MapEvent", e)
 		}
+	})
+
+	return &listener
+}
+
+func newNamedMapNearLifecycleListener[K comparable, V any](nc NamedMapClient[K, V], cache *localCacheImpl[K, V]) *namedCacheNearLifecyleListener[K, V] {
+	listener := namedCacheNearLifecyleListener[K, V]{
+		listener:  NewMapLifecycleListener[K, V](),
+		nearCache: cache,
+	}
+
+	listener.listener.OnAny(func(e MapLifecycleEvent[K, V]) {
+		processNearCacheLifecycleEvent(nc.baseClient.nearCache, e.Type())
 	})
 
 	return &listener

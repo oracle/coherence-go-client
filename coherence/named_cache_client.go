@@ -126,11 +126,17 @@ func (nc *NamedCacheClient[K, V]) Release() {
 	s.mapMutex.Lock()
 	defer s.mapMutex.Unlock()
 
+	// remove near cache Map Listener
 	if nc.baseClient.nearCacheListener != nil {
 		err := nc.RemoveListener(context.Background(), nc.baseClient.nearCacheListener.listener)
 		if err != nil {
 			log.Printf("unable to remove listener to near cache: %v", err)
 		}
+	}
+
+	// remove near cache Lifecycle Listener
+	if nc.baseClient.nearCacheLifecycleListener != nil {
+		nc.RemoveLifecycleListener(nc.baseClient.nearCacheLifecycleListener.listener)
 	}
 
 	executeRelease[K, V](&nc.baseClient, nc.NamedCache)
@@ -573,8 +579,7 @@ func getNamedCache[K comparable, V any](session *Session, name string, sOpts *Se
 		// check if there is a difference in cache options wrt near cache.
 		// e.g. user has asked for a cache with near cache and previously
 		// cache does not have this, or visa-versa
-		if existing.baseClient.nearCache == nil && cacheOptions.NearCacheOptions != nil ||
-			existing.baseClient.nearCache != nil && cacheOptions.NearCacheOptions == nil {
+		if !isNearCacheEqual[K, V](existing.baseClient.nearCache, cacheOptions.NearCacheOptions) {
 			return nil, getExistingNearCacheError("NamedCache", name)
 		}
 
@@ -585,7 +590,8 @@ func getNamedCache[K comparable, V any](session *Session, name string, sOpts *Se
 	newCache := &NamedCacheClient[K, V]{
 		baseClient: newBaseClient[K, V](session, name, format, sOpts, cacheOptions),
 	}
-	if err := newCache.baseClient.ensureClientConnection(); err != nil {
+
+	if err = newCache.baseClient.ensureClientConnection(); err != nil {
 		return nil, err
 	}
 
@@ -602,7 +608,7 @@ func getNamedCache[K comparable, V any](session *Session, name string, sOpts *Se
 	listener := newNamedCacheReconnectListener[K, V](*newCache)
 	newCache.namedCacheReconnectListener = *listener
 
-	// if near cache then add listener
+	// if near cache then add listener for events and lifecycle
 	if newCache.baseClient.nearCache != nil {
 		nearCacheListener := newNearNamedCacheMapLister[K, V](*newCache, newCache.baseClient.nearCache)
 		newCache.baseClient.nearCacheListener = nearCacheListener
@@ -610,6 +616,10 @@ func getNamedCache[K comparable, V any](session *Session, name string, sOpts *Se
 		if err != nil {
 			return nil, fmt.Errorf("unable to add listener to near cache: %v", err)
 		}
+
+		nearCacheLifecycleListener := newNamedCacheNearLifecycleListener[K, V](*newCache, newCache.baseClient.nearCache)
+		newCache.baseClient.nearCacheLifecycleListener = nearCacheLifecycleListener
+		newCache.AddLifecycleListener(newCache.baseClient.nearCacheLifecycleListener.listener)
 	}
 	session.AddSessionLifecycleListener(newCache.namedCacheReconnectListener.listener)
 
@@ -642,10 +652,16 @@ func newNamedCacheReconnectListener[K comparable, V any](nc NamedCacheClient[K, 
 // namedCacheNearCacheListener is a [MapListener] to be called when invalidation events are received for a near cache.
 type namedCacheNearCacheListener[K comparable, V any] struct {
 	listener  MapListener[K, V]
-	nearCache *localCache[K, V]
+	nearCache *localCacheImpl[K, V]
 }
 
-func newNearNamedCacheMapLister[K comparable, V any](nc NamedCacheClient[K, V], cache *localCache[K, V]) *namedCacheNearCacheListener[K, V] {
+// namedCacheNearLifecyleListener is a [MapLifecycleListener] to be called when truncate events are received for a near cache.
+type namedCacheNearLifecyleListener[K comparable, V any] struct {
+	listener  MapLifecycleListener[K, V]
+	nearCache *localCacheImpl[K, V]
+}
+
+func newNearNamedCacheMapLister[K comparable, V any](nc NamedCacheClient[K, V], cache *localCacheImpl[K, V]) *namedCacheNearCacheListener[K, V] {
 	listener := namedCacheNearCacheListener[K, V]{
 		listener:  NewMapListener[K, V](),
 		nearCache: cache,
@@ -661,12 +677,24 @@ func newNearNamedCacheMapLister[K comparable, V any](nc NamedCacheClient[K, V], 
 	return &listener
 }
 
+func newNamedCacheNearLifecycleListener[K comparable, V any](nc NamedCacheClient[K, V], cache *localCacheImpl[K, V]) *namedCacheNearLifecyleListener[K, V] {
+	listener := namedCacheNearLifecyleListener[K, V]{
+		listener:  NewMapLifecycleListener[K, V](),
+		nearCache: cache,
+	}
+
+	listener.listener.OnAny(func(e MapLifecycleEvent[K, V]) {
+		processNearCacheLifecycleEvent(nc.baseClient.nearCache, e.Type())
+	})
+
+	return &listener
+}
+
 // ProcessEvent processes a map event and carries out the appropriate action. error is non nil
 // if there are any deserialization issues.
-func processNearCacheEvent[K comparable, V any](l *localCache[K, V], e MapEvent[K, V]) error {
-	var (
-		value *V
-	)
+func processNearCacheEvent[K comparable, V any](l *localCacheImpl[K, V], e MapEvent[K, V]) error {
+	var value *V
+
 	key, err := e.Key()
 	if err != nil {
 		return err
@@ -687,12 +715,16 @@ func processNearCacheEvent[K comparable, V any](l *localCache[K, V], e MapEvent[
 	}
 
 	// type must be EntryDeleted, so delete if the near cache contains the entry
-	delCacheValue := l.Get(*key)
-	if delCacheValue != nil {
-		l.Remove(*key)
-	}
+	l.Remove(*key)
 
 	return nil
+}
+
+// processNearCacheLifecycleEvent processes a lifecycle event and updates the near cache.
+func processNearCacheLifecycleEvent[K comparable, V any](l *localCacheImpl[K, V], e MapLifecycleEventType) {
+	if e == Truncated || e == Destroyed {
+		l.Clear()
+	}
 }
 
 func convertNamedCacheClient[K comparable, V any](client *NamedCacheClient[K, V]) NamedMap[K, V] {
@@ -711,6 +743,10 @@ func validateNearCacheOptions(options *NearCacheOptions) error {
 	// HighUnits
 	// HighUnitsMemory
 
+	if options.InvalidationStrategy != ListenAll {
+		return fmt.Errorf("the only invalidation strategy supported currently is %v", getInvalidationStrategyString(options.InvalidationStrategy))
+	}
+
 	if options.TTL == 0 && options.HighUnits == 0 && options.HighUnitsMemory == 0 {
 		return ErrInvalidNearCache
 	}
@@ -724,4 +760,34 @@ func validateNearCacheOptions(options *NearCacheOptions) error {
 	}
 
 	return nil
+}
+
+// isNearCacheEqual returns true if the existing local cache has same options as the provided options
+func isNearCacheEqual[K comparable, V any](existing *localCacheImpl[K, V], cacheOptions *NearCacheOptions) bool {
+	if existing == nil && cacheOptions == nil {
+		return true
+	}
+
+	// e.g. user has asked for a cache with near cache and previously
+	// cache does not have this, or visa-versa
+	if existing == nil && cacheOptions != nil || existing != nil && cacheOptions == nil {
+		return false
+	}
+
+	// compare near cache options
+	existingOptions := existing.options
+	if existingOptions.TTL != cacheOptions.TTL {
+		return false
+	}
+	if existingOptions.HighUnits != cacheOptions.HighUnits {
+		return false
+	}
+	if existingOptions.HighUnitsMemory != cacheOptions.HighUnitsMemory {
+		return false
+	}
+	if existingOptions.InvalidationStrategy != cacheOptions.InvalidationStrategy {
+		return false
+	}
+
+	return true
 }
