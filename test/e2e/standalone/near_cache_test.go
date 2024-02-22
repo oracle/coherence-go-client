@@ -527,9 +527,8 @@ func TestIncompatibleNearCacheOptions(t *testing.T) {
 	_, err = coherence.GetNamedMap[int, string](session, namedMap, coherence.WithNearCache(&nearCacheOptions1))
 	g.Expect(err).Should(gomega.HaveOccurred())
 
-	// destroy and re-create namedMap with near cache options
-	err = namedMapNoNearCache.Destroy(ctx)
-	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	// release and re-create namedMap with near cache options
+	namedMapNoNearCache.Release()
 
 	Sleep(10)
 
@@ -560,8 +559,7 @@ func TestIncompatibleNearCacheOptions(t *testing.T) {
 	g.Expect(err).Should(gomega.HaveOccurred())
 
 	// destroy and re-create namedMap with near cache options
-	err = namedCacheNoNearCache.Destroy(ctx)
-	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	namedCacheNoNearCache.Release()
 
 	namedCacheNoNearCache, err = coherence.GetNamedCache[int, string](session, namedCache, coherence.WithNearCache(&nearCacheOptions1))
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
