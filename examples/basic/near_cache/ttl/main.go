@@ -5,7 +5,7 @@
  */
 
 /*
-Package main shows how to use a near-cache with a [NamedMap] or [NamedCache] with an expiry of 10 seconds.
+Package main shows how to use a near cache with a [NamedMap] or [NamedCache] with an expiry of 10 seconds.
 */
 package main
 
@@ -77,8 +77,8 @@ func main() {
 
 		start := time.Now()
 		for i := 1; i <= maxEntries; i++ {
-			value, err = namedCache.Get(ctx, i)
-			if err != nil || value == nil {
+			_, err = namedCache.Get(ctx, i)
+			if err != nil {
 				panic(err)
 			}
 		}

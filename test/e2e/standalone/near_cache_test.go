@@ -409,6 +409,7 @@ func TestDuplicateNamedCache(t *testing.T) {
 	defer session.Close()
 
 	nearCacheOptions10Seconds := coherence.NearCacheOptions{TTL: time.Duration(10) * time.Second}
+	g.Expect(nearCacheOptions10Seconds).To(gomega.Not(gomega.BeNil()))
 
 	// test creating a NamedCache with near cache and then trying to get a NamedCache without near cache
 	namedCache, err = coherence.GetNamedCache[int, string](session, nearCacheName, coherence.WithNearCache(&nearCacheOptions10Seconds))

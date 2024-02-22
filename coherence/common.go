@@ -85,11 +85,12 @@ type CacheOptions struct {
 	NearCacheOptions *NearCacheOptions
 }
 
+// NearCacheOptions defines options when creating a near cache.
 type NearCacheOptions struct {
 	TTL                  time.Duration
 	HighUnits            int64
 	HighUnitsMemory      int64
-	InvalidationStrategy InvalidationStrategyType
+	InvalidationStrategy InvalidationStrategyType // currently only supports ListenAll
 }
 
 func (n NearCacheOptions) String() string {

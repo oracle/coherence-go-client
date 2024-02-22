@@ -5,7 +5,7 @@
  */
 
 /*
-Package main shows how to use a near-cache with a [NamedMap] or [NamedCache] with high units memory of 5k.
+Package main shows how to use a near cache with a [NamedMap] or [NamedCache] with high units memory of 10k.
 */
 package main
 
@@ -31,10 +31,10 @@ func main() {
 	defer session.Close()
 
 	// near cache options to use for NamedCache
-	nearCacheOptions := coherence.NearCacheOptions{HighUnitsMemory: 5 * 1024}
+	nearCacheOptions := coherence.NearCacheOptions{HighUnitsMemory: 10 * 1024}
 
 	// create a new NamedCache with key of int and value of string which has a
-	// near cache that will keep local entries up to max size of 5K
+	// near cache that will keep local entries up to max size of 10K
 	namedCache, err := coherence.GetNamedCache[int, string](session, "my-near-cache-high-units-memory", coherence.WithNearCache(&nearCacheOptions))
 	if err != nil {
 		panic(err)

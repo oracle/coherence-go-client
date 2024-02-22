@@ -18,7 +18,10 @@ import (
 	"unsafe"
 )
 
-var _ localCache[string, string] = &localCacheImpl[string, string]{}
+var (
+	_ localCache[string, string] = &localCacheImpl[string, string]{}
+	_ CacheStats                 = &localCacheImpl[string, string]{}
+)
 
 const (
 	KB           = 1024
@@ -38,6 +41,21 @@ type localCache[K comparable, V any] interface {
 	Clear()
 	Release()
 	GetStats() CacheStats
+}
+
+// CacheStats defines various statics for near caches.
+type CacheStats interface {
+	GetCacheHits() int64                   // the number of entries served from the near cache
+	GetCacheMisses() int64                 // the number of entries that had to be retrieved from the cluster
+	GetCacheMissesDuration() time.Duration // the total duration of all misses
+	GetHitRate() float32                   // the hit rate of the near cache
+	GetCachePuts() int64                   // the number of entries put in the near cache
+	GetTotalGets() int64                   // the number of gets against the near cache
+	GetCachePrunes() int64                 // the number of times the near cache was pruned
+	GetCachePrunesDuration() time.Duration // the duration of all prunes
+	Size() int                             // the number of entries in the near cache
+	SizeBytes() int64                      // the number of bytes used by the entries (keys and values) in the near cache
+	ResetStats()                           // reset the stats for the near cache, not including Size() or SizeBytes()
 }
 
 type localCacheImpl[K comparable, V any] struct {
@@ -179,6 +197,16 @@ func (l *localCacheImpl[K, V]) Size() int {
 	l.expireEntries()
 
 	return len(l.data)
+}
+
+// SizeBytes returns the number of bytes used by the entries (keys and values) in the near cache.
+func (l *localCacheImpl[K, V]) SizeBytes() int64 {
+	l.Lock()
+	defer l.Unlock()
+
+	l.expireEntries()
+
+	return l.cacheMemory
 }
 
 // Clear removes all mappings from the cache.
@@ -341,21 +369,6 @@ func withLocalCacheHighUnitsMemory(highUnitsMemory int64) func(options *localCac
 	return func(o *localCacheOptions) {
 		o.HighUnitsMemory = highUnitsMemory
 	}
-}
-
-var _ CacheStats = &localCacheImpl[string, string]{}
-
-type CacheStats interface {
-	GetCacheHits() int64
-	GetCacheMisses() int64
-	GetCacheMissesDuration() time.Duration
-	GetCachePuts() int64
-	GetCachePrunes() int64
-	GetCachePrunesDuration() time.Duration
-	GetTotalGets() int64
-	GetHitRate() float32
-	Size() int
-	ResetStats()
 }
 
 func (l *localCacheImpl[K, V]) registerHit() {
