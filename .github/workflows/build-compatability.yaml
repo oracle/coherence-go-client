@@ -25,7 +25,6 @@ jobs:
         coherenceVersion:
           - 23.09.3-SNAPSHOT
           - 23.09.2
-          - 23.09.1
         go-version:
           - 1.19.x
           - 1.20.x

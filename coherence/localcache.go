@@ -20,7 +20,12 @@ import (
 
 var _ localCache[string, string] = &localCacheImpl[string, string]{}
 
-const prunePercent = 20
+const (
+	KB           = 1024
+	MB           = KB * KB
+	GB           = MB * KB
+	prunePercent = 20
+)
 
 // localCache implements a local cache of values.
 type localCache[K comparable, V any] interface {
@@ -434,12 +439,6 @@ func (l *localCacheImpl[K, V]) String() string {
 func (l *localCacheImpl[K, V]) updateEntrySize(entry *localCacheEntry[K, V], sign int) {
 	l.updateCacheMemory(int64(sign) * (int64(unsafe.Sizeof(entry.key)) + int64(unsafe.Sizeof(entry.value))))
 }
-
-const (
-	KB = 1024
-	MB = KB * KB
-	GB = MB * KB
-)
 
 func formatMemory(bytesValue int64) string {
 	var printer = message.NewPrinter(language.English)
