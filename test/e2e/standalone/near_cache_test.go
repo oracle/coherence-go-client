@@ -106,6 +106,10 @@ func RunTestNearCacheBasic(t *testing.T, namedMap coherence.NamedMap[int, Person
 	// now remove the entry from the cache and the delete event should remove from the near cache immediately
 	_, err = namedMap.Remove(ctx, person1.ID)
 	g.Expect(err).NotTo(gomega.HaveOccurred())
+
+	// sleep to allow the back-end event to arrive
+	Sleep(5)
+
 	g.Expect(namedMap.GetNearCacheStats().Size()).To(gomega.Equal(0))
 	AssertSize[int, Person](g, namedMap, 0)
 
