@@ -63,7 +63,7 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Printf("Cache size is %v, doing 1000 Get() operations to populate near cache\n", size)
+	fmt.Printf("Cache size is %v, doing 1000 Get() operations to populate near cache\n\n", size)
 
 	for i := 1; i <= 1000; i++ {
 		_, err = namedCache.Get(ctx, i)
@@ -81,6 +81,7 @@ func main() {
 	fmt.Println(namedCache.GetNearCacheStats())
 
 	fmt.Println("\nIssuing another get which will make the near cache over the high-units and it will prune to 80% of size")
+	fmt.Println()
 
 	_, err = namedCache.Get(ctx, 2000)
 	if err != nil {
