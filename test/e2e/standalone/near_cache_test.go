@@ -205,19 +205,18 @@ func RunTestNearCacheGetAll(t *testing.T, namedMap coherence.NamedMap[int, Perso
 
 func RunTestNearCacheGetAll2(t *testing.T, namedMap coherence.NamedMap[int, Person]) {
 	var (
-		g       = gomega.NewWithT(t)
-		err     error
-		person1 = Person{ID: 1, Name: "Tim1-Name"}
-		person2 = Person{ID: 2, Name: "Tim2-Name"}
-		person3 = Person{ID: 3, Name: "Tim3-Name"}
+		g   = gomega.NewWithT(t)
+		err error
+		p1  = Person{ID: 1, Name: "Tim1-Name"}
+		p2  = Person{ID: 2, Name: "Tim2-Name"}
+		p3  = Person{ID: 3, Name: "Tim3-Name"}
 	)
 
 	people := make(map[int]Person, 0)
-	people[1] = person1
-	people[2] = person2
-	people[3] = person3
+	people[1] = p1
+	people[2] = p2
+	people[3] = p3
 
-	// populate
 	err = namedMap.PutAll(ctx, people)
 	g.Expect(err).NotTo(gomega.HaveOccurred())
 	AssertSize[int, Person](g, namedMap, 3)
@@ -229,7 +228,6 @@ func RunTestNearCacheGetAll2(t *testing.T, namedMap coherence.NamedMap[int, Pers
 		g.Expect(ch.Err).ShouldNot(gomega.HaveOccurred())
 		g.Expect(ch.Value).ShouldNot(gomega.BeNil())
 	}
-
 	g.Expect(count).To(gomega.Equal(3))
 
 	// we should have no hits but have size of 3
