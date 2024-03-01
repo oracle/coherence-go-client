@@ -63,7 +63,6 @@ type localCacheImpl[K comparable, V any] struct {
 	options *localCacheOptions
 	sync.Mutex
 	data              map[K]*localCacheEntry[K, V]
-	cacheStats        CacheStats
 	cacheHits         int64
 	cacheMisses       int64
 	cacheMissesNannos int64
@@ -111,11 +110,10 @@ func (l *localCacheImpl[K, V]) Put(key K, value V) *V {
 // This variation of the Put() function that allows the caller to specify an expiry (or "time to live")
 // for the cache entry. V will be nil if there was no previous value.
 func (l *localCacheImpl[K, V]) PutWithExpiry(key K, value V, ttl time.Duration) *V {
-	defer l.registerPut()
-
 	l.Lock()
 	defer l.Unlock()
 
+	l.registerPut()
 	l.pruneEntries()
 
 	newEntry := newLocalCacheEntry[K, V](key, value, ttl)
@@ -224,7 +222,7 @@ func (l *localCacheImpl[K, V]) Release() {
 }
 
 func (l *localCacheImpl[K, V]) GetStats() CacheStats {
-	return l.cacheStats
+	return l
 }
 
 // expireEntries goes through the map to see if any entries have expired due to ttl.
@@ -450,7 +448,8 @@ func (l *localCacheImpl[K, V]) String() string {
 
 // updateEntrySize updates the cacheMemory size based upon a local entry. The sign indicates to either remove or add.
 func (l *localCacheImpl[K, V]) updateEntrySize(entry *localCacheEntry[K, V], sign int) {
-	l.updateCacheMemory(int64(sign) * (int64(unsafe.Sizeof(entry.key)) + int64(unsafe.Sizeof(entry.value))))
+	l.updateCacheMemory(int64(sign)*(int64(unsafe.Sizeof(entry.key))+int64(unsafe.Sizeof(entry.value))+
+		(int64(unsafe.Sizeof(entry.ttl)))+(int64(unsafe.Sizeof(entry.insertTime)))) + (int64(unsafe.Sizeof(entry.lastAccess))))
 }
 
 func formatMemory(bytesValue int64) string {

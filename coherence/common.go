@@ -114,7 +114,10 @@ func WithNearCache(options *NearCacheOptions) func(cacheOptions *CacheOptions) {
 
 // executeClear executes the clear operation against a baseClient.
 func executeClear[K comparable, V any](ctx context.Context, bc *baseClient[K, V]) error {
-	err := bc.ensureClientConnection()
+	var (
+		err       = bc.ensureClientConnection()
+		nearCache = bc.nearCache
+	)
 	if err != nil {
 		return err
 	}
@@ -127,6 +130,11 @@ func executeClear[K comparable, V any](ctx context.Context, bc *baseClient[K, V]
 	clearRequest := pb.ClearRequest{Cache: bc.name, Scope: bc.sessionOpts.Scope}
 
 	_, err = bc.client.Clear(newCtx, &clearRequest)
+
+	// clear the near cache
+	if err != nil && nearCache != nil {
+		nearCache.Clear()
+	}
 
 	return err
 }
@@ -212,7 +220,10 @@ func executeRemoveIndex[K comparable, V, T, E any](ctx context.Context, bc *base
 
 // executeTruncate executes the truncate operation against a baseClient.
 func executeTruncate[K comparable, V any](ctx context.Context, bc *baseClient[K, V]) error {
-	err := bc.ensureClientConnection()
+	var (
+		err       = bc.ensureClientConnection()
+		nearCache = bc.nearCache
+	)
 	if err != nil {
 		return err
 	}
@@ -225,6 +236,12 @@ func executeTruncate[K comparable, V any](ctx context.Context, bc *baseClient[K,
 	request := pb.TruncateRequest{Cache: bc.name, Scope: bc.sessionOpts.Scope}
 
 	_, err = bc.client.Truncate(newCtx, &request)
+
+	// clear the near cache
+	if err != nil && nearCache != nil {
+		nearCache.Clear()
+	}
+
 	return err
 }
 
@@ -889,9 +906,10 @@ func executeKeySetFilter[K comparable, V any](ctx context.Context, bc *baseClien
 // executePutAll executes the PutAll operation against a baseClient.
 func executePutAll[K comparable, V any](ctx context.Context, bc *baseClient[K, V], entries map[K]V) error {
 	var (
-		err      = bc.ensureClientConnection()
-		binKey   []byte
-		binValue []byte
+		err       = bc.ensureClientConnection()
+		binKey    []byte
+		binValue  []byte
+		nearCache = bc.nearCache
 	)
 	if err != nil {
 		return err
@@ -923,6 +941,15 @@ func executePutAll[K comparable, V any](ctx context.Context, bc *baseClient[K, V
 	_, err = bc.client.PutAll(newCtx, &putAllRequest)
 	if err != nil {
 		return err
+	}
+
+	// if we have near cache and the entry exists then update
+	if nearCache != nil {
+		for k, v := range entries {
+			if oldVal := nearCache.Get(k); oldVal != nil {
+				nearCache.Put(k, v)
+			}
+		}
 	}
 
 	return nil
@@ -976,6 +1003,7 @@ func executePutWithExpiry[K comparable, V any](ctx context.Context, bc *baseClie
 		binValue  []byte
 		err       = bc.ensureClientConnection()
 		zeroValue *V
+		nearCache = bc.nearCache
 	)
 
 	// check that the expiry value is no > Integer.MAX_VALUE millis on Java, which is 2147483647
@@ -1010,6 +1038,14 @@ func executePutWithExpiry[K comparable, V any](ctx context.Context, bc *baseClie
 		return zeroValue, err
 	}
 
+	// if we have near cache and the entry exists then update this as well because we do
+	// not use synchronous listener like we do on Java
+	if nearCache != nil {
+		if oldValue := nearCache.Get(key); oldValue != nil {
+			nearCache.Put(key, value)
+		}
+	}
+
 	return bc.valueSerializer.Deserialize(result.Value)
 }
 
@@ -1020,6 +1056,7 @@ func executeRemove[K comparable, V any](ctx context.Context, bc *baseClient[K, V
 		oldValue  *wrapperspb.BytesValue
 		binKey    []byte
 		zeroValue *V
+		nearCache = bc.nearCache
 	)
 	if err != nil {
 		return zeroValue, err
@@ -1042,16 +1079,21 @@ func executeRemove[K comparable, V any](ctx context.Context, bc *baseClient[K, V
 		return zeroValue, err
 	}
 
+	if nearCache != nil {
+		nearCache.Remove(key)
+	}
+
 	return bc.valueSerializer.Deserialize(oldValue.Value)
 }
 
 // executeRemoveMapping executes the RemoveMapping operation against a baseClient.
 func executeRemoveMapping[K comparable, V any](ctx context.Context, bc *baseClient[K, V], key K, value V) (bool, error) {
 	var (
-		result   *wrapperspb.BoolValue
-		err      = bc.ensureClientConnection()
-		binKey   []byte
-		binValue []byte
+		result    *wrapperspb.BoolValue
+		err       = bc.ensureClientConnection()
+		binKey    []byte
+		binValue  []byte
+		nearCache = bc.nearCache
 	)
 
 	if err != nil {
@@ -1078,6 +1120,10 @@ func executeRemoveMapping[K comparable, V any](ctx context.Context, bc *baseClie
 	result, err = bc.client.RemoveMapping(newCtx, &request)
 	if err != nil {
 		return false, err
+	}
+
+	if result.Value && nearCache != nil {
+		nearCache.Remove(key)
 	}
 
 	return result.Value, nil
@@ -1129,6 +1175,7 @@ func executeReplaceMapping[K comparable, V any](ctx context.Context, bc *baseCli
 		binKey       []byte
 		binPrevValue []byte
 		binNewValue  []byte
+		nearCache    = bc.nearCache
 	)
 
 	if err != nil {
@@ -1161,6 +1208,12 @@ func executeReplaceMapping[K comparable, V any](ctx context.Context, bc *baseCli
 	result, err = bc.client.ReplaceMapping(newCtx, &request)
 	if err != nil {
 		return false, err
+	}
+
+	if result.Value && nearCache != nil {
+		if old := nearCache.Get(key); old != nil {
+			nearCache.Put(key, newValue)
+		}
 	}
 	return result.Value, nil
 }
