@@ -26,7 +26,7 @@ The Coherence Go client provides the following features:
     and session lifecycle events such as connected, disconnected, reconnected and closed
   - Support for storing Go structs as JSON as well as the ability to serialize to Java objects on the server for access from other Coherence language API's
   - Full support for Go generics in all Coherence API's
-  - Ability to specify size or memory limited near caches using either time-to-live (TTL)
+  - Ability to specify a near cache with time-to-live (TTL), size or memory limits
 
 For more information on Coherence caches, please see the [Coherence Documentation].
 
@@ -571,8 +571,7 @@ The following example shows how to get a named cache that will cache entries fro
 	    log.Fatal(err)
 	}
 
-	// issue first Get for data in the cache on the storage-nodes. Entries found
-	// will be stored in near cache
+	// issue first Get for data in the cache on the storage-nodes. Entries found will be stored in near cache
 	value, err = namedMap.Get(ctx, 1)
 	if err != nil {
 	    panic(err)
