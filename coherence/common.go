@@ -543,9 +543,15 @@ func executeGetAll[K comparable, V any](ctx context.Context, bc *baseClient[K, V
 			defer cancel()
 		}
 
-		// if we have any entries in the nearCacheEntries then stream these first
+		// if we have any entries in the near cache entries then stream these first
 		for k, v := range nearCacheEntries {
 			ch <- &StreamedEntry[K, V]{Key: k, Value: *v}
+		}
+
+		// if we can get all keys from near cache then return immediately
+		if len(finalKeys) == 0 {
+			close(ch)
+			return
 		}
 
 		var (
@@ -1210,7 +1216,7 @@ func executeReplaceMapping[K comparable, V any](ctx context.Context, bc *baseCli
 		return false, err
 	}
 
-	if result.Value && nearCache != nil {
+	if nearCache != nil && result.Value {
 		if old := nearCache.Get(key); old != nil {
 			nearCache.Put(key, newValue)
 		}

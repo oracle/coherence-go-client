@@ -233,7 +233,7 @@ func (l *localCacheImpl[K, V]) expireEntries() {
 		start        = time.Now()
 	)
 
-	// Check 1 - check for cache expiry
+	// check for cache expiry
 	for k, v := range l.data {
 		if v.ttl > 0 && time.Since(v.insertTime) > v.ttl {
 			keysToDelete = append(keysToDelete, k)
