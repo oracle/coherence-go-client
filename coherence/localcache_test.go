@@ -137,7 +137,7 @@ func TestBasicLocalCacheGetAll(t *testing.T) {
 func TestLocalCacheWithHighUnitsOnly(t *testing.T) {
 	g := NewWithT(t)
 
-	cache := newLocalCache[int, string]("my-cache-high-unit", withLocalCacheHighUnits(100))
+	cache := newLocalCache[int, string]("my-cache-high-unit1", withLocalCacheHighUnits(100))
 
 	for i := 0; i < 100; i++ {
 		cache.Put(i, fmt.Sprintf("value-%v", i))
@@ -156,10 +156,10 @@ func TestLocalCacheWithHighUnitsOnly(t *testing.T) {
 func TestLocalCacheWithHighUnitsMemoryOnly(t *testing.T) {
 	g := NewWithT(t)
 
-	cache := newLocalCache[int, string]("my-cache-high-unit", withLocalCacheHighUnitsMemory(1024*100))
+	cache := newLocalCache[int, string]("my-cache-high-unit2", withLocalCacheHighUnitsMemory(1024*100))
 
 	for i := 0; i < 10_000; i++ {
-		cache.Put(i, fmt.Sprintf("value-%v", i))
+		cache.Put(i, fmt.Sprintf("value2-%v", i))
 	}
 
 	// cache size should be less than 10,000 as it would not all fit in under 100K
@@ -171,10 +171,10 @@ func TestLocalCacheWithHighUnitsMemoryOnly(t *testing.T) {
 func TestLocalCacheWithHighUnitsOnlyAccessTime(t *testing.T) {
 	g := NewWithT(t)
 
-	cache := newLocalCache[int, string]("my-cache-high-unit", withLocalCacheHighUnits(100))
+	cache := newLocalCache[int, string]("my-cache-high-unit3", withLocalCacheHighUnits(100))
 
 	for i := 0; i < 100; i++ {
-		cache.Put(i, fmt.Sprintf("value-%v", i))
+		cache.Put(i, fmt.Sprintf("value3-%v", i))
 	}
 
 	g.Expect(cache.Size()).To(Equal(100))
