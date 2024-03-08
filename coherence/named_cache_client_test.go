@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-// TestIsNearCacheEqual tests various scenarios where cache options should equal
+// TestIsNearCacheEqual tests various scenarios where cache options should equal.
 func TestIsNearCacheEqual(t *testing.T) {
 	var (
 		g                 = gomega.NewWithT(t)
@@ -37,4 +37,31 @@ func TestIsNearCacheEqual(t *testing.T) {
 	g.Expect(isNearCacheEqual[int, string](localCache3, &nearCacheOptions4)).To(gomega.Equal(true))
 	g.Expect(isNearCacheEqual[int, string](localCache4, &nearCacheOptions4)).To(gomega.Equal(false))
 	g.Expect(isNearCacheEqual[int, string](localCache4, &nearCacheOptions5)).To(gomega.Equal(true))
+}
+
+// TestInvalidNearCacheOptions tests various edge cases for near cache options
+func TestInvalidNearCacheOptions(t *testing.T) {
+	var (
+		g                 = gomega.NewWithT(t)
+		nearCacheOptions1 = NearCacheOptions{HighUnits: -1}
+		nearCacheOptions2 = NearCacheOptions{HighUnitsMemory: -1}
+		nearCacheOptions3 = NearCacheOptions{HighUnitsMemory: 1, HighUnits: 1}
+		nearCacheOptions4 = NearCacheOptions{TTL: time.Duration(1) * time.Second, HighUnitsMemory: 1, HighUnits: 1}
+		nearCacheOptions5 = NearCacheOptions{}
+	)
+
+	err := validateNearCacheOptions(&nearCacheOptions1)
+	g.Expect(err).To(gomega.Equal(ErrNegativeNearCacheOptions))
+
+	err = validateNearCacheOptions(&nearCacheOptions2)
+	g.Expect(err).To(gomega.Equal(ErrNegativeNearCacheOptions))
+
+	err = validateNearCacheOptions(&nearCacheOptions3)
+	g.Expect(err).To(gomega.Equal(ErrInvalidNearCacheWithNoTTL))
+
+	err = validateNearCacheOptions(&nearCacheOptions4)
+	g.Expect(err).To(gomega.Equal(ErrInvalidNearCacheWithTTL))
+
+	err = validateNearCacheOptions(&nearCacheOptions5)
+	g.Expect(err).To(gomega.Equal(ErrInvalidNearCache))
 }

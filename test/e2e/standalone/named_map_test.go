@@ -813,8 +813,6 @@ func RunTestGetAll(t *testing.T, namedMap coherence.NamedMap[int, Person]) {
 		results = append(results, se.Key)
 	}
 	g.Expect(len(results)).To(gomega.Equal(0))
-
-	// GetAll keys that don't exist
 }
 
 func RunTestInvokeAllKeys(t *testing.T, namedMap coherence.NamedMap[int, Person]) {

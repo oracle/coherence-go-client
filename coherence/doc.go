@@ -25,8 +25,8 @@ The Coherence Go client provides the following features:
   - insert, update and delete on Maps, map lifecycle events such as truncated, released or destroyed
     and session lifecycle events such as connected, disconnected, reconnected and closed
   - Support for storing Go structs as JSON as well as the ability to serialize to Java objects on the server for access from other Coherence language API's
+  - Near cache support to cache frequently accessed data in the Go client to avoid sending requests across the network
   - Full support for Go generics in all Coherence API's
-  - Ability to specify a near cache with time-to-live (TTL), size or memory limits
 
 For more information on Coherence caches, please see the [Coherence Documentation].
 
@@ -537,9 +537,9 @@ Lastly, when you create a Customer object you must set the Class value matching 
 
 # Using Near Caches
 
-The Coherence Go client allows you to specify a near cache to cache frequently used and accessed data in your Go application.
+The Coherence Go client allows you to specify a near cache to cache frequently accessed data in your Go application.
 When you access data using Get() or GetAll() operations, returned entries are stored in the near cache and subsequent data
-access for keys in the near-cache is almost instantaneous.
+access for keys in the near cache is almost instant where without a near cache each operation above always results in a network call.
 
 On creating a near cache, Coherence automatically adds a [MapListener] to your [NamedMap] or [NamedCache] which listens on
 all cache events and updates or invalidates entries in the near cache that have been changed or removed on the server.
@@ -550,7 +550,7 @@ To manage the amount of memory used by the near cache, the following options are
   - High-Units – maximum number of cache entries in the near cache
   - Memory – maximum amount of memory used by cache entries
 
-Note: You can specify TTL and High-Units or memory.
+Note: You can specify either High-Units or Memory and in either case, optionally, a TTL.
 
 The above can be specified by passing [NearCacheOptions] within [WithNearCache] when creating a [NamedMap] or [NamedCache].
 See below for various ways of creating near caches.

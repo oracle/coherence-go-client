@@ -22,12 +22,13 @@ For local development, we recommend using the Coherence CE Docker image; it cont
 everything necessary for the client to operate correctly.
 
 ```bash
-docker run -d -p 1408:1408 -p 30000:30000 ghcr.io/oracle/coherence-ce:23.09.1
+docker run -d -p 1408:1408 -p 30000:30000 ghcr.io/oracle/coherence-ce:23.09.2
 ```
 
 ### Index
 
 * [Basic operations using primitives and structs](#basic)
+* [Using near caches](#near)
 * [Querying data](#querying)
 * [Aggregating data](#aggregations)
 * [Mutating data using entry processors](#processors)
@@ -96,7 +97,7 @@ Source code: [basic/expiry_cache/main.go](basic/expiry_cache/main.go)
 go run basic/expiry_cache/main.go
 ```
 
-### Using Near Caches
+### <a name="near"></a> Using near caches
 
 These example shows how to specify a near-cache for either NamedMap or NamedCache which will
 cache data accessed via Get() operations on the Go client for fast subsequent local access.

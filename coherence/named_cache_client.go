@@ -747,6 +747,10 @@ func validateNearCacheOptions(options *NearCacheOptions) error {
 		return fmt.Errorf("the only invalidation strategy supported currently is %v", getInvalidationStrategyString(options.InvalidationStrategy))
 	}
 
+	if options.HighUnits < 0 || options.HighUnitsMemory < 0 {
+		return ErrNegativeNearCacheOptions
+	}
+
 	if options.TTL == 0 && options.HighUnits == 0 && options.HighUnitsMemory == 0 {
 		return ErrInvalidNearCache
 	}
