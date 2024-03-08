@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2023 Oracle and/or its affiliates.
+ * Copyright (c) 2022, 2024 Oracle and/or its affiliates.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * https://oss.oracle.com/licenses/upl.
  */
@@ -25,6 +25,7 @@ The Coherence Go client provides the following features:
   - insert, update and delete on Maps, map lifecycle events such as truncated, released or destroyed
     and session lifecycle events such as connected, disconnected, reconnected and closed
   - Support for storing Go structs as JSON as well as the ability to serialize to Java objects on the server for access from other Coherence language API's
+  - Near cache support to cache frequently accessed data in the Go client to avoid sending requests across the network
   - Full support for Go generics in all Coherence API's
 
 For more information on Coherence caches, please see the [Coherence Documentation].
@@ -533,6 +534,115 @@ Lastly, when you create a Customer object you must set the Class value matching 
 	if err != nil {
 	    log.Fatal(err)
 	}
+
+# Using Near Caches
+
+The Coherence Go client allows you to specify a near cache to cache frequently accessed data in your Go application.
+When you access data using Get() or GetAll() operations, returned entries are stored in the near cache and subsequent data
+access for keys in the near cache is almost instant where without a near cache each operation above always results in a network call.
+
+On creating a near cache, Coherence automatically adds a [MapListener] to your [NamedMap] or [NamedCache] which listens on
+all cache events and updates or invalidates entries in the near cache that have been changed or removed on the server.
+
+To manage the amount of memory used by the near cache, the following options are supported when creating one:
+
+  - time-to-live (TTL) – objects expired after time in near cache, e.g. 5 minutes
+  - High-Units – maximum number of cache entries in the near cache
+  - Memory – maximum amount of memory used by cache entries
+
+Note: You can specify either High-Units or Memory and in either case, optionally, a TTL.
+
+The above can be specified by passing [NearCacheOptions] within [WithNearCache] when creating a [NamedMap] or [NamedCache].
+See below for various ways of creating near caches.
+
+You can ask a [NamedMap] or [NamedCache] for its near cache statistics by calling GetNearCacheStats(). Various statistics
+are recorded with regards to the near cache and can be seen via the [CacheStats] interface. If the [NamedMap] or [NamedCache]
+does not have a near cache, nil will be returned.
+
+1. Creating a Near Cache specifying time-to-live (TTL)
+
+The following example shows how to get a named cache that will cache entries from Get() or GetAll() for up to 30 seconds.
+
+	// specify a TTL of 30 seconds
+	nearCacheOptions := coherence.NearCacheOptions{TTL: time.Duration(30) * time.Second}
+
+	namedMap, err := coherence.GetNamedMap[int, string](session, "customers", coherence.WithNearCache(&nearCacheOptions))
+	if err != nil {
+	    log.Fatal(err)
+	}
+
+	// issue first Get for data in the cache on the storage-nodes. Entries found will be stored in near cache
+	value, err = namedMap.Get(ctx, 1)
+	if err != nil {
+	    panic(err)
+	}
+
+	// subsequent access will be almost instant from near cache
+	value, err = namedMap.Get(ctx, 1)
+
+	// you can check the near cache stats
+	fmt.Println("Near cache size is", namedMap.GetNearCacheStats().Size())
+
+	// output: "Near cache size is 1"
+
+2. Creating a Near Cache specifying maximum number of entries to store
+
+The following example shows how to get a named cache that will cache up to 100 entries from Get() or GetAll().
+When the threshold of HighUnits is reached, the near cache is pruned to 80% of its size and evicts least recently
+accessed and created entries.
+
+	// specify HighUnits of 1000
+	nearCacheOptions := coherence.NearCacheOptions{HighUnits: 1000}
+
+	namedMap, err := coherence.GetNamedMap[int, string](session, "customers", coherence.WithNearCache(&nearCacheOptions))
+	if err != nil {
+	    log.Fatal(err)
+	}
+
+	// assume we have 2000 entries in the coherence cache, issue 1000 gets and the near cache will have 100 entries
+	for i := 1; i <= 1000; i++ {
+		_, err = namedMap.Get(ctx, i)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	fmt.Println("Near cache size is", namedMap.GetNearCacheStats().Size())
+	// output: "Near cache size is 1000"
+
+	// issue a subsequent Get() for an entry not in the near cache and the cache will be pruned to 80%
+	customer, err = namedMap.Get(ctx, 1)
+
+	fmt.Println("Near cache size is", namedCache.GetNearCacheStats().Size())
+	// output: "Near cache size is 800"
+
+3. Creating a Near Cache specifying maximum memory to use
+
+The following example shows how to get a named cache that will cache up to 10KB of entries from Get() or GetAll().
+When the threshold of HighUnits is reached, the near cache is pruned to 80% of its size and evicts least recently
+accessed and created entries.
+
+	// specify HighUnits of 1000
+	nearCacheOptions := coherence.NearCacheOptions{HighUnitsMemory: 10 * 1024}
+
+	namedMap, err := coherence.GetNamedMap[int, string](session, "customers", coherence.WithNearCache(&nearCacheOptions))
+	if err != nil {
+	    log.Fatal(err)
+	}
+
+	// assume we have 5000 entries in the coherence cache, issue 5000 gets and the near cache will be pruned and
+	// not have the full 5000 entries as it does not fit within 10KB.
+	for i := 1; i <= 5000; i++ {
+		_, err = namedMap.Get(ctx, i)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	// print the near cache stats via String()
+	fmt.Println(namedMap.GetNearCacheStats())
+	// localCache{name=customers options=localCacheOptions{ttl=0s, highUnits=0, highUnitsMemory=10.0KB, invalidation=ListenAll},
+	// stats=CacheStats{puts=5000, gets=5000, hits=0, misses=5000, missesDuration=4.95257111s, hitRate=0, prunes=7, prunesDuration=196.498µs, size=398, memoryUsed=9.3KB}}
 
 [Coherence Documentation]: https://docs.oracle.com/en/middleware/standalone/coherence/14.1.1.2206/develop-applications/introduction-coherence-caches.html
 [examples]: https://github.com/oracle/coherence-go-client/tree/main/examples

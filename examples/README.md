@@ -22,12 +22,13 @@ For local development, we recommend using the Coherence CE Docker image; it cont
 everything necessary for the client to operate correctly.
 
 ```bash
-docker run -d -p 1408:1408 -p 30000:30000 ghcr.io/oracle/coherence-ce:23.09.1
+docker run -d -p 1408:1408 -p 30000:30000 ghcr.io/oracle/coherence-ce:23.09.2
 ```
 
 ### Index
 
 * [Basic operations using primitives and structs](#basic)
+* [Using near caches](#near)
 * [Querying data](#querying)
 * [Aggregating data](#aggregations)
 * [Mutating data using entry processors](#processors)
@@ -94,6 +95,37 @@ Source code: [basic/expiry_cache/main.go](basic/expiry_cache/main.go)
 
 ```go
 go run basic/expiry_cache/main.go
+```
+
+### <a name="near"></a> Using near caches
+
+These example shows how to specify a near-cache for either NamedMap or NamedCache which will
+cache data accessed via Get() operations on the Go client for fast subsequent local access.
+Near caches can specify time-to-live (TTL) for entries in a cache as well as number of entries or size of entryes.
+Any updates of data from the back-end will update the data in the near cache or any
+data removals will invalidate the near cache.
+
+#### Near cache with 10 second TTL
+
+Source code: [basic/near_cache/ttl/main.go](basic/near_cache/ttl/main.go)
+
+```go
+go run basic/near_cache/ttl/main.go
+```
+#### Near cache with high units of 1000
+
+Source code: [basic/near_cache/high_units/main.go](basic/near_cache/high_units/main.go)
+
+```go
+go run basic/near_cache/high_units/main.go
+```
+
+#### Near cache with high units memory of 10KB
+
+Source code: [basic/near_cache/memory/main.go](basic/near_cache/memory/main.go)
+
+```go
+go run basic/near_cache/memory/main.go
 ```
 
 ### <a name="querying"></a> Querying data

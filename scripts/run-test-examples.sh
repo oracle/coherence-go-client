@@ -39,6 +39,8 @@ function wait_for_ready() {
 
 wait_for_ready
 
+pause && pause && pause && pause
+
 set -e
 cd examples
 

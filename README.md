@@ -23,7 +23,8 @@ to a Coherence Cluster using gRPC for the network transport.
   * mutations such as insert, update and delete on Maps
   * map lifecycle events such as truncated, released or destroyed
   * session lifecycle events such as connected, disconnected, reconnected and closed 
-* Support for storing Go structs as JSON as well as the ability to serialize to Java objects on the server for access from other Coherence language API's
+* Support for storing Go structs as JSON as well as the ability to serialize to Java objects on the server for access from other Coherence language API's 
+* Near cache support to cache frequently accessed data in the Go client to avoid sending requests across the network
 * Full support for Go generics in all Coherence API's
 
 #### Requirements
@@ -38,7 +39,7 @@ For local development, we recommend using the Coherence CE Docker image; it cont
 everything necessary for the client to operate correctly.
 
 ```bash
-docker run -d -p 1408:1408 -p 30000:30000 ghcr.io/oracle/coherence-ce:23.09.1
+docker run -d -p 1408:1408 -p 30000:30000 ghcr.io/oracle/coherence-ce:23.09.2
 ```
 
 ## Installation

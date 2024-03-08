@@ -16,12 +16,14 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     strategy:
       matrix:
         go-version:
           - 1.19.x
           - 1.20.x
           - 1.21.x
+          - 1.22.x
 
 #   Checkout the source, we need a depth of zero to fetch all of the history otherwise
 #   the copyright check cannot work out the date of the files from Git.
@@ -104,6 +106,7 @@ jobs:
           COHERENCE_TLS_CLIENT_CERT=`pwd`/test/utils/certs/star-lord.crt \
           COHERENCE_TLS_CLIENT_KEY=`pwd`/test/utils/certs/star-lord.key \
           COHERENCE_VERSION=22.06.7 PROFILES=,secure,-jakarta,javax make clean certs generate-proto build-test-images test-e2e-standalone
+
 
     - name: E2E Local Tests SSL (options)
       shell: bash

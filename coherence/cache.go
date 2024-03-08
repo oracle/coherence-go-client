@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2023 Oracle and/or its affiliates.
+ * Copyright (c) 2022, 2024 Oracle and/or its affiliates.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * https://oss.oracle.com/licenses/upl.
  */
@@ -159,7 +159,7 @@ type NamedMap[K comparable, V any] interface {
 	RemoveListener(ctx context.Context, listener MapListener[K, V]) error
 
 	// RemoveMapping removes the entry for the specified key only if it is currently
-	// mapped to the specified value.
+	// mapped to the specified value. Returns true if the value was removed.
 	RemoveMapping(ctx context.Context, key K, value V) (bool, error)
 
 	// Replace replaces the entry for the specified key only if it is
@@ -167,7 +167,7 @@ type NamedMap[K comparable, V any] interface {
 	Replace(ctx context.Context, key K, value V) (*V, error)
 
 	// ReplaceMapping replaces the entry for the specified key only if it is
-	// currently mapped to some value. Returns true if the value was replaced
+	// currently mapped to the value. Returns true if the value was replaced.
 	ReplaceMapping(ctx context.Context, key K, prevValue V, newValue V) (bool, error)
 
 	// Size returns the number of mappings contained within the NamedMap.
@@ -176,7 +176,7 @@ type NamedMap[K comparable, V any] interface {
 	// GetSession returns the Session associated with the NamedMap.
 	GetSession() *Session
 
-	// ValuesFilter return a view of filtered values contained in the NamedMap.
+	// ValuesFilter returns a view of filtered values contained in the NamedMap.
 	// The returned channel will be asynchronously filled with values in the
 	// NamedMap that satisfy the filter.
 	ValuesFilter(ctx context.Context, filter filters.Filter) <-chan *StreamedValue[V]
@@ -194,6 +194,10 @@ type NamedMap[K comparable, V any] interface {
 	// storage-enabled members.
 	// If it is not supported by the gRPC proxy, an error will be returned.
 	IsReady(ctx context.Context) (bool, error)
+
+	// GetNearCacheStats returns the [CacheStats] for a near cache for a [NamedMap] or [NamedCache].
+	// If no near cache is defined, nil is returned.
+	GetNearCacheStats() CacheStats
 }
 
 // NamedCache is syntactically identical in behaviour to a NamedMap, but additionally implements

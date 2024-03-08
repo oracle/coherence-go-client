@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2023 Oracle and/or its affiliates.
+ * Copyright (c) 2022, 2024 Oracle and/or its affiliates.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * https://oss.oracle.com/licenses/upl.
  */
@@ -39,6 +39,8 @@ const (
 
 	// Integer.MAX_VALUE on Java
 	integerMaxValue = 2147483647
+
+	ListenAll InvalidationStrategyType = 0
 )
 
 var (
@@ -55,25 +57,45 @@ var (
 	ErrShutdown = errors.New("gRPC channel has been shutdown")
 )
 
+// InvalidationStrategyType described the type if invalidation strategies for near cache.
+type InvalidationStrategyType int
+
 // baseClient is a struct that is used for both NamedMap and NamedCache
 type baseClient[K comparable, V any] struct {
-	session         *Session
-	name            string          // Name of the NamedMap or NamedCache
-	sessionOpts     *SessionOptions // Options for the sessions
-	cacheOpts       *CacheOptions   // Options for the cache or map
-	client          pb.NamedCacheServiceClient
-	format          string
-	keySerializer   Serializer[K]
-	valueSerializer Serializer[V]
-	eventManager    *mapEventManager[K, V]
-	destroyed       bool
-	released        bool
-	mutex           *sync.RWMutex
+	session                    *Session
+	name                       string          // Name of the NamedMap or NamedCache
+	sessionOpts                *SessionOptions // Options for the sessions
+	cacheOpts                  *CacheOptions   // Options for the cache or map
+	client                     pb.NamedCacheServiceClient
+	format                     string
+	keySerializer              Serializer[K]
+	valueSerializer            Serializer[V]
+	eventManager               *mapEventManager[K, V]
+	destroyed                  bool
+	released                   bool
+	mutex                      *sync.RWMutex
+	nearCache                  *localCacheImpl[K, V]
+	nearCacheListener          *namedCacheNearCacheListener[K, V]
+	nearCacheLifecycleListener *namedCacheNearLifecyleListener[K, V]
 }
 
 // CacheOptions holds various cache options.
 type CacheOptions struct {
-	DefaultExpiry time.Duration
+	DefaultExpiry    time.Duration
+	NearCacheOptions *NearCacheOptions
+}
+
+// NearCacheOptions defines options when creating a near cache.
+type NearCacheOptions struct {
+	TTL                  time.Duration
+	HighUnits            int64
+	HighUnitsMemory      int64
+	InvalidationStrategy InvalidationStrategyType // currently only supports ListenAll
+}
+
+func (n NearCacheOptions) String() string {
+	return fmt.Sprintf("NearCacheOptions{TTL=%v, HighUnits=%v, HighUnitsMemory=%v, invalidationStrategy=%v}",
+		n.TTL, n.HighUnits, n.HighUnitsMemory, getInvalidationStrategyString(n.InvalidationStrategy))
 }
 
 // WithExpiry returns a function to set the default expiry for a [NamedCache]. This option is not valid on [NamedMap].
@@ -83,9 +105,19 @@ func WithExpiry(ttl time.Duration) func(cacheOptions *CacheOptions) {
 	}
 }
 
+// WithNearCache returns a function to set [NearCacheOptions].
+func WithNearCache(options *NearCacheOptions) func(cacheOptions *CacheOptions) {
+	return func(s *CacheOptions) {
+		s.NearCacheOptions = options
+	}
+}
+
 // executeClear executes the clear operation against a baseClient.
 func executeClear[K comparable, V any](ctx context.Context, bc *baseClient[K, V]) error {
-	err := bc.ensureClientConnection()
+	var (
+		err       = bc.ensureClientConnection()
+		nearCache = bc.nearCache
+	)
 	if err != nil {
 		return err
 	}
@@ -98,6 +130,12 @@ func executeClear[K comparable, V any](ctx context.Context, bc *baseClient[K, V]
 	clearRequest := pb.ClearRequest{Cache: bc.name, Scope: bc.sessionOpts.Scope}
 
 	_, err = bc.client.Clear(newCtx, &clearRequest)
+
+	// clear the near cache
+	if err != nil && nearCache != nil {
+		nearCache.Clear()
+	}
+
 	return err
 }
 
@@ -182,7 +220,10 @@ func executeRemoveIndex[K comparable, V, T, E any](ctx context.Context, bc *base
 
 // executeTruncate executes the truncate operation against a baseClient.
 func executeTruncate[K comparable, V any](ctx context.Context, bc *baseClient[K, V]) error {
-	err := bc.ensureClientConnection()
+	var (
+		err       = bc.ensureClientConnection()
+		nearCache = bc.nearCache
+	)
 	if err != nil {
 		return err
 	}
@@ -195,6 +236,12 @@ func executeTruncate[K comparable, V any](ctx context.Context, bc *baseClient[K,
 	request := pb.TruncateRequest{Cache: bc.name, Scope: bc.sessionOpts.Scope}
 
 	_, err = bc.client.Truncate(newCtx, &request)
+
+	// clear the near cache
+	if err != nil && nearCache != nil {
+		nearCache.Clear()
+	}
+
 	return err
 }
 
@@ -230,7 +277,7 @@ func executeDestroy[K comparable, V any](ctx context.Context, bc *baseClient[K, 
 	return nil
 }
 
-// executeRelease releases a NamedCache or NamedMap
+// executeRelease releases a NamedCache or NamedMap.
 func executeRelease[K comparable, V any](bc *baseClient[K, V], nm NamedMap[K, V]) {
 	bc.eventManager.dispatch(Released, func() MapLifecycleEvent[K, V] {
 		return newMapLifecycleEvent(nm, Released)
@@ -246,9 +293,10 @@ func executeRelease[K comparable, V any](bc *baseClient[K, V], nm NamedMap[K, V]
 // executeContainsKey executes the containsKey operation against a baseClient.
 func executeContainsKey[K comparable, V any](ctx context.Context, bc *baseClient[K, V], key K) (bool, error) {
 	var (
-		result *wrapperspb.BoolValue
-		err    = bc.ensureClientConnection()
-		binKey []byte
+		result    *wrapperspb.BoolValue
+		err       = bc.ensureClientConnection()
+		binKey    []byte
+		nearCache = bc.nearCache
 	)
 	if err != nil {
 		return false, err
@@ -257,6 +305,15 @@ func executeContainsKey[K comparable, V any](ctx context.Context, bc *baseClient
 	newCtx, cancel := bc.session.ensureContext(ctx)
 	if cancel != nil {
 		defer cancel()
+	}
+
+	// check near cache
+	if nearCache != nil {
+		ncValue := bc.nearCache.Get(key)
+		if ncValue != nil {
+			nearCache.registerHit()
+			return true, nil
+		}
 	}
 
 	binKey, err = bc.keySerializer.Serialize(key)
@@ -369,6 +426,7 @@ func executeGet[K comparable, V any](ctx context.Context, bc *baseClient[K, V], 
 		binKey    []byte
 		err       = bc.ensureClientConnection()
 		zeroValue *V
+		nearCache = bc.nearCache
 	)
 
 	if err != nil {
@@ -380,21 +438,50 @@ func executeGet[K comparable, V any](ctx context.Context, bc *baseClient[K, V], 
 		defer cancel()
 	}
 
+	// check near cache
+	if nearCache != nil {
+		ncValue := bc.nearCache.Get(key)
+		if ncValue != nil {
+			nearCache.registerHit()
+			return ncValue, nil
+		}
+	}
+
 	binKey, err = bc.keySerializer.Serialize(key)
 
 	if err != nil {
 		return zeroValue, err
 	}
 
+	if nearCache != nil {
+		// if we get here then it must be a near cache miss because if it was a hit
+		// we would have returned already, so save total time we have spent getting
+		// the value from Coherence.
+		defer func(start time.Time) {
+			nearCache.registerMissesNanos(time.Since(start).Nanoseconds())
+			nearCache.registerMiss()
+		}(time.Now())
+	}
+
 	getRequest := pb.GetRequest{Key: binKey, Cache: bc.name, Format: bc.format, Scope: bc.sessionOpts.Scope}
 
 	result, err := bc.client.Get(newCtx, &getRequest)
+
 	if err != nil {
 		return zeroValue, err
 	}
 
 	if result.Present {
-		return bc.valueSerializer.Deserialize(result.Value)
+		v, err1 := bc.valueSerializer.Deserialize(result.Value)
+		if err1 != nil {
+			return nil, err1
+		}
+
+		// Add to near cache if one is configured, and we found a value
+		if nearCache != nil && v != nil {
+			bc.nearCache.Put(key, *v)
+		}
+		return v, nil
 	}
 
 	return nil, nil
@@ -403,9 +490,12 @@ func executeGet[K comparable, V any](ctx context.Context, bc *baseClient[K, V], 
 // executeGet executes the GetAll operation against a baseClient.
 func executeGetAll[K comparable, V any](ctx context.Context, bc *baseClient[K, V], keys []K) <-chan *StreamedEntry[K, V] {
 	var (
-		err     = bc.ensureClientConnection()
-		binKeys = make([][]byte, 0)
-		ch      = make(chan *StreamedEntry[K, V])
+		err              = bc.ensureClientConnection()
+		binKeys          = make([][]byte, 0)
+		ch               = make(chan *StreamedEntry[K, V])
+		nearCache        = bc.nearCache
+		nearCacheEntries = make(map[K]*V) // entries found in near cache
+		finalKeys        []K
 	)
 
 	if err != nil {
@@ -415,8 +505,34 @@ func executeGetAll[K comparable, V any](ctx context.Context, bc *baseClient[K, V
 
 	newCtx, cancel := bc.session.ensureContext(ctx)
 
+	// if we have a near cache and size > 0 then check to see if we can get any of
+	// the keys and values from the near cache
+	if nearCache != nil && nearCache.Size() > 0 {
+		nearCacheEntries = nearCache.GetAll(keys)
+	}
+
+	if len(nearCacheEntries) == 0 {
+		// no keys in near cache so fetch all keys
+		finalKeys = keys
+	} else {
+		// we have some keys that were fetched from the near cache, so only
+		// include the keys not found in near cache in the finalKeys list to fetch from cluster
+		finalKeys = make([]K, 0)
+
+		for _, key := range keys {
+			// if we cannot find the key in the near cache entries, then add to final keys to fetch
+			if _, ok := nearCacheEntries[key]; !ok {
+				finalKeys = append(finalKeys, key)
+				nearCache.registerMiss()
+			} else {
+				// we found the key so increment cache hits
+				nearCache.registerHit()
+			}
+		}
+	}
+
 	// serialize the array of keys
-	binKeys, err = serializeKeys[K](bc.keySerializer, keys)
+	binKeys, err = serializeKeys[K](bc.keySerializer, finalKeys)
 	if err != nil {
 		ch <- &StreamedEntry[K, V]{Err: err}
 		return ch
@@ -425,6 +541,17 @@ func executeGetAll[K comparable, V any](ctx context.Context, bc *baseClient[K, V
 	go func() {
 		if cancel != nil {
 			defer cancel()
+		}
+
+		// if we have any entries in the near cache entries then stream these first
+		for k, v := range nearCacheEntries {
+			ch <- &StreamedEntry[K, V]{Key: k, Value: *v}
+		}
+
+		// if we can get all keys from near cache then return immediately
+		if len(finalKeys) == 0 {
+			close(ch)
+			return
 		}
 
 		var (
@@ -465,6 +592,11 @@ func executeGetAll[K comparable, V any](ctx context.Context, bc *baseClient[K, V
 				ch <- &StreamedEntry[K, V]{Err: err1}
 				close(ch)
 				return
+			}
+
+			if nearCache != nil {
+				// add to near cache
+				nearCache.Put(*key, *value)
 			}
 
 			ch <- &StreamedEntry[K, V]{Key: *key, Value: *value}
@@ -780,9 +912,10 @@ func executeKeySetFilter[K comparable, V any](ctx context.Context, bc *baseClien
 // executePutAll executes the PutAll operation against a baseClient.
 func executePutAll[K comparable, V any](ctx context.Context, bc *baseClient[K, V], entries map[K]V) error {
 	var (
-		err      = bc.ensureClientConnection()
-		binKey   []byte
-		binValue []byte
+		err       = bc.ensureClientConnection()
+		binKey    []byte
+		binValue  []byte
+		nearCache = bc.nearCache
 	)
 	if err != nil {
 		return err
@@ -814,6 +947,15 @@ func executePutAll[K comparable, V any](ctx context.Context, bc *baseClient[K, V
 	_, err = bc.client.PutAll(newCtx, &putAllRequest)
 	if err != nil {
 		return err
+	}
+
+	// if we have near cache and the entry exists then update
+	if nearCache != nil {
+		for k, v := range entries {
+			if oldVal := nearCache.Get(k); oldVal != nil {
+				nearCache.Put(k, v)
+			}
+		}
 	}
 
 	return nil
@@ -867,6 +1009,7 @@ func executePutWithExpiry[K comparable, V any](ctx context.Context, bc *baseClie
 		binValue  []byte
 		err       = bc.ensureClientConnection()
 		zeroValue *V
+		nearCache = bc.nearCache
 	)
 
 	// check that the expiry value is no > Integer.MAX_VALUE millis on Java, which is 2147483647
@@ -901,6 +1044,14 @@ func executePutWithExpiry[K comparable, V any](ctx context.Context, bc *baseClie
 		return zeroValue, err
 	}
 
+	// if we have near cache and the entry exists then update this as well because we do
+	// not use synchronous listener like we do on Java
+	if nearCache != nil {
+		if oldValue := nearCache.Get(key); oldValue != nil {
+			nearCache.Put(key, value)
+		}
+	}
+
 	return bc.valueSerializer.Deserialize(result.Value)
 }
 
@@ -911,6 +1062,7 @@ func executeRemove[K comparable, V any](ctx context.Context, bc *baseClient[K, V
 		oldValue  *wrapperspb.BytesValue
 		binKey    []byte
 		zeroValue *V
+		nearCache = bc.nearCache
 	)
 	if err != nil {
 		return zeroValue, err
@@ -933,16 +1085,21 @@ func executeRemove[K comparable, V any](ctx context.Context, bc *baseClient[K, V
 		return zeroValue, err
 	}
 
+	if nearCache != nil {
+		nearCache.Remove(key)
+	}
+
 	return bc.valueSerializer.Deserialize(oldValue.Value)
 }
 
 // executeRemoveMapping executes the RemoveMapping operation against a baseClient.
 func executeRemoveMapping[K comparable, V any](ctx context.Context, bc *baseClient[K, V], key K, value V) (bool, error) {
 	var (
-		result   *wrapperspb.BoolValue
-		err      = bc.ensureClientConnection()
-		binKey   []byte
-		binValue []byte
+		result    *wrapperspb.BoolValue
+		err       = bc.ensureClientConnection()
+		binKey    []byte
+		binValue  []byte
+		nearCache = bc.nearCache
 	)
 
 	if err != nil {
@@ -970,6 +1127,11 @@ func executeRemoveMapping[K comparable, V any](ctx context.Context, bc *baseClie
 	if err != nil {
 		return false, err
 	}
+
+	if result.Value && nearCache != nil {
+		nearCache.Remove(key)
+	}
+
 	return result.Value, nil
 }
 
@@ -1019,6 +1181,7 @@ func executeReplaceMapping[K comparable, V any](ctx context.Context, bc *baseCli
 		binKey       []byte
 		binPrevValue []byte
 		binNewValue  []byte
+		nearCache    = bc.nearCache
 	)
 
 	if err != nil {
@@ -1051,6 +1214,12 @@ func executeReplaceMapping[K comparable, V any](ctx context.Context, bc *baseCli
 	result, err = bc.client.ReplaceMapping(newCtx, &request)
 	if err != nil {
 		return false, err
+	}
+
+	if nearCache != nil && result.Value {
+		if old := nearCache.Get(key); old != nil {
+			nearCache.Put(key, newValue)
+		}
 	}
 	return result.Value, nil
 }
@@ -1379,4 +1548,11 @@ func ensureError(err error) error {
 		return fmt.Errorf("this operation is not supported by the current gRPC proxy, either upgrade the version of Coherence on the gRPC proxy or connect to a gRPC proxy that supports the operation: %w", err)
 	}
 	return err
+}
+
+func getInvalidationStrategyString(strategy InvalidationStrategyType) string {
+	if strategy == ListenAll {
+		return "ListenAll"
+	}
+	return "UNKNOWN"
 }

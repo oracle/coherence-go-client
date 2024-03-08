@@ -27,15 +27,22 @@ import (
 )
 
 // ErrInvalidFormat indicates that the serialization format can only be JSON.
-var ErrInvalidFormat = errors.New("format can only be 'json'")
+var (
+	ErrInvalidFormat             = errors.New("format can only be 'json'")
+	ErrInvalidNearCache          = errors.New("you must specify at least one near cache option")
+	ErrInvalidNearCacheWithTTL   = errors.New("when using TTL for near cache you can only specify highUnits or highUnitsMemory")
+	ErrInvalidNearCacheWithNoTTL = errors.New("you can only specify highUnits or highUnitsMemory, not both")
+	ErrNegativeNearCacheOptions  = errors.New("you cannot specify negative values for near cache options")
+)
 
 const (
-	defaultFormat            = "json"
-	mapOrCacheExists         = "the %s %s already exists with different type parameters"
-	defaultRequestTimeout    = "30000" // millis
-	defaultDisconnectTimeout = "30000" // millis
-	defaultReadyTimeout      = "0"     // millis
-	insecureWarning          = "WARNING: you have turned off SSL certificate validation. This is insecure and not recommended."
+	defaultFormat             = "json"
+	mapOrCacheExists          = "the %s %s already exists with different type parameters"
+	mapOrCacheExistsNearCache = "the %s %s already exists with different near cache options"
+	defaultRequestTimeout     = "30000" // millis
+	defaultDisconnectTimeout  = "30000" // millis
+	defaultReadyTimeout       = "0"     // millis
+	insecureWarning           = "WARNING: you have turned off SSL certificate validation. This is insecure and not recommended."
 )
 
 // Session provides APIs to create NamedCaches. The [NewSession] method creates a
