@@ -120,7 +120,7 @@ Source code: [basic/near_cache/high_units/main.go](basic/near_cache/high_units/m
 go run basic/near_cache/high_units/main.go
 ```
 
-#### Near cache with high units memory of 5K
+#### Near cache with high units memory of 10KB
 
 Source code: [basic/near_cache/memory/main.go](basic/near_cache/memory/main.go)
 
