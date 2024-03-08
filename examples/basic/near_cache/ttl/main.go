@@ -5,7 +5,7 @@
  */
 
 /*
-Package main shows how to use a near cache with a [NamedMap] or [NamedCache] with an expiry of 10 seconds.
+Package main shows how to use a near cache with a NamedMap or NamedCache with an expiry of 10 seconds.
 */
 package main
 

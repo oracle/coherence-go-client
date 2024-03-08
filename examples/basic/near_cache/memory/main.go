@@ -5,7 +5,7 @@
  */
 
 /*
-Package main shows how to use a near cache with a [NamedMap] or [NamedCache] with high units memory of 10k.
+Package main shows how to use a near cache with a NamedMap or NamedCache with high units memory of 10k.
 */
 package main
 
