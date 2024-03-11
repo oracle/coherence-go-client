@@ -198,6 +198,9 @@ type NamedMap[K comparable, V any] interface {
 	// GetNearCacheStats returns the [CacheStats] for a near cache for a [NamedMap] or [NamedCache].
 	// If no near cache is defined, nil is returned.
 	GetNearCacheStats() CacheStats
+
+	// GetCacheName returns the cache name of the [NamedMap] or [NamedCache].
+	GetCacheName() string
 }
 
 // NamedCache is syntactically identical in behaviour to a NamedMap, but additionally implements
