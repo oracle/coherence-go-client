@@ -248,6 +248,11 @@ func RemoveIndex[K comparable, V, T, E any](ctx context.Context, nm NamedMap[K, 
 	return executeRemoveIndex(ctx, nm.getBaseClient(), extractor)
 }
 
+// GetCacheName returns the cache name of the [NamedMap].
+func (nm *NamedMapClient[K, V]) GetCacheName() string {
+	return nm.name
+}
+
 // AddLifecycleListener adds a [MapLifecycleListener] that will receive events (truncated or released) that occur
 // against the [NamedMap].
 func (nm *NamedMapClient[K, V]) AddLifecycleListener(listener MapLifecycleListener[K, V]) {

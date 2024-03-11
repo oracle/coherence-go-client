@@ -186,7 +186,7 @@ func (l *mapLifecycleEvent[K, V]) Source() NamedMap[K, V] {
 
 // String returns a string representation of a MapLifecycleEvent.
 func (l *mapLifecycleEvent[K, V]) String() string {
-	return fmt.Sprintf("MapLifecycleEvent{source=%v, type=%s}", l.Source(), l.Type())
+	return fmt.Sprintf("MapLifecycleEvent{source=%v, type=%s}", l.Source().GetCacheName(), l.Type())
 }
 
 // MapEvent an event which indicates that the content of the NamedMap or
@@ -321,8 +321,8 @@ func (e *mapEvent[K, V]) String() string {
 		}
 		return *val
 	}
-	return fmt.Sprintf("MapEvent{source=%v, name=%s, type=%s, key=%s, oldValue=%s, newValue=%s}",
-		source, source.Name(), e.eventType, keyEval(key, keyErr), valueEval(oldValue, oldErr), valueEval(newValue, newErr))
+	return fmt.Sprintf("MapEvent{source=%v, name=%s, type=%s, key=%v, oldValue=%v, newValue=%v}",
+		source.GetCacheName(), source.Name(), e.eventType, keyEval(key, keyErr), valueEval(oldValue, oldErr), valueEval(newValue, newErr))
 }
 
 type SessionLifecycleListener interface {

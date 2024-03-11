@@ -28,6 +28,11 @@ func (nc *NamedCacheClient[K, V]) getBaseClient() *baseClient[K, V] { // nolint
 	return &nc.baseClient
 }
 
+// GetCacheName returns the cache name of the [NamedCache].
+func (nc *NamedCacheClient[K, V]) GetCacheName() string {
+	return nc.name
+}
+
 // AddLifecycleListener Adds a [MapLifecycleListener] that will receive events (truncated or released) that occur
 // against the [NamedCache].
 func (nc *NamedCacheClient[K, V]) AddLifecycleListener(listener MapLifecycleListener[K, V]) {

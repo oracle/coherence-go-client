@@ -132,7 +132,7 @@ func executeClear[K comparable, V any](ctx context.Context, bc *baseClient[K, V]
 	_, err = bc.client.Clear(newCtx, &clearRequest)
 
 	// clear the near cache
-	if err != nil && nearCache != nil {
+	if nearCache != nil {
 		nearCache.Clear()
 	}
 
@@ -238,7 +238,7 @@ func executeTruncate[K comparable, V any](ctx context.Context, bc *baseClient[K,
 	_, err = bc.client.Truncate(newCtx, &request)
 
 	// clear the near cache
-	if err != nil && nearCache != nil {
+	if nearCache != nil {
 		nearCache.Clear()
 	}
 
