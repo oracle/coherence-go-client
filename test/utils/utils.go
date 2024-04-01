@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2023 Oracle and/or its affiliates.
+ * Copyright (c) 2022, 2024 Oracle and/or its affiliates.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * https://oss.oracle.com/licenses/upl.
  */
@@ -47,7 +47,7 @@ type TestContext struct {
 var (
 	currentTestContext *TestContext
 	emptyByte          = make([]byte, 0)
-	ctx                = context.Background()
+	localCtx           = context.Background()
 )
 
 const (
@@ -373,7 +373,7 @@ func GetSession(options ...func(session *coherence.SessionOptions)) (*coherence.
 		}
 	}
 
-	return coherence.NewSession(ctx, sessionOptions...)
+	return coherence.NewSession(localCtx, sessionOptions...)
 }
 
 // createTLSOptions creates tls.Config for testing.
@@ -439,7 +439,7 @@ func validateFilePath(file string) error {
 func GetNamedMapWithScope[K comparable, V any](g *gomega.WithT, session *coherence.Session, cacheName, _ string) coherence.NamedMap[K, V] {
 	namedCache, err := coherence.GetNamedMap[K, V](session, cacheName)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-	err = namedCache.Clear(ctx)
+	err = namedCache.Clear(localCtx)
 	g.Expect(err).NotTo(gomega.HaveOccurred())
 
 	return namedCache
@@ -448,7 +448,7 @@ func GetNamedMapWithScope[K comparable, V any](g *gomega.WithT, session *coheren
 func GetNamedCacheWithScope[K comparable, V any](g *gomega.WithT, session *coherence.Session, cacheName, _ string) coherence.NamedCache[K, V] {
 	namedCache, err := coherence.GetNamedCache[K, V](session, cacheName)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-	err = namedCache.Clear(ctx)
+	err = namedCache.Clear(localCtx)
 	g.Expect(err).NotTo(gomega.HaveOccurred())
 
 	return namedCache
@@ -463,13 +463,13 @@ func GetNamedCache[K comparable, V any](g *gomega.WithT, session *coherence.Sess
 }
 
 func AssertSize[K comparable, V any](g *gomega.WithT, namedMap coherence.NamedMap[K, V], expectedSize int) {
-	size, err := namedMap.Size(ctx)
+	size, err := namedMap.Size(localCtx)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	g.Expect(size).To(gomega.Equal(expectedSize))
 }
 
 func ClearNamedMap[K comparable, V any](g *gomega.WithT, namedCache coherence.NamedMap[K, V]) {
-	err := namedCache.Clear(ctx)
+	err := namedCache.Clear(localCtx)
 	g.Expect(err).NotTo(gomega.HaveOccurred())
 }
 
@@ -516,20 +516,20 @@ type Address struct {
 func RunKeyValueTest[K comparable, V any](g *gomega.WithT, cache coherence.NamedMap[K, V], key K, value V) {
 	var (
 		result   *V
-		err      = cache.Clear(ctx)
+		err      = cache.Clear(localCtx)
 		oldValue *V
 	)
 	g.Expect(err).NotTo(gomega.HaveOccurred())
 
-	_, err = cache.Put(ctx, key, value)
+	_, err = cache.Put(localCtx, key, value)
 	g.Expect(err).NotTo(gomega.HaveOccurred())
 
-	result, err = cache.Get(ctx, key)
+	result, err = cache.Get(localCtx, key)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 	g.Expect(*result).To(gomega.Equal(value))
 
-	oldValue, err = cache.Remove(ctx, key)
+	oldValue, err = cache.Remove(localCtx, key)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	g.Expect(oldValue).To(gomega.Equal(result))
 }
@@ -538,14 +538,14 @@ func RunKeyValueTest[K comparable, V any](g *gomega.WithT, cache coherence.Named
 func RunKeyValueTestNamedCache[K comparable, V any](g *gomega.WithT, cache coherence.NamedCache[K, V], key K, value V) {
 	var (
 		result interface{}
-		err    = cache.Clear(ctx)
+		err    = cache.Clear(localCtx)
 	)
 	g.Expect(err).NotTo(gomega.HaveOccurred())
 
-	_, err = cache.Put(ctx, key, value)
+	_, err = cache.Put(localCtx, key, value)
 	g.Expect(err).NotTo(gomega.HaveOccurred())
 
-	result, err = cache.Get(ctx, key)
+	result, err = cache.Get(localCtx, key)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 	g.Expect(result).To(gomega.Equal(value))
