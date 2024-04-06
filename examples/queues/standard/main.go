@@ -22,7 +22,7 @@ func main() {
 		ctx   = context.Background()
 	)
 
-	const iterations = 100_000
+	const iterations = 10
 
 	// create a new Session to the default gRPC port of 1408 using plain text
 	session, err := coherence.NewSession(ctx, coherence.WithPlainText())
@@ -36,25 +36,22 @@ func main() {
 		panic(err)
 	}
 
+	// Offer() 10 entries to the queue
 	for i := 1; i <= iterations; i++ {
 		v := fmt.Sprintf("value-%v", i)
+		log.Printf("Offer() %s to the queue\n", v)
 		err = namedQueue.Offer(v)
 		if err != nil {
 			panic(err)
 		}
-		if i%1000 == 0 {
-			log.Println("Offer()", i)
-		}
 	}
 
 	for i := 1; i <= iterations; i++ {
-		_, err = namedQueue.Poll()
+		value, err = namedQueue.Poll()
 		if err != nil {
 			panic(err)
 		}
-		if i%1000 == 0 {
-			log.Println("Poll() iteration", i)
-		}
+		log.Printf("Poll() returned: %s\n", *value)
 	}
 
 	// try to read again should get nil

@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/oracle/coherence-go-client/coherence/extractors"
 	"github.com/oracle/coherence-go-client/coherence/processors"
+	"log"
 	"sync"
 	"time"
 )
@@ -32,6 +33,7 @@ var (
 	ErrQueueTimedOut       = errors.New("operation timed out for Poll() or Peek()")
 )
 
+// NamedQueue defines a non-blocking Queue implementation.
 type NamedQueue[V any] interface {
 	Offer(value V) error
 	Poll() (*V, error)
@@ -41,6 +43,7 @@ type NamedQueue[V any] interface {
 	Close() error
 }
 
+// NamedBlockingQueue defines a blocking Queue implementation.
 type NamedBlockingQueue[V any] interface {
 	Offer(value V) error
 	Poll(timeout time.Duration) (*V, error)
@@ -57,12 +60,14 @@ type QueueKey struct {
 	ID    int64  `json:"id"`
 }
 
+// QueueOfferResult defines the result of a queue Offer(). Exported only for serialization.
 type QueueOfferResult struct {
 	Class  string `json:"@class"`
 	ID     int64  `json:"id"`
 	Result int    `json:"result"`
 }
 
+// QueuePollResult defines the result of a queue Poll(). Exported only for serialization.
 type QueuePollResult[V any] struct {
 	Class   string `json:"@class"`
 	ID      int64  `json:"id"`
@@ -87,7 +92,7 @@ type namedBlockingQueue[V any] struct {
 	notifier           *queueNotifier
 }
 
-// GetNamedQueue returns a new queue.
+// GetNamedQueue returns a new [NamedQueue].
 func GetNamedQueue[V any](ctx context.Context, session *Session, queueName string) (NamedQueue[V], error) {
 	var (
 		existingQueue interface{}
@@ -129,7 +134,7 @@ func GetNamedQueue[V any](ctx context.Context, session *Session, queueName strin
 	return queue, nil
 }
 
-// GetBlockingNamedQueue returns a new blocking queue.
+// GetBlockingNamedQueue returns a new [NamedBlockingQueue].
 func GetBlockingNamedQueue[V any](ctx context.Context, session *Session, queueName string) (NamedBlockingQueue[V], error) {
 	var (
 		existingQueue interface{}
@@ -291,8 +296,7 @@ func (bq *namedBlockingQueue[V]) peekOrPoll(isPoll bool, timeout time.Duration) 
 			return value, nil
 		}
 
-		// no value, so wait on either event or timeout, subscribe for notification
-		// if any new entries arrive
+		// no value, so wait on either event or timeout, subscribe for notification if any new entries arrive
 		id, ch := bq.notifier.subscribe()
 
 		select {
@@ -313,6 +317,7 @@ func (bq *namedBlockingQueue[V]) Close() error {
 		return err
 	}
 
+	log.Println("Removed listener")
 	return nil
 }
 
@@ -386,6 +391,8 @@ func newQueueCacheListener[V any](namedQueue *namedBlockingQueue[V]) *queueCache
 
 	listener.listener.OnInserted(func(e MapEvent[QueueKey, V]) {
 		// notify all registered listeners that an entry has been added to the Queue
+		namedQueue.notifyMutex.Lock()
+		defer namedQueue.notifyMutex.Unlock()
 		namedQueue.notifier.notifyAll()
 	})
 
@@ -422,7 +429,9 @@ func (qn *queueNotifier) notifyAll() {
 	qn.Lock()
 	defer qn.Unlock()
 	for _, v := range qn.listeners {
-		v <- struct{}{}
+		go func(channel chan struct{}) {
+			channel <- struct{}{}
+		}(v)
 	}
 }
 

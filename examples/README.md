@@ -22,7 +22,7 @@ For local development, we recommend using the Coherence CE Docker image; it cont
 everything necessary for the client to operate correctly.
 
 ```bash
-docker run -d -p 1408:1408 -p 30000:30000 ghcr.io/oracle/coherence-ce:23.09.2
+docker run -d -p 1408:1408 -p 30000:30000 ghcr.io/oracle/coherence-ce:24.03
 ```
 
 ### Index
@@ -36,6 +36,7 @@ docker run -d -p 1408:1408 -p 30000:30000 ghcr.io/oracle/coherence-ce:23.09.2
 * [Listening for map lifecycle events](#lifecycle-events)
 * [Listening for session lifecycle events](#session-lifecycle-events)
 * [Adding indexes](#indexes)
+* [Working with Queues](#queues)
 * [Basic REST server](#rest)
 
 ### <a name="basic"></a> Basic Operations
@@ -284,6 +285,34 @@ Source code: [indexes/main.go](indexes/main.go)
 ```go
 go run indexes/main.go
 ```
+
+### <a name="queues</a> Working with Queues
+
+This example shows how to work with both standard (NamedQueue) and blocking (NamesBlockingQueue).
+
+#### Standard 
+
+Source code: [queues/standard/main.go](queues/standard/main.go)
+
+```go
+go run queues/standard/main.go
+```
+
+#### Blocking
+
+This example show how to use a blocking queue. Where you can try to issue a Poll() 
+and provide a timeout incase there are no entries on the Queue.
+
+To run this example there are three programs:
+
+1. [queues/blocking/publisher/main.go](queues/blocking/publisher/main.go) - Publishes a specified number of orders to a queue
+2. [queues/blocking/processor/main.go](queues/blocking/processor/main.go) - Polls() on orders-queue, processes the order and places on processed-queue
+3. [queues/blocking/subscriber/main.go](queues/blocking/subscriber/main.go) - Polls() processed-queue and displays processing time
+
+To run this example, do the following in separate command terminals:
+1. Start a subscriber `go run queues/blocking/subscriber/main.go` 
+2. Start one or more processors `go run queues/blocking/processor/main.go` 
+3. Start a publisher and specify the number orders  `go run queues/blocking/publisher/main.go 10000` 
 
 ### <a name="rest"></a> Basic REST server
 

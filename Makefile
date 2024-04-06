@@ -55,6 +55,8 @@ TEST_APPLICATION_IMAGE_1 := $(RELEASE_IMAGE_PREFIX)coherence-go-test-1:1.0.0
 TEST_APPLICATION_IMAGE_2 := $(RELEASE_IMAGE_PREFIX)coherence-go-test-2:1.0.0
 GO_TEST_FLAGS ?= -timeout 50m
 
+DOCKER_COMPOSE:=$(shell type -p docker-compose || echo docker compose)
+
 # ----------------------------------------------------------------------------------------------------------------------
 # Options to append to the Maven command
 # ----------------------------------------------------------------------------------------------------------------------
@@ -276,7 +278,7 @@ test-e2e-standalone-scope: test-clean test gotestsum $(BUILD_PROPS) ## Run e2e t
 .PHONY: test-e2e-standalone-queues
 test-e2e-standalone-queues: test-clean test gotestsum $(BUILD_PROPS) ## Run e2e tests with Coherence with Scope set
 	CGO_ENABLED=0 $(GOTESTSUM) --format testname --junitfile $(TEST_LOGS_DIR)/go-client-test-queues.xml \
-	  -- $(GO_TEST_FLAGS) -v -coverprofile=$(COVERAGE_DIR)/cover-functional-scope.out -v ./test/e2e/queues/... -coverpkg=./coherence/...
+	  -- $(GO_TEST_FLAGS) -v -coverprofile=$(COVERAGE_DIR)/cover-functional-queues.out -v ./test/e2e/queues/... -coverpkg=./coherence/...
 	go tool cover -html=$(COVERAGE_DIR)/cover-functional-queues.out -o $(COVERAGE_DIR)/cover-functional-queues.html
 	@echo
 	@echo "**** CODE COVERAGE ****"
@@ -295,14 +297,14 @@ test-examples: test-clean gotestsum $(BUILD_PROPS) ## Run examples tests with Co
 # ----------------------------------------------------------------------------------------------------------------------
 .PHONY: test-cluster-startup
 test-cluster-startup: $(BUILD_PROPS) ## Startup any test cluster members using docker-compose
-	cd test/utils && docker-compose -f docker-compose-2-members.yaml up -d
+	cd test/utils && $(DOCKER_COMPOSE) -f docker-compose-2-members.yaml up -d
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Shutdown any cluster members via docker compose
 # ----------------------------------------------------------------------------------------------------------------------
 .PHONY: test-cluster-shutdown
 test-cluster-shutdown: ## Shutdown any test cluster members using docker-compose
-	cd test/utils && docker-compose -f docker-compose-2-members.yaml down || true
+	cd test/utils && $(DOCKER_COMPOSE) -f docker-compose-2-members.yaml down || true
 
 
 # ----------------------------------------------------------------------------------------------------------------------

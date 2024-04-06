@@ -44,7 +44,7 @@ pause && pause && pause && pause
 set -e
 cd examples
 
-find . -type f -name '*.go' | grep -v people_listen | grep -v people_insert | grep -v doc.go | grep -v rest | while read file
+find . -type f -name '*.go' | grep -v people_listen | grep -v people_insert | grep -v doc.go | grep -v rest | grep -v blocking | while read file
 do
   echo
   echo "==========================================="

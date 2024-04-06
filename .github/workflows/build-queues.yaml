@@ -68,7 +68,7 @@ jobs:
       with:
         go-version: '${{ matrix.go-version }}'
 
-    - name: E2E Local Tests
+    - name: E2E Queue Tests
       env:
         COH_VERSION: ${{ matrix.coherenceVersion }}
       shell: bash

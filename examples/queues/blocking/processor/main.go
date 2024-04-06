@@ -5,7 +5,8 @@
  */
 
 /*
-Package main shows how to use a blocking queue.
+Package main shows how to use a blocking queue. This program simulates order processing by issuing
+a blocking Poll() on the "orders-queue" and on receive processes the order and places on the "processed-queue".
 */
 package main
 
@@ -78,7 +79,7 @@ func main() {
 			panic(err)
 		}
 
-		// simular processing
+		// simulate processing and set the processing time ...
 		start := time.Now()
 		time.Sleep(time.Duration(10) * time.Millisecond)
 		order.CompleteTime = time.Now()

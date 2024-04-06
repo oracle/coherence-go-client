@@ -5,7 +5,7 @@
  */
 
 /*
-Package main shows how to use a blocking queue.
+Package main shows how to use a blocking queue. This program simulates submitting orders to the "orders-queue".
 */
 package main
 

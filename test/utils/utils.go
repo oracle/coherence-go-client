@@ -120,11 +120,12 @@ func StartCoherenceCluster(fileName, url string) error {
 	return nil
 }
 
-// DockerComposeUp runs docker-compose up on a given file
+// DockerComposeUp runs docker compose up on a given file
 func DockerComposeUp(composeFile string) (string, error) {
-	fmt.Println("Issuing docker-compose up with file " + composeFile)
+	command, args := getDockerComposeCommand([]string{"-f", composeFile, "--env-file", "../../../test/utils/.env", "up", "-d"}...)
+	fmt.Printf("Issuing %s up with file %v\n", command, composeFile)
 
-	output, err := ExecuteHostCommand("docker-compose", "-f", composeFile, "--env-file", "../../utils/.env", "up", "-d")
+	output, err := ExecuteHostCommand(command, args...)
 
 	if err != nil {
 		fmt.Println(output)
@@ -179,13 +180,15 @@ func CollectDockerLogs() error {
 	return nil
 }
 
-// DockerComposeDown runs docker-compose down on a given file
+// DockerComposeDown runs docker compose down on a given file
 func DockerComposeDown(composeFile string) (string, error) {
-	fmt.Println("Issuing docker-compose down with file " + composeFile)
+	fmt.Println("Issuing docker compose down with file " + composeFile)
 	// sleep as sometimes docker compose networks are not completely stopped
 	Sleep(5)
 
-	output, err := ExecuteHostCommand("docker-compose", "-f", composeFile, "down")
+	command, args := getDockerComposeCommand([]string{"-f", composeFile, "down"}...)
+
+	output, err := ExecuteHostCommand(command, args...)
 
 	if err != nil {
 		fmt.Println(output)
@@ -549,4 +552,22 @@ func RunKeyValueTestNamedCache[K comparable, V any](g *gomega.WithT, cache coher
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 	g.Expect(result).To(gomega.Equal(value))
+}
+
+// getDockerComposeCommand returns true if we should use "docker-compose" (v1).
+func useDockerComposeV1() bool {
+	return os.Getenv("DOCKER_COMPOSE_V1") != ""
+}
+
+func getDockerComposeCommand(arguments ...string) (string, []string) {
+	command := "docker"
+	args := arguments
+	if useDockerComposeV1() {
+		command = "docker-compose"
+	} else {
+		finalArgs := []string{"compose"}
+		args = append(finalArgs, args...)
+	}
+
+	return command, args
 }

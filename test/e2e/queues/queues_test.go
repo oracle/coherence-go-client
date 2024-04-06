@@ -387,8 +387,114 @@ func TestStandardBlockingQueueCloseOperation(t *testing.T) {
 
 	// we should be able to wait for the wg successfully
 	wg.Wait()
+}
 
-	// now exit and no locks
+func TestStandardBlockingQueueMultipleGoRoutines(t *testing.T) {
+	const (
+		queueName     = "blocking-queue-4"
+		numGoRoutines = 10
+	)
+
+	var (
+		g        = gomega.NewWithT(t)
+		err      error
+		session1 *coherence.Session
+		session2 *coherence.Session
+		ctx      = context.Background()
+		wg       sync.WaitGroup
+		results  = make(map[int]int, numGoRoutines)
+		mapMutex sync.Mutex
+	)
+
+	cancelCtx, cancel := context.WithCancel(context.Background())
+
+	// Note: We use two sessions, so we can have a standard and blocking queue with the same name
+	session1, err = GetSession()
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	defer session1.Close()
+
+	session2, err = GetSession()
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	defer session2.Close()
+
+	receivingQueue, err := coherence.GetBlockingNamedQueue[string](ctx, session1, queueName)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	defer receivingQueue.Close()
+
+	publishingQueue, err := coherence.GetNamedQueue[string](ctx, session2, queueName)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+
+	validateQueueSize(g, publishingQueue, 0)
+
+	// start numGoRoutines go routines
+	for i := 0; i < numGoRoutines; i++ {
+		log.Println("Starting go routine", i)
+		go runBlockingDequeue(cancelCtx, receivingQueue, results, i, &mapMutex)
+	}
+
+	// sleep for 5 seconds to allow for the Poll() to try a few times
+	time.Sleep(time.Duration(5) * time.Second)
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for i := 1; i <= 3_000; i++ {
+			err = publishingQueue.Offer(fmt.Sprintf("value=%d", i))
+			if i%250 == 0 {
+				log.Println("publish", i)
+			}
+		}
+	}()
+
+	// we should be able to wait for the wg successfully
+	wg.Wait()
+
+	// we should see at least one entry per go routine
+	mapMutex.Lock()
+	for k, v := range results {
+		log.Printf("routine=%d, count=%d\n", k, v)
+		g.Expect(v > 0).To(gomega.BeTrue())
+	}
+	mapMutex.Unlock()
+
+	log.Println("Done, exiting")
+	cancel()
+	time.Sleep(time.Second)
+	// ensure cancel is processed
+	// we should be able to exit fine
+}
+
+func runBlockingDequeue(cancelCtx context.Context, receivingQueue coherence.NamedBlockingQueue[string], results map[int]int, routine int, mtx *sync.Mutex) {
+	var (
+		err           error
+		receivedCount = 0
+	)
+	for {
+		_, err = receivingQueue.Poll(time.Duration(2) * time.Second)
+		if err == coherence.ErrQueueTimedOut {
+			time.Sleep(time.Second)
+			continue
+		}
+		if err != nil {
+			// exit the go routine as we may be closing the connection
+			return
+		}
+		receivedCount++
+		mtx.Lock()
+		results[routine] = receivedCount
+		mtx.Unlock()
+		if receivedCount%10 == 0 {
+			log.Printf("routine=%d, dequeue count=%d...", routine, receivedCount)
+		}
+
+		// check for cancel
+		select {
+		case <-cancelCtx.Done():
+			return
+		case <-time.After(time.Duration(1) * time.Millisecond):
+			continue
+		}
+	}
 }
 
 func validateQueueSize(g *gomega.WithT, namedQueue coherence.NamedQueue[string], expectedSize int) {

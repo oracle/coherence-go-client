@@ -5,7 +5,8 @@
  */
 
 /*
-Package main shows how to use a blocking queue.
+Package main shows how to use a blocking queue. This program subscribes to the "processed-queue" and
+does a Poll() for messages and displays the average and last processing time.
 */
 package main
 
@@ -59,7 +60,7 @@ func main() {
 	log.Println("Waiting for completed orders")
 	start := time.Now()
 	for {
-		order, err = blockingQueue.Poll(time.Duration(10) * time.Second)
+		order, err = blockingQueue.Poll(time.Duration(5) * time.Second)
 		if err == coherence.ErrQueueTimedOut {
 			continue
 		}
