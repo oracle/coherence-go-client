@@ -30,6 +30,7 @@ override ENV_FILE            := test/utils/.env
 
 # Maven version is always 1.0.0 as it is only for testing
 MVN_VERSION ?= 1.0.0
+SHELL := /bin/bash
 
 # Coherence CE version to run base tests against
 COHERENCE_VERSION ?= 22.06.7
