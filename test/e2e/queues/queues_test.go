@@ -305,7 +305,7 @@ func TestStandardBlockingQueueWithGoRoutines(t *testing.T) {
 
 	log.Println("submitted", count)
 
-	// we should be able to wait for the wg successfully
+	// we should be  able to wait for the wg successfully
 	wg.Wait()
 }
 

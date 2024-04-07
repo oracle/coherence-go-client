@@ -88,7 +88,7 @@ type namedQueue[V any] struct {
 type namedBlockingQueue[V any] struct {
 	*baseQueueClient[V]
 	queueCacheListener *queueCacheListener[V]
-	notifyMutex        sync.Mutex
+	notifyMutex        sync.RWMutex
 	notifier           *queueNotifier
 }
 
@@ -302,10 +302,14 @@ func (bq *namedBlockingQueue[V]) peekOrPoll(isPoll bool, timeout time.Duration) 
 		select {
 		case <-ch:
 			// new item added, unsubscribe and attempt to poll() or peek() again,
+			bq.notifyMutex.Lock()
 			bq.notifier.unsubscribe(id)
+			bq.notifyMutex.Unlock()
 		case <-time.After(timeout):
 			// timeout
+			bq.notifyMutex.Lock()
 			bq.notifier.unsubscribe(id)
+			bq.notifyMutex.Unlock()
 			return nil, ErrQueueTimedOut
 		}
 	}

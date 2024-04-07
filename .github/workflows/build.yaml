@@ -64,6 +64,11 @@ jobs:
       with:
         go-version: '${{ matrix.go-version }}'
 
+    - name: Get Docker Images
+      shell: bash
+      run: |
+        docker pull gcr.io/distroless/java17
+
     - name: Copyright Check
       shell: bash
       run: |
