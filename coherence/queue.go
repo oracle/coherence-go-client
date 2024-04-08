@@ -12,7 +12,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/oracle/coherence-go-client/coherence/extractors"
 	"github.com/oracle/coherence-go-client/coherence/processors"
-	"log"
 	"sync"
 	"time"
 )
@@ -398,10 +397,8 @@ func newQueueCacheListener[V any](namedQueue *namedBlockingQueue[V]) *queueCache
 
 	listener.listener.OnInserted(func(e MapEvent[QueueKey, V]) {
 		// notify all registered listeners that an entry has been added to the Queue
-		log.Println("before lock")
 		namedQueue.notifyMutex.Lock()
 		defer namedQueue.notifyMutex.Unlock()
-		log.Println("before notifyAll")
 		namedQueue.notifier.notifyAll()
 	})
 
@@ -413,6 +410,7 @@ func createQueueKey(hash int, id int64) QueueKey {
 }
 
 type queueNotifier struct {
+	sync.Mutex
 	listeners map[string]chan struct{}
 }
 
@@ -424,6 +422,9 @@ func newQueueNotifier() *queueNotifier {
 
 // subscribe subscribes to receive notifications about new queue messages.
 func (qn *queueNotifier) subscribe() (string, chan struct{}) {
+	qn.Lock()
+	defer qn.Unlock()
+
 	id := uuid.New().String()
 	ch := make(chan struct{})
 	qn.listeners[id] = ch
@@ -432,6 +433,9 @@ func (qn *queueNotifier) subscribe() (string, chan struct{}) {
 
 // notifyAll() notifies all listeners registered.
 func (qn *queueNotifier) notifyAll() {
+	qn.Lock()
+	defer qn.Unlock()
+
 	for _, v := range qn.listeners {
 		go func(channel chan struct{}) {
 			channel <- struct{}{}
@@ -441,6 +445,9 @@ func (qn *queueNotifier) notifyAll() {
 
 // unsubscribe unsubscribes from receiving notifications for a uuid.
 func (qn *queueNotifier) unsubscribe(uuid string) {
+	qn.Lock()
+	defer qn.Unlock()
+
 	if v, ok := qn.listeners[uuid]; ok {
 		close(v)
 		delete(qn.listeners, uuid)
