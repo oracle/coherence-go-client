@@ -29,7 +29,7 @@ to a Coherence Cluster using gRPC for the network transport.
 
 #### Requirements
 
-* Coherence CE 22.06.4+ or Coherence 14.1.1.2206.4+ Commercial edition with a configured [gRPCProxy](https://docs.oracle.com/en/middleware/standalone/coherence/14.1.1.2206/develop-remote-clients/using-coherence-grpc-server.html).
+* Coherence CE 22.06.4+, 24.03+ or Coherence 14.1.1.2206.4+ Commercial edition with a configured [gRPCProxy](https://docs.oracle.com/en/middleware/standalone/coherence/14.1.1.2206/develop-remote-clients/using-coherence-grpc-server.html).
 * Go 1.19.+
 
 #### <a name="start"></a> Starting a gRPC enabled Coherence cluster
@@ -39,7 +39,7 @@ For local development, we recommend using the Coherence CE Docker image; it cont
 everything necessary for the client to operate correctly.
 
 ```bash
-docker run -d -p 1408:1408 -p 30000:30000 ghcr.io/oracle/coherence-ce:23.09.2
+docker run -d -p 1408:1408 -p 30000:30000 ghcr.io/oracle/coherence-ce:24.03
 ```
 
 ## Installation

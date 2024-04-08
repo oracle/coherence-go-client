@@ -593,11 +593,11 @@ func (lg *listenerGroup[K, V]) subscribe(ctx context.Context, lite bool) error {
 
 	ctxOp, cancel := context.WithCancel(ctx)
 	lg.manager.pendingRegistrations[lg.request.Uid] = &pendingListenerOp[K, V]{cancel, lg}
+	lg.manager.pendingMutex.Unlock()
 	err := lg.write(&lg.request)
 	if err != nil {
 		return err
 	}
-	lg.manager.pendingMutex.Unlock()
 
 	<-ctxOp.Done()
 	if errInner := ctxOp.Err(); errInner != nil && errInner == context.DeadlineExceeded {
@@ -624,22 +624,26 @@ func (lg *listenerGroup[K, V]) unsubscribe(ctx context.Context) error {
 	lg.manager.pendingMutex.Lock()
 
 	lg.manager.pendingRegistrations[lg.request.Uid] = &pendingListenerOp[K, V]{cancel, lg}
+	lg.manager.pendingMutex.Unlock()
 	err := lg.write(&lg.request)
 	if err != nil {
 		return err
 	}
-	lg.manager.pendingMutex.Unlock()
 
-	<-ctxOp.Done()
-	if errInner := ctxOp.Err(); errInner != nil && errInner == context.DeadlineExceeded {
-		err = errInner
+	select {
+	case <-ctxOp.Done():
+		if errInner := ctxOp.Err(); errInner != nil && errInner == context.DeadlineExceeded {
+			err = errInner
+		}
+		if err == nil {
+			lg.postUnsubscribe()
+		}
+
+		return err
+	case <-time.After(time.Duration(10) * time.Second):
+		// special case for closing queue when trying to de-register map listener
+		return nil
 	}
-
-	if err == nil {
-		lg.postUnsubscribe()
-	}
-
-	return err
 }
 
 // makeGeneralListenerGroup creates and returns a pointer to a new ListenerGroup

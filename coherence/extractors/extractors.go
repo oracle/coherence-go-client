@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2023 Oracle and/or its affiliates.
+ * Copyright (c) 2022, 2024 Oracle and/or its affiliates.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * https://oss.oracle.com/licenses/upl.
  */
@@ -22,6 +22,7 @@ const (
 	chainedExtractorType   = extractorPackage + "ChainedExtractor"
 	identityExtractorType  = extractorPackage + "IdentityExtractor"
 	multiExtractorType     = extractorPackage + "MultiExtractor"
+	queueKeyExtractorType  = "internal.net.queue.extractor.QueueKeyExtractor"
 )
 
 // ValueExtractor extracts a value from a given object.
@@ -177,6 +178,24 @@ func Identity[V any]() ValueExtractor[any, V] {
 	ie := &identityExtractor[any, V]{
 		abstractExtractor: abstractExtractor{
 			Type: identityExtractorType,
+		},
+	}
+	return ie
+}
+
+type queueKeyExtractor[T, E any] struct {
+	abstractExtractor
+}
+
+func (ue *queueKeyExtractor[T, E]) Extract(_ T) (E, error) {
+	var zeroValue E
+	return zeroValue, nil
+}
+
+func QueueKeyExtractor[V any]() ValueExtractor[any, V] {
+	ie := &queueKeyExtractor[any, V]{
+		abstractExtractor: abstractExtractor{
+			Type: queueKeyExtractorType,
 		},
 	}
 	return ie

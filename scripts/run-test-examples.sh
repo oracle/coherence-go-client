@@ -44,14 +44,21 @@ pause && pause && pause && pause
 set -e
 cd examples
 
-find . -type f -name '*.go' | grep -v people_listen | grep -v people_insert | grep -v doc.go | grep -v rest | while read file
+find . -type f -name '*.go' | grep -v people_listen | grep -v people_insert | grep -v doc.go | grep -v rest | grep -v blocking | while read file
 do
   echo
   echo "==========================================="
   echo $file
   echo "==========================================="
 
-  go run -race $file
+  if [ ! -z `echo $file | grep queues` ]; then
+     # Check for queues which cannot be run unless 24.03+
+     if [ ! -z `echo $COHERENCE_VERSION | grep 24.03`]; then
+        go run -race $file
+     fi
+  else
+      go run -race $file
+  fi
 done
 
 # Special case for REST server example

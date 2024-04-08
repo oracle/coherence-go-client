@@ -8,7 +8,7 @@
 # ----------------------------------------------------------------------------------------------------------------------
 
 # This is the version of the coherence-go-client
-VERSION ?=1.1.2
+VERSION ?=1.2.0-rc1
 CURRDIR := $(shell pwd)
 USER_ID := $(shell echo "`id -u`:`id -g`")
 
@@ -30,6 +30,7 @@ override ENV_FILE            := test/utils/.env
 
 # Maven version is always 1.0.0 as it is only for testing
 MVN_VERSION ?= 1.0.0
+SHELL := /bin/bash
 
 # Coherence CE version to run base tests against
 COHERENCE_VERSION ?= 22.06.7
@@ -54,6 +55,8 @@ RELEASE_IMAGE_PREFIX     ?= ghcr.io/oracle/
 TEST_APPLICATION_IMAGE_1 := $(RELEASE_IMAGE_PREFIX)coherence-go-test-1:1.0.0
 TEST_APPLICATION_IMAGE_2 := $(RELEASE_IMAGE_PREFIX)coherence-go-test-2:1.0.0
 GO_TEST_FLAGS ?= -timeout 50m
+
+DOCKER_COMPOSE:=$(shell type -p docker-compose || echo docker compose)
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Options to append to the Maven command
@@ -271,6 +274,18 @@ test-e2e-standalone-scope: test-clean test gotestsum $(BUILD_PROPS) ## Run e2e t
 	@cat $(COVERAGE_DIR)/cover-functional-scope.html | grep 'github.com/oracle/coherence-go-client/coherence' | grep option | sed 's/^.*github/github/' | sed 's,</option.*,,'
 
 # ----------------------------------------------------------------------------------------------------------------------
+# Executes the Go end to end tests for standalone Coherence with Queues set
+# ----------------------------------------------------------------------------------------------------------------------
+.PHONY: test-e2e-standalone-queues
+test-e2e-standalone-queues: test-clean test gotestsum $(BUILD_PROPS) ## Run e2e tests with Coherence with Scope set
+	CGO_ENABLED=0 $(GOTESTSUM) --format testname --junitfile $(TEST_LOGS_DIR)/go-client-test-queues.xml \
+	  -- $(GO_TEST_FLAGS) -v -coverprofile=$(COVERAGE_DIR)/cover-functional-queues.out -v ./test/e2e/queues/... -coverpkg=./coherence/...
+	go tool cover -html=$(COVERAGE_DIR)/cover-functional-queues.out -o $(COVERAGE_DIR)/cover-functional-queues.html
+	@echo
+	@echo "**** CODE COVERAGE ****"
+	@cat $(COVERAGE_DIR)/cover-functional-queues.html | grep 'github.com/oracle/coherence-go-client/coherence' | grep option | sed 's/^.*github/github/' | sed 's,</option.*,,'
+
+# ----------------------------------------------------------------------------------------------------------------------
 # Executes the test of the examples
 # ----------------------------------------------------------------------------------------------------------------------
 .PHONY: test-examples
@@ -283,14 +298,14 @@ test-examples: test-clean gotestsum $(BUILD_PROPS) ## Run examples tests with Co
 # ----------------------------------------------------------------------------------------------------------------------
 .PHONY: test-cluster-startup
 test-cluster-startup: $(BUILD_PROPS) ## Startup any test cluster members using docker-compose
-	cd test/utils && docker-compose -f docker-compose-2-members.yaml up -d
+	cd test/utils && $(DOCKER_COMPOSE) -f docker-compose-2-members.yaml up -d
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Shutdown any cluster members via docker compose
 # ----------------------------------------------------------------------------------------------------------------------
 .PHONY: test-cluster-shutdown
 test-cluster-shutdown: ## Shutdown any test cluster members using docker-compose
-	cd test/utils && docker-compose -f docker-compose-2-members.yaml down || true
+	cd test/utils && $(DOCKER_COMPOSE) -f docker-compose-2-members.yaml down || true
 
 
 # ----------------------------------------------------------------------------------------------------------------------

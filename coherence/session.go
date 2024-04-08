@@ -57,6 +57,7 @@ type Session struct {
 	mapMutex              sync.RWMutex
 	caches                map[string]interface{}
 	maps                  map[string]interface{}
+	queues                map[string]interface{}
 	lifecycleMutex        sync.RWMutex
 	lifecycleListeners    []*SessionLifecycleListener
 	sessionConnectCtx     context.Context
@@ -144,6 +145,7 @@ func NewSession(ctx context.Context, options ...func(session *SessionOptions)) (
 		debug:                 func(v ...any) {},
 		maps:                  make(map[string]interface{}, 0),
 		caches:                make(map[string]interface{}, 0),
+		queues:                make(map[string]interface{}, 0),
 		lifecycleListeners:    []*SessionLifecycleListener{},
 		sessOpts: &SessionOptions{
 			PlainText:          false,
