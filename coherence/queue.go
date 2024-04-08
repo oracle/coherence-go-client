@@ -88,7 +88,7 @@ type namedQueue[V any] struct {
 type namedBlockingQueue[V any] struct {
 	*baseQueueClient[V]
 	queueCacheListener *queueCacheListener[V]
-	notifyMutex        sync.RWMutex
+	notifyMutex        sync.Mutex
 	notifier           *queueNotifier
 }
 
@@ -280,7 +280,7 @@ func (bq *namedBlockingQueue[V]) peekOrPoll(isPoll bool, timeout time.Duration) 
 			value *V
 		)
 
-		// lock while we are polling, specifically don't defer the unlock
+		// lock while we are polling, specifically don't defer unlock
 		bq.notifyMutex.Lock()
 		if isPoll {
 			value, err = poll(bq.baseQueueClient, longMaxValue)
@@ -297,7 +297,11 @@ func (bq *namedBlockingQueue[V]) peekOrPoll(isPoll bool, timeout time.Duration) 
 		}
 
 		// no value, so wait on either event or timeout, subscribe for notification if any new entries arrive
+		// mutex is placed around the subscribe(), unsubscribe() and notifyAll() to ensure we don't try and read
+		// from a closed channel
+		bq.notifyMutex.Lock()
 		id, ch := bq.notifier.subscribe()
+		bq.notifyMutex.Unlock()
 
 		select {
 		case <-ch:
@@ -321,7 +325,6 @@ func (bq *namedBlockingQueue[V]) Close() error {
 		return err
 	}
 
-	log.Println("Removed listener")
 	return nil
 }
 
@@ -395,8 +398,10 @@ func newQueueCacheListener[V any](namedQueue *namedBlockingQueue[V]) *queueCache
 
 	listener.listener.OnInserted(func(e MapEvent[QueueKey, V]) {
 		// notify all registered listeners that an entry has been added to the Queue
+		log.Println("before lock")
 		namedQueue.notifyMutex.Lock()
 		defer namedQueue.notifyMutex.Unlock()
+		log.Println("before notifyAll")
 		namedQueue.notifier.notifyAll()
 	})
 
@@ -408,7 +413,6 @@ func createQueueKey(hash int, id int64) QueueKey {
 }
 
 type queueNotifier struct {
-	sync.Mutex
 	listeners map[string]chan struct{}
 }
 
@@ -420,8 +424,6 @@ func newQueueNotifier() *queueNotifier {
 
 // subscribe subscribes to receive notifications about new queue messages.
 func (qn *queueNotifier) subscribe() (string, chan struct{}) {
-	qn.Lock()
-	defer qn.Unlock()
 	id := uuid.New().String()
 	ch := make(chan struct{})
 	qn.listeners[id] = ch
@@ -430,8 +432,6 @@ func (qn *queueNotifier) subscribe() (string, chan struct{}) {
 
 // notifyAll() notifies all listeners registered.
 func (qn *queueNotifier) notifyAll() {
-	qn.Lock()
-	defer qn.Unlock()
 	for _, v := range qn.listeners {
 		go func(channel chan struct{}) {
 			channel <- struct{}{}
@@ -441,8 +441,6 @@ func (qn *queueNotifier) notifyAll() {
 
 // unsubscribe unsubscribes from receiving notifications for a uuid.
 func (qn *queueNotifier) unsubscribe(uuid string) {
-	qn.Lock()
-	defer qn.Unlock()
 	if v, ok := qn.listeners[uuid]; ok {
 		close(v)
 		delete(qn.listeners, uuid)

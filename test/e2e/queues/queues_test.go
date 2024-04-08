@@ -368,6 +368,7 @@ func TestStandardBlockingQueueCloseOperation(t *testing.T) {
 			log.Println("received", receivedCount)
 
 			if receivedCount == count {
+				log.Println("exiting go routine")
 				break
 			}
 		}
