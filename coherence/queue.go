@@ -437,9 +437,7 @@ func (qn *queueNotifier) notifyAll() {
 	defer qn.Unlock()
 
 	for _, v := range qn.listeners {
-		go func(channel chan struct{}) {
-			channel <- struct{}{}
-		}(v)
+		v <- struct{}{}
 	}
 }
 
