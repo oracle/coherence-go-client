@@ -876,6 +876,7 @@ func runMultipleLifecycleTests(g *gomega.WithT, cache coherence.NamedMap[string,
 	log.Println("Truncate", cache.Name())
 	err = cache.Truncate(ctx)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	time.Sleep(time.Duration(5) * time.Second)
 
 	// function to return the truncate count from the listeners
 	f1 := func() int32 {
