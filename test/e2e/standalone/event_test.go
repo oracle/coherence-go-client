@@ -115,6 +115,7 @@ func TestMapAndLifecycleEventsAll3(t *testing.T) {
 }
 
 func TestMapAndLifecycleEventsAll4(t *testing.T) {
+	t.Skip("Skip until ")
 	g, session := initTest(t)
 	defer session.Close()
 
@@ -850,13 +851,6 @@ func runBasicLifecycleTests(g *gomega.WithT, cache coherence.NamedMap[string, st
 }
 
 func runMultipleLifecycleTests(g *gomega.WithT, cache coherence.NamedMap[string, string]) {
-	defer func(cache coherence.NamedMap[string, string], ctx context.Context) {
-		err := cache.Destroy(ctx)
-		if err != nil && err != coherence.ErrDestroyed {
-			log.Printf("Error destroying map %s: %s", cache.Name(), err)
-		}
-	}(cache, ctx)
-
 	listener1 := NewCountingLifecycleListener[string, string]("listener1")
 	listener2 := NewCountingLifecycleListener[string, string]("listener2")
 

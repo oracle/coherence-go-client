@@ -981,12 +981,14 @@ func (m *mapEventManager[K, V]) ensureStream() (*eventStream, error) {
 					}
 				case *proto.MapListenerResponse_Truncated:
 					{
-						nm := *m.namedMap
-						listeners := nm.getBaseClient().eventManager.lifecycleListeners
-						event := newMapLifecycleEvent(nm, Truncated)
-						for _, l := range listeners {
-							e := *l
-							e.getEmitter().emit(Truncated, event)
+						if m != nil {
+							nm := *m.namedMap
+							listeners := nm.getBaseClient().eventManager.lifecycleListeners
+							event := newMapLifecycleEvent(nm, Truncated)
+							for _, l := range listeners {
+								e := *l
+								e.getEmitter().emit(Truncated, event)
+							}
 						}
 					}
 				case *proto.MapListenerResponse_Destroyed:
