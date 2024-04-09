@@ -74,34 +74,55 @@ func TestMapAndLifecycleEventsAll(t *testing.T) {
 	g, session := initTest(t)
 	defer session.Close()
 
+	namedCache := GetNamedCache[string, string](g, session, "test-events-all-cache")
+	namedMap := GetNamedMap[string, string](g, session, "test-events-all-map")
+
+	runBasicTests(g, namedCache, namedCache.Name(), &expected, -1)
+	runBasicTests(g, namedMap, namedMap.Name(), &expected, -1)
+}
+
+func TestMapAndLifecycleEventsAll1(t *testing.T) {
+	g, session := initTest(t)
+	defer session.Close()
+
 	namedCache := GetNamedCache[string, string](g, session, "test-lifecycle-release-cache")
 	namedMap := GetNamedMap[string, string](g, session, "test-lifecycle-release-map")
 
 	runReleasedLifecycleTests(g, namedMap)
 	runReleasedLifecycleTests(g, namedCache)
+}
 
-	namedCache = GetNamedCache[string, string](g, session, "test-lifecycle-all-cache-multi")
-	namedMap = GetNamedMap[string, string](g, session, "test-lifecycle-all-map-multi")
+func TestMapAndLifecycleEventsAll2(t *testing.T) {
+	g, session := initTest(t)
+	defer session.Close()
+
+	namedCache := GetNamedCache[string, string](g, session, "test-lifecycle-all-cache-multi")
+	namedMap := GetNamedMap[string, string](g, session, "test-lifecycle-all-map-multi")
 
 	runMultipleLifecycleTests(g, namedMap)
 	runMultipleLifecycleTests(g, namedCache)
+}
 
-	namedCache = GetNamedCache[string, string](g, session, "test-lifecycle-all-cache")
-	namedMap = GetNamedMap[string, string](g, session, "test-lifecycle-all-map")
+func TestMapAndLifecycleEventsAll3(t *testing.T) {
+	g, session := initTest(t)
+	defer session.Close()
 
-	Sleep(10)
+	namedCache := GetNamedCache[string, string](g, session, "test-lifecycle-all-cache")
+	namedMap := GetNamedMap[string, string](g, session, "test-lifecycle-all-map")
 
 	runBasicLifecycleTests(g, namedMap, namedMap.Name())
 	runBasicLifecycleTests(g, namedCache, namedCache.Name())
+}
 
-	// re-create the cache as it has been destroyed above
-	namedCache = GetNamedCache[string, string](g, session, "test-events-all-cache")
-	namedMap = GetNamedMap[string, string](g, session, "test-events-all-map")
+func TestMapAndLifecycleEventsAll4(t *testing.T) {
+	g, session := initTest(t)
+	defer session.Close()
 
-	Sleep(10)
+	namedCache := GetNamedCache[string, string](g, session, "test-lifecycle-all-cache")
+	namedMap := GetNamedMap[string, string](g, session, "test-lifecycle-all-map")
 
-	runBasicTests(g, namedCache, namedCache.Name(), &expected, -1)
-	runBasicTests(g, namedMap, namedMap.Name(), &expected, -1)
+	runMultipleLifecycleTests(g, namedMap)
+	runMultipleLifecycleTests(g, namedCache)
 }
 
 // TestEventDisconnect tests to ensure that if we get a disconnect, then we can
