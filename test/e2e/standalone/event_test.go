@@ -832,6 +832,8 @@ func runBasicLifecycleTests(g *gomega.WithT, cache coherence.NamedMap[string, st
 	err = cache.Truncate(ctx)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
+	time.Sleep(time.Duration(5) * time.Second)
+
 	// issue truncate again
 	log.Println("Issue second truncate")
 	err = cache.Truncate(ctx)
