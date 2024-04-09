@@ -866,10 +866,14 @@ func runMultipleLifecycleTests(g *gomega.WithT, cache coherence.NamedMap[string,
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 	// issue truncate
+	log.Println("Truncate", cache.Name())
 	err = cache.Truncate(ctx)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
+	time.Sleep(time.Duration(5) * time.Second)
+
 	// issue truncate again
+	log.Println("Truncate", cache.Name())
 	err = cache.Truncate(ctx)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
@@ -888,6 +892,9 @@ func runMultipleLifecycleTests(g *gomega.WithT, cache coherence.NamedMap[string,
 	// unregister the second listener
 	cache.RemoveLifecycleListener(listener2.listener)
 
+	time.Sleep(time.Duration(5) * time.Second)
+
+	log.Println("Truncate", cache.Name())
 	// issue another truncate, listener2 should not receive the event
 	err = cache.Truncate(ctx)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
@@ -896,6 +903,7 @@ func runMultipleLifecycleTests(g *gomega.WithT, cache coherence.NamedMap[string,
 	g.Expect(expect[int32](f2, 2, 20)).To(gomega.BeNil())
 	g.Expect(expect[int32](f1, 3, 20)).To(gomega.BeNil())
 
+	log.Println("Destroy", cache.Name())
 	// destroy the cache
 	err = cache.Destroy(ctx)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
