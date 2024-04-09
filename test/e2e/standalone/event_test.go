@@ -907,6 +907,7 @@ func runMultipleLifecycleTests(g *gomega.WithT, cache coherence.NamedMap[string,
 	// destroy the cache
 	err = cache.Destroy(ctx)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	time.Sleep(time.Duration(5) * time.Second)
 
 	f1 = func() int32 { return listener1.destroyCount() }
 	g.Expect(expect[int32](f1, 1, 20)).To(gomega.BeNil())
