@@ -64,7 +64,7 @@ func Invoke[K comparable, V, R any](ctx context.Context, nm NamedMap[K, V], key 
 //
 //	age := extractors.Extract[int]("age")
 //
-//	ch := coherence.InvokeAllFilter[int, Person, int](ctx, namedMap, filters.Greater(age, 1), processors.Increment("age", 1)
+//	ch := coherence.InvokeAllFilter[int, Person, int](ctx, namedMap, filters.Greater(age, 1), processors.Increment("age", 1))
 //	for se := range ch {
 //	    // Check the error
 //	    if se.Err != nil {
