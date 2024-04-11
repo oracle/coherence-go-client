@@ -865,15 +865,13 @@ func runMultipleLifecycleTests(g *gomega.WithT, cache coherence.NamedMap[string,
 	_, err := cache.Put(ctx, "A", "A")
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
-	// issue truncate
-	log.Println("Truncate", cache.Name())
+	log.Println("Truncate - 1", cache.Name())
 	err = cache.Truncate(ctx)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 	time.Sleep(time.Duration(5) * time.Second)
 
-	// issue truncate again
-	log.Println("Truncate", cache.Name())
+	log.Println("Truncate - 2", cache.Name())
 	err = cache.Truncate(ctx)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	time.Sleep(time.Duration(5) * time.Second)
