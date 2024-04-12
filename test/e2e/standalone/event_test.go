@@ -824,6 +824,8 @@ func runBasicLifecycleTests(g *gomega.WithT, cache coherence.NamedMap[string, st
 
 	defer cache.RemoveLifecycleListener(listener.listener)
 
+	time.Sleep(time.Duration(5) * time.Second)
+
 	_, err := cache.Put(ctx, "A", "A")
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
