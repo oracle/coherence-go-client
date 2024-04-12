@@ -898,10 +898,12 @@ func runMultipleLifecycleTests(g *gomega.WithT, cache coherence.NamedMap[string,
 
 	time.Sleep(time.Duration(5) * time.Second)
 
-	log.Println("Truncate", cache.Name())
+	log.Println("Truncate - 3", cache.Name())
 	// issue another truncate, listener2 should not receive the event
 	err = cache.Truncate(ctx)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+
+	time.Sleep(time.Duration(5) * time.Second)
 
 	// listener1 should receive the event, but listener2 should not
 	g.Expect(expect[int32](f2, 2, 20)).To(gomega.BeNil())
@@ -913,7 +915,7 @@ func runMultipleLifecycleTests(g *gomega.WithT, cache coherence.NamedMap[string,
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	time.Sleep(time.Duration(5) * time.Second)
 
-	f1 = func() int32 { return listener1.destroyCount() }
+	f1 = func() int32 { return listener1.releaseCount() }
 	g.Expect(expect[int32](f1, 1, 20)).To(gomega.BeNil())
 }
 
