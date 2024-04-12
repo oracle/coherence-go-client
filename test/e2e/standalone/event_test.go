@@ -793,6 +793,9 @@ func runBasicTests(
 		_ = cache.RemoveListener(ctx, listener.listener)
 	}(cache, ctx)
 
+	log.Println("Waiting for event registrations")
+	time.Sleep(time.Duration(5) * time.Second)
+
 	_, err2 := cache.Put(ctx, "A", "A")
 	g.Expect(err2).ShouldNot(gomega.HaveOccurred())
 
@@ -802,7 +805,7 @@ func runBasicTests(
 	_, err4 := cache.Remove(ctx, "A")
 	g.Expect(err4).ShouldNot(gomega.HaveOccurred())
 
-	completed := listener.waitFor(expected.total(), 3*time.Second)
+	completed := listener.waitFor(expected.total(), 5*time.Second)
 	g.Expect(completed).Should(gomega.BeTrue())
 	expected.validate(g, cacheName, listener)
 }
