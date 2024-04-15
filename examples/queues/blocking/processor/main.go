@@ -97,6 +97,5 @@ func main() {
 		if processed%1000 == 0 {
 			log.Printf("Processed %d orders", processed)
 		}
-
 	}
 }

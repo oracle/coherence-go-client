@@ -286,9 +286,11 @@ Source code: [indexes/main.go](indexes/main.go)
 go run indexes/main.go
 ```
 
-### <a name="queues</a> Working with Queues
+### <a name="queues"></a> Working with Queues
 
 This example shows how to work with both standard (NamedQueue) and blocking (NamesBlockingQueue).
+
+> Note: This feature is currently only available when using Coherence server version CE 24.04 and above.
 
 #### Standard 
 
@@ -312,7 +314,7 @@ To run this example there are three programs:
 To run this example, do the following in separate command terminals:
 1. Start a subscriber `go run queues/blocking/subscriber/main.go` 
 2. Start one or more processors `go run queues/blocking/processor/main.go` 
-3. Start a publisher and specify the number orders  `go run queues/blocking/publisher/main.go 10000` 
+3. Start a publisher and specify the number orders `go run queues/blocking/publisher/main.go 10000` 
 
 ### <a name="rest"></a> Basic REST server
 

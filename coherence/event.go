@@ -981,12 +981,14 @@ func (m *mapEventManager[K, V]) ensureStream() (*eventStream, error) {
 					}
 				case *proto.MapListenerResponse_Truncated:
 					{
-						nm := *m.namedMap
-						listeners := nm.getBaseClient().eventManager.lifecycleListeners
-						event := newMapLifecycleEvent(nm, Truncated)
-						for _, l := range listeners {
-							e := *l
-							e.getEmitter().emit(Truncated, event)
+						if m != nil && m.namedMap != nil {
+							nm := *m.namedMap
+							listeners := nm.getBaseClient().eventManager.lifecycleListeners
+							event := newMapLifecycleEvent(nm, Truncated)
+							for _, l := range listeners {
+								e := *l
+								e.getEmitter().emit(Truncated, event)
+							}
 						}
 					}
 				case *proto.MapListenerResponse_Destroyed:
@@ -998,12 +1000,14 @@ func (m *mapEventManager[K, V]) ensureStream() (*eventStream, error) {
 							cancel()
 							return
 						}
-						nm := *m.namedMap
-						listeners := nm.getBaseClient().eventManager.lifecycleListeners
-						event := newMapLifecycleEvent(nm, Destroyed)
-						for _, l := range listeners {
-							e := *l
-							e.getEmitter().emit(Destroyed, event)
+						if m != nil && m.namedMap != nil {
+							nm := *m.namedMap
+							listeners := nm.getBaseClient().eventManager.lifecycleListeners
+							event := newMapLifecycleEvent(nm, Destroyed)
+							for _, l := range listeners {
+								e := *l
+								e.getEmitter().emit(Destroyed, event)
+							}
 						}
 					}
 				case *proto.MapListenerResponse_Error:

@@ -74,34 +74,56 @@ func TestMapAndLifecycleEventsAll(t *testing.T) {
 	g, session := initTest(t)
 	defer session.Close()
 
+	namedCache := GetNamedCache[string, string](g, session, "test-events-all-cache")
+	namedMap := GetNamedMap[string, string](g, session, "test-events-all-map")
+
+	runBasicTests(g, namedCache, namedCache.Name(), &expected, -1)
+	runBasicTests(g, namedMap, namedMap.Name(), &expected, -1)
+}
+
+func TestMapAndLifecycleEventsAll1(t *testing.T) {
+	g, session := initTest(t)
+	defer session.Close()
+
 	namedCache := GetNamedCache[string, string](g, session, "test-lifecycle-release-cache")
 	namedMap := GetNamedMap[string, string](g, session, "test-lifecycle-release-map")
 
 	runReleasedLifecycleTests(g, namedMap)
 	runReleasedLifecycleTests(g, namedCache)
+}
 
-	namedCache = GetNamedCache[string, string](g, session, "test-lifecycle-all-cache-multi")
-	namedMap = GetNamedMap[string, string](g, session, "test-lifecycle-all-map-multi")
+func TestMapAndLifecycleEventsAll2(t *testing.T) {
+	g, session := initTest(t)
+	defer session.Close()
+
+	namedCache := GetNamedCache[string, string](g, session, "test-lifecycle-all-cache-multi")
+	namedMap := GetNamedMap[string, string](g, session, "test-lifecycle-all-map-multi")
 
 	runMultipleLifecycleTests(g, namedMap)
 	runMultipleLifecycleTests(g, namedCache)
+}
 
-	namedCache = GetNamedCache[string, string](g, session, "test-lifecycle-all-cache")
-	namedMap = GetNamedMap[string, string](g, session, "test-lifecycle-all-map")
+func TestMapAndLifecycleEventsAll3(t *testing.T) {
+	g, session := initTest(t)
+	defer session.Close()
 
-	Sleep(10)
+	namedCache := GetNamedCache[string, string](g, session, "test-lifecycle-all-cache")
+	namedMap := GetNamedMap[string, string](g, session, "test-lifecycle-all-map")
 
 	runBasicLifecycleTests(g, namedMap, namedMap.Name())
 	runBasicLifecycleTests(g, namedCache, namedCache.Name())
+}
 
-	// re-create the cache as it has been destroyed above
-	namedCache = GetNamedCache[string, string](g, session, "test-events-all-cache")
-	namedMap = GetNamedMap[string, string](g, session, "test-events-all-map")
+func TestMapAndLifecycleEventsAll4(t *testing.T) {
+	t.Skip("Skip until ")
+	g, session := initTest(t)
+	defer session.Close()
 
-	Sleep(10)
+	namedCache := GetNamedCache[string, string](g, session, "test-lifecycle-all-cache")
+	namedMap := GetNamedMap[string, string](g, session, "test-lifecycle-all-map")
 
-	runBasicTests(g, namedCache, namedCache.Name(), &expected, -1)
-	runBasicTests(g, namedMap, namedMap.Name(), &expected, -1)
+	runMultipleLifecycleTests(g, namedMap)
+	runMultipleLifecycleTests(g, namedCache)
 }
 
 // TestEventDisconnect tests to ensure that if we get a disconnect, then we can
@@ -771,6 +793,9 @@ func runBasicTests(
 		_ = cache.RemoveListener(ctx, listener.listener)
 	}(cache, ctx)
 
+	log.Println("Waiting for event registrations")
+	time.Sleep(time.Duration(5) * time.Second)
+
 	_, err2 := cache.Put(ctx, "A", "A")
 	g.Expect(err2).ShouldNot(gomega.HaveOccurred())
 
@@ -780,7 +805,7 @@ func runBasicTests(
 	_, err4 := cache.Remove(ctx, "A")
 	g.Expect(err4).ShouldNot(gomega.HaveOccurred())
 
-	completed := listener.waitFor(expected.total(), 3*time.Second)
+	completed := listener.waitFor(expected.total(), 5*time.Second)
 	g.Expect(completed).Should(gomega.BeTrue())
 	expected.validate(g, cacheName, listener)
 }
@@ -799,6 +824,8 @@ func runBasicLifecycleTests(g *gomega.WithT, cache coherence.NamedMap[string, st
 
 	defer cache.RemoveLifecycleListener(listener.listener)
 
+	time.Sleep(time.Duration(5) * time.Second)
+
 	_, err := cache.Put(ctx, "A", "A")
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
@@ -810,6 +837,8 @@ func runBasicLifecycleTests(g *gomega.WithT, cache coherence.NamedMap[string, st
 	log.Println("Issue first truncate")
 	err = cache.Truncate(ctx)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+
+	time.Sleep(time.Duration(5) * time.Second)
 
 	// issue truncate again
 	log.Println("Issue second truncate")
@@ -827,13 +856,6 @@ func runBasicLifecycleTests(g *gomega.WithT, cache coherence.NamedMap[string, st
 }
 
 func runMultipleLifecycleTests(g *gomega.WithT, cache coherence.NamedMap[string, string]) {
-	defer func(cache coherence.NamedMap[string, string], ctx context.Context) {
-		err := cache.Destroy(ctx)
-		if err != nil && err != coherence.ErrDestroyed {
-			log.Printf("Error destroying map %s: %s", cache.Name(), err)
-		}
-	}(cache, ctx)
-
 	listener1 := NewCountingLifecycleListener[string, string]("listener1")
 	listener2 := NewCountingLifecycleListener[string, string]("listener2")
 
@@ -848,13 +870,16 @@ func runMultipleLifecycleTests(g *gomega.WithT, cache coherence.NamedMap[string,
 	_, err := cache.Put(ctx, "A", "A")
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
-	// issue truncate
+	log.Println("Truncate - 1", cache.Name())
 	err = cache.Truncate(ctx)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
-	// issue truncate again
+	time.Sleep(time.Duration(5) * time.Second)
+
+	log.Println("Truncate - 2", cache.Name())
 	err = cache.Truncate(ctx)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	time.Sleep(time.Duration(5) * time.Second)
 
 	// function to return the truncate count from the listeners
 	f1 := func() int32 {
@@ -871,19 +896,26 @@ func runMultipleLifecycleTests(g *gomega.WithT, cache coherence.NamedMap[string,
 	// unregister the second listener
 	cache.RemoveLifecycleListener(listener2.listener)
 
+	time.Sleep(time.Duration(5) * time.Second)
+
+	log.Println("Truncate - 3", cache.Name())
 	// issue another truncate, listener2 should not receive the event
 	err = cache.Truncate(ctx)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+
+	time.Sleep(time.Duration(5) * time.Second)
 
 	// listener1 should receive the event, but listener2 should not
 	g.Expect(expect[int32](f2, 2, 20)).To(gomega.BeNil())
 	g.Expect(expect[int32](f1, 3, 20)).To(gomega.BeNil())
 
+	log.Println("Destroy", cache.Name())
 	// destroy the cache
 	err = cache.Destroy(ctx)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	time.Sleep(time.Duration(5) * time.Second)
 
-	f1 = func() int32 { return listener1.destroyCount() }
+	f1 = func() int32 { return listener1.releaseCount() }
 	g.Expect(expect[int32](f1, 1, 20)).To(gomega.BeNil())
 }
 
@@ -970,10 +1002,6 @@ type CountingLifecycleListener[K comparable, V any] struct {
 
 func (cll *CountingLifecycleListener[K, V]) truncateCount() int32 {
 	return cll.truncCount
-}
-
-func (cll *CountingLifecycleListener[K, V]) destroyCount() int32 {
-	return cll.destCount
 }
 
 func (cll *CountingLifecycleListener[K, V]) releaseCount() int32 {

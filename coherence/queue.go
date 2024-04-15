@@ -34,21 +34,53 @@ var (
 
 // NamedQueue defines a non-blocking Queue implementation.
 type NamedQueue[V any] interface {
+	// Offer inserts the specified value to the end of this queue if it is possible to do
+	// so immediately without violating capacity restrictions. If queue is full then
+	// [ErrQueueFailedCapacity] is returned, if error is nil the element was added to the queue.
 	Offer(value V) error
+
+	// Poll retrieves and removes the head of this queue. If error is nil and the returned
+	// value and error is nil this means that there was no entry on the head of the queue.
 	Poll() (*V, error)
+
+	// Peek retrieves, but does not remove, the head of this queue. If error is nil and nil value
+	// return then there is no entry on the head of the queue.
 	Peek() (*V, error)
+
+	// GetName returns the cache name used for the queue.
 	GetName() string
+
+	// Size returns the current size of the queue.
 	Size() (int, error)
+
+	// Close closes a queue and removes any resources associated with it on the client side.
 	Close() error
 }
 
 // NamedBlockingQueue defines a blocking Queue implementation.
 type NamedBlockingQueue[V any] interface {
+	// Offer inserts the specified value to the end of the queue if it is possible to do
+	// so immediately without violating capacity restrictions. If queue is full then
+	// [ErrQueueFailedCapacity] is returned, if error is nil the element was added to the queue.
 	Offer(value V) error
+
+	// Poll retrieves and removes the head of this queue within the specified timeout.
+	// If error is [ErrQueueTimedOut] this means the operation failed to get a value within the timeout.
+	// If error is nil, then the value on the head of the queue is returned.
 	Poll(timeout time.Duration) (*V, error)
+
+	// Peek retrieves, but does not remove, the head of this queue within the specified timeout.
+	// If error is [ErrQueueTimedOut] this means the operation failed to get a value within the timeout.
+	// If error is nil, then the value on the head of the queue is returned.
 	Peek(timeout time.Duration) (*V, error)
+
+	// GetName returns the cache name used for the queue.
 	GetName() string
+
+	// Size returns the current size of the queue.
 	Size() (int, error)
+
+	// Close closes a queue and removes any resources associated with it on the client side.
 	Close() error
 }
 
