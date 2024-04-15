@@ -315,7 +315,7 @@ run various scenarios to perform aggregations.
 
 # Responding to cache events
 
-he Coherence Go Client provides the ability to add a [MapListener] that will receive events (inserts, updates, deletes)
+The Coherence Go Client provides the ability to add a [MapListener] that will receive events (inserts, updates, deletes)
 that occur against a [NamedMap] or [NamedCache]. You can listen for all events, events based upon a filter or
 vents based upon a key.
 
@@ -360,7 +360,7 @@ vents based upon a key.
 	    log.Fatal(err)
 	}
 
-	// output
+	// output:
 	// **EVENT=Updated: key=1, oldValue={1 Tim 53}, newValue={1 Tim 53}
 
 	// you can also listen based upon filters, for example the following would create a
@@ -414,7 +414,7 @@ that occur against a [NamedMap] or [NamedCache].
 
 	time.Sleep(time.Duration(5) * time.Second)
 
-	// output
+	// output:
 	// Add new Person {1 Tim 53}
 	// Cache size is 1 truncating cache
 	// **EVENT=Truncated: value=NamedMap{name=people, format=json}
@@ -459,10 +459,98 @@ in your main code, create a new [Session] and register the listener
 
 	time.Sleep(time.Duration(5) * time.Second)
 
-	// output
+	// output:
 	// 2023/01/31 11:15:37 connected session 59f3ec81-dda1-41b7-92de-70aad3d26615 to address localhost:1408
 	// 2023/01/31 11:15:38 closed session 59f3ec81-dda1-41b7-92de-70aad3d26615
 	// **EVENT=session_closed: source=SessionID=59f3ec81-dda1-41b7-92de-70aad3d26615, closed=true, caches=0, maps=0
+
+# Working with Queues
+
+When connecting to a Coherence CE cluster versions 24.03 or above you have the ability to create [NamedQueue] or [NamedBlockingQueue].
+Queues in general have the following methods.
+
+- Peek() - retrieve but not remove the value at the head of the queue
+
+- Offer() - inserts the specified value to the end of the queue if it is possible to do so
+
+- Poll() - retrieves and removes the head of this queue
+
+The [NamedBlockingQueue] changes the Peek() and Poll() operations to be blocking by passing a timeout. A specific error
+is returned to indicate the blocking operation did no complete within the specified timeout.
+
+Consider the example below where we want to create a standard queue and add 10 entries, and then retreive 10 entries.
+
+	namedQueue, err := coherence.GetNamedQueue[string](ctx, session, "my-queue")
+	if err != nil {
+	    panic(err)
+	}
+
+	// add an entry to the head of the queue
+	for i := 1; i <= iterations; i++ {
+	    v := fmt.Sprintf("value-%v", i)
+	    log.Printf("Offer() %s to the queue\n", v)
+	    err = namedQueue.Offer(v)
+	    if err != nil {
+	        panic(err)
+	    }
+	}
+	// output:
+	// Offer() value-1 to the queue
+	// ...
+	// Offer() value-10 to the queue
+
+	// Poll() 10 entries from the queue
+	for i := 1; i <= iterations; i++ {
+	    value, err = namedQueue.Poll()
+	    if err != nil {
+	        panic(err)
+	    }
+	    log.Printf("Poll() returned: %s\n", *value)
+	}
+
+	// output:
+	// Poll() returned: value-1
+	// ...
+	// Poll() returned: value-10
+
+	// try to read again should get nil as nothing left on the queue
+	value, err = namedQueue.Poll()
+	if err != nil {
+	    panic(err)
+	}
+	log.Println("last value is", value)
+	// output: last value is nil
+
+In the following example, we are using a [NonBlockingQueue] and trying to read a value from this queue
+with a timeout of 10 seconds. In this example we will just display a message if we are not able to retrieve
+a value and then try again.
+
+Internally, while the Poll() is blocking for up to the timeout value, if and entry is
+added to the queue, the Poll() will get immediately notified via coherence [MapEvent]s
+and the Poll() will return.  If multiple go routines or processes are waiting for dequeues,
+only one of the processes will retrieve the newly inserted value.
+
+	blockingQueue, err := coherence.GetBlockingNamedQueue[Order](ctx, session, "blocking-queue"")
+	if err != nil {
+	    panic(err)
+	}
+
+	log.Println("Waiting to receive messages...")
+	for {
+	    order, err = blockingQueue.Poll(time.Duration(10) * time.Second)
+	    if err == coherence.ErrQueueTimedOut {
+	        log.Println("Timeout waiting for Poll()")
+	        continue
+	    }
+
+	    if err != nil {
+	        panic(err)
+	    }
+
+	    // do some processing, then continue waiting for messages
+	}
+
+See the [Queues] documentation for more information on using queues on the Coherence Server.
 
 # Serializing to Java objects on the server
 
@@ -556,7 +644,7 @@ The above can be specified by passing [NearCacheOptions] within [WithNearCache] 
 See below for various ways of creating near caches.
 
 You can ask a [NamedMap] or [NamedCache] for its near cache statistics by calling GetNearCacheStats(). Various statistics
-are recorded with regards to the near cache and can be seen via the [CacheStats] interface. If the [NamedMap] or [NamedCache]
+are recorded in regard to the near cache and can be seen via the [CacheStats] interface. If the [NamedMap] or [NamedCache]
 does not have a near cache, nil will be returned.
 
 1. Creating a Near Cache specifying time-to-live (TTL)
@@ -583,7 +671,7 @@ The following example shows how to get a named cache that will cache entries fro
 	// you can check the near cache stats
 	fmt.Println("Near cache size is", namedMap.GetNearCacheStats().Size())
 
-	// output: "Near cache size is 1"
+	// output "Near cache size is 1"
 
 2. Creating a Near Cache specifying maximum number of entries to store
 
@@ -648,5 +736,6 @@ accessed and created entries.
 [examples]: https://github.com/oracle/coherence-go-client/tree/main/examples
 [gRPC Proxy documentation]: https://docs.oracle.com/en/middleware/standalone/coherence/14.1.1.2206/develop-remote-clients/using-coherence-grpc-server.html
 [gRPC Naming]: https://github.com/grpc/grpc/blob/master/doc/naming.md
+[Queues]: https://coherence.community/latest/24.03/docs/#/docs/core/09_queues
 */
 package coherence

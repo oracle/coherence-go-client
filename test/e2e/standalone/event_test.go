@@ -1004,10 +1004,6 @@ func (cll *CountingLifecycleListener[K, V]) truncateCount() int32 {
 	return cll.truncCount
 }
 
-func (cll *CountingLifecycleListener[K, V]) destroyCount() int32 {
-	return cll.destCount
-}
-
 func (cll *CountingLifecycleListener[K, V]) releaseCount() int32 {
 	return cll.relCount
 }

@@ -290,6 +290,8 @@ go run indexes/main.go
 
 This example shows how to work with both standard (NamedQueue) and blocking (NamesBlockingQueue).
 
+> Note: This feature is currently only available when using Coherence server version CE 24.04 and above.
+
 #### Standard 
 
 Source code: [queues/standard/main.go](queues/standard/main.go)
