@@ -330,21 +330,15 @@ func (bq *namedBlockingQueue[V]) peekOrPoll(isPoll bool, timeout time.Duration) 
 		// no value, so wait on either event or timeout, subscribe for notification if any new entries arrive
 		// mutex is placed around the subscribe(), unsubscribe() and notifyAll() to ensure we don't try and read
 		// from a closed channel
-		bq.notifyMutex.Lock()
 		id, ch := bq.notifier.subscribe()
-		bq.notifyMutex.Unlock()
 
 		select {
 		case <-ch:
 			// new item added, unsubscribe and attempt to poll() or peek() again,
-			bq.notifyMutex.Lock()
 			bq.notifier.unsubscribe(id)
-			bq.notifyMutex.Unlock()
 		case <-time.After(timeout):
 			// timeout
-			bq.notifyMutex.Lock()
 			bq.notifier.unsubscribe(id)
-			bq.notifyMutex.Unlock()
 			return nil, ErrQueueTimedOut
 		}
 	}
@@ -429,8 +423,6 @@ func newQueueCacheListener[V any](namedQueue *namedBlockingQueue[V]) *queueCache
 
 	listener.listener.OnInserted(func(e MapEvent[QueueKey, V]) {
 		// notify all registered listeners that an entry has been added to the Queue
-		namedQueue.notifyMutex.Lock()
-		defer namedQueue.notifyMutex.Unlock()
 		namedQueue.notifier.notifyAll()
 	})
 

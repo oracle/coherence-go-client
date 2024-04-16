@@ -23,7 +23,6 @@ jobs:
       fail-fast: false
       matrix:
         coherenceVersion:
-          - 23.09.2
           - 24.03
           - 24.03.1-SNAPSHOT
         go-version:
