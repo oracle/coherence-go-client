@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
 
-    Copyright (c) 2022, 2023 Oracle and/or its affiliates.
+    Copyright (c) 2022, 2024 Oracle and/or its affiliates.
     Licensed under the Universal Permissive License v 1.0 as shown at
     https://oss.oracle.com/licenses/upl.
 
@@ -51,6 +51,20 @@
         <dependency>
           <groupId>com.oracle.coherence.go</groupId>
           <artifactId>coherence-go-client-data-javax</artifactId>
+          <version>1.0.0</version>
+        </dependency>
+      </dependencies>
+    </profile>
+
+    <profile>
+      <id>queues</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <dependencies>
+        <dependency>
+          <groupId>com.oracle.coherence.go</groupId>
+          <artifactId>coherence-go-queues</artifactId>
           <version>1.0.0</version>
         </dependency>
       </dependencies>

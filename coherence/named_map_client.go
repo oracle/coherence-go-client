@@ -748,8 +748,8 @@ func (nm *NamedMapClient[K, V]) GetNearCacheStats() CacheStats {
 
 // String returns a string representation of a NamedMapClient.
 func (nm *NamedMapClient[K, V]) String() string {
-	return fmt.Sprintf("NamedMap{name=%s, format=%s, destroyed=%v, released=%v, options=%v}",
-		nm.Name(), nm.format, nm.destroyed, nm.released, nm.cacheOpts.NearCacheOptions)
+	return fmt.Sprintf("NamedMap{name=%s, format=%s, options=%v}",
+		nm.Name(), nm.format, nm.cacheOpts.NearCacheOptions)
 }
 
 // getNamedMap gets a [NamedMap] of the generic type specified or if a cache already exists with the

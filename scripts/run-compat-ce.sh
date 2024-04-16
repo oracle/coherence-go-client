@@ -45,5 +45,5 @@ echo "Coherence CE 24.03"
 COHERENCE_BASE_IMAGE=gcr.io/distroless/java17 PROFILES=,jakarta,-javax COHERENCE_VERSION=24.03 make clean generate-proto build-test-images test-e2e-standalone
 
 echo "Coherence CE 24.03 with queues"
-COHERENCE_BASE_IMAGE=gcr.io/distroless/java17 PROFILES=,jakarta,-javax COHERENCE_VERSION=24.03 make clean generate-proto build-test-images test-e2e-standalone-queues
+COHERENCE_BASE_IMAGE=gcr.io/distroless/java17 PROFILES=,jakarta,-javax,queues COHERENCE_VERSION=24.03 make clean generate-proto build-test-images test-e2e-standalone-queues
 

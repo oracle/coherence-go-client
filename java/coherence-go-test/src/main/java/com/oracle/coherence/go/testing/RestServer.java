@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2023 Oracle and/or its affiliates.
+ * Copyright (c) 2022, 2024 Oracle and/or its affiliates.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * https://oss.oracle.com/licenses/upl.
  */
@@ -69,6 +69,7 @@ public class RestServer {
             server.createContext("/balanced", RestServer::balanced);
             server.createContext("/checkCustomerCache", RestServer::checkCustomerCache);
             server.createContext("/isIsReadyPresent", RestServer::isIsReadyPresent);
+            server.createContext("/populateQueue", RestServer::populateQueue);
 
             server.setExecutor(null); // creates a default executor
             server.start();
@@ -100,6 +101,20 @@ public class RestServer {
         OutputStream os = t.getResponseBody();
         os.write(body.getBytes());
         os.close();
+    }
+
+    private static void populateQueue(HttpExchange t) throws IOException {
+      try {
+            Class<?> clazz          = Class.forName("com.oracle.coherence.go.queues.PopulateQueue");
+            Object   inst           = clazz.getDeclaredConstructor().newInstance();
+            Method   registerMethod = clazz.getMethod("offerData");
+            registerMethod.invoke(inst);
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+            send(t, 404, "Error: " + e.getMessage());
+        }
+        send(t, 200, "OK");
     }
 
     private static void ready(HttpExchange t) throws IOException {

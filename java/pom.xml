@@ -154,6 +154,17 @@
     </profile>
 
     <profile>
+      <id>queues</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <modules>
+        <module>coherence-go-queues</module>
+      </modules>
+    </profile>
+
+
+    <profile>
       <id>javax</id>
       <activation>
         <!-- This is a work-around for the fact that activeByDefault does not do what you'd think it should -->
