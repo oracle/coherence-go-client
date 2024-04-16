@@ -96,6 +96,13 @@ type Customer struct {
 	Balance float32 `json:"balance"`
 }
 
+type JavaCustomer struct {
+	Class        string `json:"@class"`
+	ID           int    `json:"id"`
+	CustomerName string `json:"customerName"`
+	CustomerType string `json:"customerType"`
+}
+
 func TestStandardQueueWithStruct(t *testing.T) {
 	var (
 		g         = gomega.NewWithT(t)
@@ -463,6 +470,39 @@ func TestStandardBlockingQueueMultipleGoRoutines(t *testing.T) {
 	time.Sleep(time.Second)
 	// ensure cancel is processed
 	// we should be able to exit fine
+}
+
+func TestStandardQueueFromJava(t *testing.T) {
+	var (
+		g       = gomega.NewWithT(t)
+		err     error
+		session *coherence.Session
+		ctx     = context.Background()
+		result  *JavaCustomer
+	)
+
+	const queueEntries = 1000
+
+	session, err = GetSession()
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	defer session.Close()
+
+	namedQueue, err := coherence.GetNamedQueue[JavaCustomer](ctx, session, "test-queue")
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	defer namedQueue.Close()
+
+	// add 1000 entries to the "test-queue" in Java
+	_, err = IssueGetRequest(GetTestContext().RestURL + "/populateQueues")
+	g.Expect(err).Should(gomega.Not(gomega.HaveOccurred()))
+	g.Expect(namedQueue.Size()).To(gomega.Equal(queueEntries))
+
+	for i := 1; i <= queueEntries; i++ {
+		result, err = namedQueue.Poll()
+		g.Expect(err).Should(gomega.Not(gomega.HaveOccurred()))
+		g.Expect(result.ID).To(gomega.Equal(i))
+		g.Expect(result.CustomerName).To(gomega.Equal(fmt.Sprintf("Name-%d", i)))
+		g.Expect(result.CustomerType).To(gomega.Equal("GOLD"))
+	}
 }
 
 func runBlockingDequeue(cancelCtx context.Context, receivingQueue coherence.NamedBlockingQueue[string], results map[int]int, routine int, mtx *sync.Mutex) {
