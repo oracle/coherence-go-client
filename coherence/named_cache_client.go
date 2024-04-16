@@ -101,7 +101,7 @@ func (nc *NamedCacheClient[K, V]) Destroy(ctx context.Context) error {
 	bc := &nc.baseClient
 	s := bc.session
 
-	// protect updates to maps - specifically don't defer unlock as we need to unlock below
+	// protect updates to maps
 	s.mapMutex.Lock()
 	defer s.mapMutex.Unlock()
 
@@ -538,8 +538,8 @@ func (nc *NamedCacheClient[K, V]) GetNearCacheStats() CacheStats {
 
 // String returns a string representation of a [NamedCacheClient].
 func (nc *NamedCacheClient[K, V]) String() string {
-	return fmt.Sprintf("NamedCache{name=%s, format=%s, destroyed=%v, released=%v, options=%v}",
-		nc.Name(), nc.format, nc.destroyed, nc.released, nc.cacheOpts.NearCacheOptions)
+	return fmt.Sprintf("NamedCache{name=%s, format=%s, options=%v}",
+		nc.Name(), nc.format, nc.cacheOpts.NearCacheOptions)
 }
 
 // getNamedCache gets a [NamedCache] of the generic type specified or if a cache already exists with the
