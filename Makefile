@@ -33,7 +33,7 @@ MVN_VERSION ?= 1.0.0
 SHELL := /bin/bash
 
 # Coherence CE version to run base tests against
-COHERENCE_VERSION ?= 22.06.7
+COHERENCE_VERSION ?= 22.06.8
 COHERENCE_GROUP_ID ?= com.oracle.coherence.ce
 COHERENCE_WKA1 ?= server1
 COHERENCE_WKA2 ?= server1
