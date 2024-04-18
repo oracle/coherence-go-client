@@ -205,8 +205,8 @@ golangci: $(TOOLS_BIN)/golangci-lint ## Go code review
 .PHONY: generate-proto
 generate-proto: $(TOOLS_BIN)/protoc ## Generate Proto Files
 	mkdir -p $(PROTO_DIR) || true
-	curl -o $(PROTO_DIR)/services.proto https://raw.githubusercontent.com/oracle/coherence/22.06.7/prj/coherence-grpc/src/main/proto/services.proto
-	curl -o $(PROTO_DIR)/messages.proto https://raw.githubusercontent.com/oracle/coherence/22.06.7/prj/coherence-grpc/src/main/proto/messages.proto
+	curl -o $(PROTO_DIR)/services.proto https://raw.githubusercontent.com/oracle/coherence/22.06.8/prj/coherence-grpc/src/main/proto/services.proto
+	curl -o $(PROTO_DIR)/messages.proto https://raw.githubusercontent.com/oracle/coherence/22.06.8/prj/coherence-grpc/src/main/proto/messages.proto
 	echo "" >> $(PROTO_DIR)/services.proto
 	echo "" >> $(PROTO_DIR)/messages.proto
 	echo 'option go_package = "github.com/oracle/coherence-go-client/proto";' >> $(PROTO_DIR)/services.proto
