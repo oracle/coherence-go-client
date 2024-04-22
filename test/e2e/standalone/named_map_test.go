@@ -222,8 +222,8 @@ func TestBasicOperationsAgainstMapAndCache(t *testing.T) {
 		{"NamedCacheRunTestKeySetFilter", GetNamedCache[int, Person](g, session, "keyset-cache"), RunTestKeySetFilter},
 		{"NamedMapRunTestGetAll", GetNamedMap[int, Person](g, session, "getall-filter-map"), RunTestGetAll},
 		{"NamedCacheRunTestGetAll", GetNamedCache[int, Person](g, session, "getall-filter-cache"), RunTestGetAll},
-		{"NamedMapRunTestInvokeAll", GetNamedMap[int, Person](g, session, "invokeall-keys-map"), RunTestInvokeAllKeys},
-		{"NamedCacheRunTestInvokeAll", GetNamedCache[int, Person](g, session, "invokeall-keys-cache"), RunTestInvokeAllKeys},
+		{"NamedMapRunTestInvokeAll", GetNamedMap[int, Person](g, session, "invokeall-keys-map"), RunTestInvokeAllKeysAndFilter},
+		{"NamedCacheRunTestInvokeAll", GetNamedCache[int, Person](g, session, "invokeall-keys-cache"), RunTestInvokeAllKeysAndFilter},
 		{"NamedMapRunTestKeySet", GetNamedMap[int, Person](g, session, "keyset-map"), RunTestKeySetLong},
 		{"NamedCacheRunTestKeySet", GetNamedCache[int, Person](g, session, "keyset-cache"), RunTestKeySetLong},
 		{"NamedMapRunTestKeySetShort", GetNamedMap[int, Person](g, session, "keyset-map-short"), RunTestKeySetShort},
@@ -815,10 +815,11 @@ func RunTestGetAll(t *testing.T, namedMap coherence.NamedMap[int, Person]) {
 	g.Expect(len(results)).To(gomega.Equal(0))
 }
 
-func RunTestInvokeAllKeys(t *testing.T, namedMap coherence.NamedMap[int, Person]) {
+func RunTestInvokeAllKeysAndFilter(t *testing.T, namedMap coherence.NamedMap[int, Person]) {
 	var (
 		g       = gomega.NewWithT(t)
 		results = make([]int, 0)
+		person  *Person
 	)
 
 	// populate the cache
@@ -837,6 +838,16 @@ func RunTestInvokeAllKeys(t *testing.T, namedMap coherence.NamedMap[int, Person]
 	g.Expect(containsValue[int](results, 1)).Should(gomega.BeTrue())
 	g.Expect(containsValue[int](results, 2)).Should(gomega.BeTrue())
 
+	// reset and run for InvokeAllKeysBlind
+	populatePeople(g, namedMap)
+
+	err := coherence.InvokeAllKeysBlind[int, Person](ctx, namedMap, []int{1, 2}, processors.Increment("age", 1, true))
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+
+	person, err = namedMap.Get(ctx, 1)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	g.Expect(person.Age).To(gomega.Equal(34))
+
 	// reset and run for filter
 	results = make([]int, 0)
 
@@ -852,6 +863,17 @@ func RunTestInvokeAllKeys(t *testing.T, namedMap coherence.NamedMap[int, Person]
 
 	// should match all entries
 	g.Expect(len(results)).To(gomega.Equal(4))
+
+	// reset and run for InvokeAllFilterBlind
+	populatePeople(g, namedMap)
+
+	err = coherence.InvokeAllFilterBlind[int, Person](ctx, namedMap,
+		filters.Greater(extractors.Extract[int]("age"), 1), processors.Increment("age", 1, true))
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+
+	person, err = namedMap.Get(ctx, 1)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	g.Expect(person.Age).To(gomega.Equal(34))
 }
 
 func RunTestKeySetLong(t *testing.T, namedMap coherence.NamedMap[int, Person]) {
@@ -1047,6 +1069,9 @@ func populatePeople(g *gomega.WithT, namedMap coherence.NamedMap[int, Person]) {
 		err  error
 		size int
 	)
+	err = namedMap.Clear(ctx)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+
 	err = namedMap.PutAll(ctx, peopleData)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 

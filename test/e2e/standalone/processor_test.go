@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Oracle and/or its affiliates.
+ * Copyright (c) 2023, 2024 Oracle and/or its affiliates.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * https://oss.oracle.com/licenses/upl.
  */
@@ -490,6 +490,25 @@ func RunTestInvokeAll(t *testing.T, namedMap coherence.NamedMap[int, Person]) {
 	expectedAgesAfterUpdate := map[int]int{1: 34, 2: 45, 3: 21, 4: 13}
 
 	ch2 := namedMap.EntrySetFilter(ctx, filters.Always())
+	for se := range ch2 {
+		g.Expect(se.Err).ShouldNot(gomega.HaveOccurred())
+
+		// check that the updates ages are correct
+		g.Expect(expectedAgesAfterUpdate[se.Key]).To(gomega.Equal(se.Value.Age))
+	}
+
+	// run test using InvokeAllBlind
+	err = namedMap.Clear(ctx)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+
+	err = namedMap.PutAll(ctx, peopleData)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+
+	err = coherence.InvokeAllBlind[int, Person](ctx, namedMap, processors.Increment("age", 1, true))
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+
+	// validate that the entry processor actually worked
+	ch2 = namedMap.EntrySetFilter(ctx, filters.Always())
 	for se := range ch2 {
 		g.Expect(se.Err).ShouldNot(gomega.HaveOccurred())
 

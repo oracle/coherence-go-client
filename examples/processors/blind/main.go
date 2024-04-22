@@ -1,11 +1,11 @@
 /*
- * Copyright (c) 2022, 2023 Oracle and/or its affiliates.
+ * Copyright (c) 2024 Oracle and/or its affiliates.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * https://oss.oracle.com/licenses/upl.
  */
 
 /*
-Package main shows how to run processors against a NamedMap or NamedCache.
+Package main shows how to run processors against a NamedMap or NamedCache using the *Blind utilities methods.
 */
 package main
 
@@ -89,25 +89,19 @@ func main() {
 	}
 
 	fmt.Println("Incrementing the age of each person")
-	// invoke an entry processor over all people, this returns the keys that have been updated
-	ch := coherence.InvokeAll[int, Person, int](ctx, namedMap, processors.Increment("age", 1))
-	for se := range ch {
-		if se.Err != nil {
-			panic(se.Err)
-		}
-		fmt.Println("Updated person with key", se.Value)
+	// invoke an entry processor over all people, but ignoring returned values
+	err = coherence.InvokeAllBlind[int, Person](ctx, namedMap, processors.Increment("age", 1))
+	if err != nil {
+		panic(err)
 	}
 
 	fmt.Println("Retiring all people over 67, just an example ;)")
 	// invoke an entry process over all people older than 67 and set them as retired
 	age := extractors.Extract[int]("age")
-	ch2 := coherence.InvokeAllFilter[int, Person, int](ctx, namedMap, filters.Greater(age, 67),
+	err = coherence.InvokeAllFilterBlind[int, Person](ctx, namedMap, filters.Greater(age, 67),
 		processors.Update("retired", true))
-	for se := range ch2 {
-		if se.Err != nil {
-			panic(se.Err)
-		}
-		fmt.Println("Retired person with key", se.Value)
+	if err != nil {
+		panic(err)
 	}
 
 	fmt.Println("Displaying all people")

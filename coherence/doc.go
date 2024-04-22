@@ -576,7 +576,7 @@ standard Java serialization, but you can use POF serialization if you have that 
 		private int id;
 
 		@JsonbProperty("customerName")
-		private String  customerName;
+		private String customerName;
 
 		@JsonbProperty("outstandingBalance")
 		private double outstandingBalance;
