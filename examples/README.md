@@ -175,10 +175,18 @@ go run aggregators/main.go
 
 This example shows how to run entry processors against a or NamedMap or NamedCache with a key of int and value of Person struct.
 
-Source code: [processors/main.go](processors/main.go)
+Source code: [processors/standard/main.go](processors/standard/main.go)
 
 ```go
-go run processors/main.go
+go run processors/standard/main.go
+````
+
+This example shows how to run the same entry processors but use the utility functions to ignore the values returned.
+
+Source code: [processors/blind/main.go](processors/blind/main.go)
+
+```go
+go run processors/blind/main.go
 ```
 
 ### <a name="map-events"></a> Listening for map events

@@ -79,6 +79,33 @@ func InvokeAllFilter[K comparable, V any, R any](ctx context.Context, nm NamedMa
 	return executeInvokeAllFilterOrKeys[K, V, R](ctx, nm.getBaseClient(), fltr, []K{}, proc)
 }
 
+// InvokeAllFilterBlind invokes the specified function against the entries matching the specified filter but does not return results via a channel.
+// This is a utility function that differs from [InvokeAllFilter] and is useful when you do not
+// care about the result of the [InvokeAllFilter], just if it succeeded or not. If error is nil then the operation was successful,
+// otherwise the first error encountered is returned. If you wish to know all the errors use the [InvokeAllFilter] function.
+// When an error occurs the result of all the operations is undefined.
+//
+//	namedMap, err := coherence.GetNamedMap[int, Person](session, "people")
+//	if err != nil {
+//	    log.Fatal(err)
+//	}
+//
+//	age := extractors.Extract[int]("age")
+//
+//	err := coherence.InvokeAllFilter[int, Person](ctx, namedMap, filters.Greater(age, 1), processors.Increment("age", 1))
+//	if err != nil {
+//	    log.Fatal(err)
+//	}
+func InvokeAllFilterBlind[K comparable, V any](ctx context.Context, nm NamedMap[K, V], fltr filters.Filter, proc processors.Processor) error {
+	ch := executeInvokeAllFilterOrKeys[K, V, any](ctx, nm.getBaseClient(), fltr, []K{}, proc)
+	for e := range ch {
+		if e.Err != nil {
+			return e.Err
+		}
+	}
+	return nil
+}
+
 // InvokeAllKeys invokes the specified function against the entries matching the specified keys.
 // Functions are invoked atomically against a specific entry as the function may mutate the entry.
 // The type parameter is R = type of the result of the invocation.
@@ -106,6 +133,31 @@ func InvokeAllKeys[K comparable, V any, R any](ctx context.Context, nm NamedMap[
 	return executeInvokeAllFilterOrKeys[K, V, R](ctx, nm.getBaseClient(), nil, keys, proc)
 }
 
+// InvokeAllKeysBlind invokes the specified function against the entries matching the specified keys but does not return results via a channel.
+// This is a utility function that differs from [InvokeAllKeys] and is useful when you do not
+// care about the result of the [InvokeAllKeys], just if it succeeded or not. If error is nil then the operation was successful,
+// otherwise the first error encountered is returned. If you wish to know all the errors use the [InvokeAllKeys] function.
+// When an error occurs the result of all the operations is undefined.
+//
+//	namedMap, err := coherence.GetNamedMap[int, Person](session, "people")
+//	if err != nil {
+//	    log.Fatal(err)
+//	}
+//
+//	ch := coherence.InvokeAllKeysBlind[int, Person](ctx, namedMap, []int{1, 2}, processors.Increment("age", 1))
+//	if err != nil {
+//	    log.Fatal(err)
+//	}
+func InvokeAllKeysBlind[K comparable, V any](ctx context.Context, nm NamedMap[K, V], keys []K, proc processors.Processor) error {
+	ch := executeInvokeAllFilterOrKeys[K, V, any](ctx, nm.getBaseClient(), nil, keys, proc)
+	for e := range ch {
+		if e.Err != nil {
+			return e.Err
+		}
+	}
+	return nil
+}
+
 // InvokeAll invokes the specified function against all entries in a [NamedMap].
 // Functions are invoked atomically against a specific entry as the function may mutate the entry.
 // The type parameter is R = type of the result of the invocation.
@@ -131,6 +183,31 @@ func InvokeAllKeys[K comparable, V any, R any](ctx context.Context, nm NamedMap[
 //	}
 func InvokeAll[K comparable, V any, R any](ctx context.Context, nm NamedMap[K, V], proc processors.Processor) <-chan *StreamedValue[R] {
 	return executeInvokeAllFilterOrKeys[K, V, R](ctx, nm.getBaseClient(), filters.Always(), nil, proc)
+}
+
+// InvokeAllBlind invokes the specified function against all entries in a [NamedMap] but does not return results via a channel.
+// This is a utility function that differs from [InvokeAll] and is useful when you do not
+// care about the result of the [InvokeAll], just if it succeeded or not. If error is nil then the operation was successful,
+// otherwise the first error encountered is returned. If you wish to know all the errors use the [InvokeAll] function.
+// When an error occurs the result of all the operations is undefined.
+//
+//	namedMap, err := coherence.GetNamedMap[int, Person](session, "people")
+//	if err != nil {
+//	    log.Fatal(err)
+//	}
+//
+//	err := coherence.InvokeAllBlind[int, Person](ctx, namedMap, processors.Increment("age", 1))
+//	if err != nil {
+//	    log.Fatal(err)
+//	}
+func InvokeAllBlind[K comparable, V any](ctx context.Context, nm NamedMap[K, V], proc processors.Processor) error {
+	ch := executeInvokeAllFilterOrKeys[K, V, any](ctx, nm.getBaseClient(), filters.Always(), nil, proc)
+	for e := range ch {
+		if e.Err != nil {
+			return e.Err
+		}
+	}
+	return nil
 }
 
 // AggregateKeys performs an aggregating operation (identified by aggregator) against the
