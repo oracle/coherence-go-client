@@ -85,7 +85,7 @@ jobs:
         go get google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.3.0
         INCLUDE_LONG_RUNNING=true PROFILES=,-jakarta,javax COHERENCE_VERSION=22.06.8 make clean generate-proto build-test-images test-e2e-standalone
 
-    - uses: actions/upload-artifact@vv
+    - uses: actions/upload-artifact@v4
       if: failure()
       with:
         name: test-output-${{ matrix.go-version }}
@@ -130,7 +130,7 @@ jobs:
           COHERENCE_TLS_CLIENT_KEY_OPTION=`pwd`/test/utils/certs/star-lord.key \
           COHERENCE_VERSION=22.06.7 PROFILES=,secure,-jakarta,javax,scope make clean certs generate-proto build-test-images test-e2e-standalone-scope
 
-    - uses: actions/upload-artifact@vv
+    - uses: actions/upload-artifact@v4
       if: failure()
       with:
         name: test-output-${{ matrix.go-version }}
