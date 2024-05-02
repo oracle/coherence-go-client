@@ -478,7 +478,7 @@ Queues in general have the following methods.
 The [NamedBlockingQueue] changes the Peek() and Poll() operations to be blocking by passing a timeout. A specific error
 is returned to indicate the blocking operation did no complete within the specified timeout.
 
-Consider the example below where we want to create a standard queue and add 10 entries, and then retreive 10 entries.
+Consider the example below where we want to create a standard queue and add 10 entries, and then retrieve 10 entries.
 
 	namedQueue, err := coherence.GetNamedQueue[string](ctx, session, "my-queue")
 	if err != nil {
@@ -521,12 +521,12 @@ Consider the example below where we want to create a standard queue and add 10 e
 	log.Println("last value is", value)
 	// output: last value is nil
 
-In the following example, we are using a [NonBlockingQueue] and trying to read a value from this queue
+In the following example, we are using a [NamedBlockingQueue] and trying to read a value from this queue
 with a timeout of 10 seconds. In this example we will just display a message if we are not able to retrieve
 a value and then try again.
 
 Internally, while the Poll() is blocking for up to the timeout value, if and entry is
-added to the queue, the Poll() will get immediately notified via coherence [MapEvent]s
+added to the queue, the Poll() will get immediately notified via a coherence [MapEvent]
 and the Poll() will return.  If multiple go routines or processes are waiting for dequeues,
 only one of the processes will retrieve the newly inserted value.
 
