@@ -79,8 +79,8 @@ jobs:
         COHERENCE_BASE_IMAGE=gcr.io/distroless/java17 COHERENCE_VERSION=${{ matrix.coherenceVersion }} PROFILES=,jakarta,-javax make clean generate-proto build-test-images test-cluster-startup test-examples
         make test-cluster-shutdown || true
 
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4
       if: failure()
       with:
-        name: test-output
+        name: test-output-${{ matrix.go-version }}-${{ matrix.coherenceVersion }}
         path: build/_output/test-logs
