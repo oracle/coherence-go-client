@@ -359,7 +359,7 @@ test-discovery: test-clean gotestsum $(BUILD_PROPS) ## Run Discovery tests with 
 # ----------------------------------------------------------------------------------------------------------------------
 .PHONY: test-resolver
 test-discovery: test-clean gotestsum $(BUILD_PROPS) ## Run Resolver tests with Coherence
-	CGO_ENABLED=0 $(GOTESTSUM) --format testname --junitfile $(TEST_LOGS_DIR)/cohctl-test-resover.xml \
+	COHERENCE_RESOLVER_DEBUG=true CGO_ENABLED=0 $(GOTESTSUM) --format testname --junitfile $(TEST_LOGS_DIR)/cohctl-test-resover.xml \
 	  -- $(GO_TEST_FLAGS) -v  ./test/e2e/resolver/...
 
 # ----------------------------------------------------------------------------------------------------------------------
