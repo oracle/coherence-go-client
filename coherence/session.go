@@ -18,6 +18,7 @@ import (
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/resolver"
 	"log"
 	"os"
 	"strconv"
@@ -155,6 +156,9 @@ func NewSession(ctx context.Context, options ...func(session *SessionOptions)) (
 			ReadyTimeout:       time.Duration(0) * time.Second,
 			DisconnectTimeout:  time.Duration(0) * time.Second},
 	}
+
+	// ensure name resolver has been registered
+	resolver.Register(&nsLookupResolverBuilder{})
 
 	if getBoolValueFromEnvVarOrDefault(envSessionDebug, false) {
 		// enable session debugging

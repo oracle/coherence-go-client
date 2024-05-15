@@ -34,8 +34,11 @@ const (
 	envDisconnectTimeout  = "COHERENCE_SESSION_DISCONNECT_TIMEOUT"
 	envReadyTimeout       = "COHERENCE_READY_TIMEOUT"
 
-	// envSessionDebug enabled session debug messages to be displayed.
+	// envSessionDebug enables session debug messages to be displayed.
 	envSessionDebug = "COHERENCE_SESSION_DEBUG"
+
+	// envResolverDebug enables resolver debug messages to be displayed.
+	envResolverDebug = "COHERENCE_RESOLVER_DEBUG"
 
 	// Integer.MAX_VALUE on Java
 	integerMaxValue = 2147483647

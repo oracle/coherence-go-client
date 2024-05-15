@@ -8,7 +8,7 @@
 # ----------------------------------------------------------------------------------------------------------------------
 
 # This is the version of the coherence-go-client
-VERSION ?=1.2.0-rc1
+VERSION ?=1.3.0-rc1
 CURRDIR := $(shell pwd)
 USER_ID := $(shell echo "`id -u`:`id -g`")
 
@@ -353,6 +353,14 @@ test-discovery: test-clean gotestsum $(BUILD_PROPS) ## Run Discovery tests with 
 	CGO_ENABLED=0 $(GOTESTSUM) --format testname --junitfile $(TEST_LOGS_DIR)/cohctl-test-discovery.xml \
 	  -- $(GO_TEST_FLAGS) -v  ./test/e2e/discovery/...
 	make test-coherence-shutdown
+
+# ----------------------------------------------------------------------------------------------------------------------
+# Executes the Go resolver tests for standalone Coherence
+# ----------------------------------------------------------------------------------------------------------------------
+.PHONY: test-resolver
+test-discovery: test-clean gotestsum $(BUILD_PROPS) ## Run Resolver tests with Coherence
+	CGO_ENABLED=0 $(GOTESTSUM) --format testname --junitfile $(TEST_LOGS_DIR)/cohctl-test-resover.xml \
+	  -- $(GO_TEST_FLAGS) -v  ./test/e2e/resolver/...
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Obtain the golangci-lint binary
