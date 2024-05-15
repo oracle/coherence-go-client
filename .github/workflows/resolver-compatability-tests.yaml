@@ -72,6 +72,12 @@ jobs:
         sleep 20
         cohctl monitor health -n localhost:7574 -T 40 -w
         make clean test-clean test-resolver
+
+    - name: Examples Tests Using Resolver
+      shell: bash
+      run: |
+        export COHERENCE_SERVER_ADDRESS=coherence:///localhost:7574
+        ./scripts/run-test-examples.sh
         cohctl stop cluster grpc-cluster -y
         cohctl remove cluster grpc-cluster -y
 
