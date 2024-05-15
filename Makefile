@@ -358,7 +358,7 @@ test-discovery: test-clean gotestsum $(BUILD_PROPS) ## Run Discovery tests with 
 # Executes the Go resolver tests for standalone Coherence
 # ----------------------------------------------------------------------------------------------------------------------
 .PHONY: test-resolver
-test-discovery: test-clean gotestsum $(BUILD_PROPS) ## Run Resolver tests with Coherence
+test-resolver: test-clean gotestsum $(BUILD_PROPS) ## Run Resolver tests with Coherence
 	COHERENCE_RESOLVER_DEBUG=true CGO_ENABLED=0 $(GOTESTSUM) --format testname --junitfile $(TEST_LOGS_DIR)/cohctl-test-resover.xml \
 	  -- $(GO_TEST_FLAGS) -v  ./test/e2e/resolver/...
 
