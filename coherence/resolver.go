@@ -92,13 +92,43 @@ func generateNSAddresses(endpoint string) []string {
 }
 
 // NsLookupGrpcAddresses looks up grpc proxy server addresses based upon the provided
-// name service address provided as host:port, e.g. localhost:7574.
+// name service address provided as host:port, e.g. localhost:7574[/cluster].
 func NsLookupGrpcAddresses(address string) ([]string, error) {
 	var (
-		addrString string
-		_          []string
+		addrString     string
+		_              []string
+		foreignCluster string
 	)
-	ns, err := discovery.Open(address, 10)
+
+	// check to see a cluster is provided for lookup
+	if strings.Contains(address, "/") {
+		s := strings.Split(address, "/")
+		address = s[0]
+		foreignCluster = s[1]
+
+		// retrieve the foreign clusters actual name service address
+		nsF, err := discovery.Open(address, discovery.DefaultTimeout)
+		if err != nil {
+			return emptyAddresses, err
+		}
+		defer nsF.Close()
+
+		query := discovery.NSPrefix + discovery.ClusterForeignLookup + "/" + foreignCluster + discovery.NSLocalPort
+		resolverDebug(fmt.Sprintf("lookup for foreign cluster NS port using %s", query))
+		port, err := nsF.Lookup(query)
+		if err != nil {
+			return emptyAddresses, fmt.Errorf("unable to lookup foreign clsuter NS port: %v", err)
+		}
+
+		// get the IP address portion
+		s1 := strings.Split(address, ":")
+		address = fmt.Sprintf("%s:%v", s1[0], port)
+
+		resolverDebug(fmt.Sprintf("actualy NS port for %s is %s", foreignCluster, address))
+		// fall through and do the actual lookup using new address
+	}
+
+	ns, err := discovery.Open(address, discovery.DefaultTimeout)
 	if err != nil {
 		return emptyAddresses, err
 	}
