@@ -36,14 +36,13 @@ func TestConnectingUsingNSResolver(t *testing.T) {
 
 	session, err := coherence.NewSession(ctx, coherence.WithPlainText(), coherence.WithAddress("coherence:///localhost:7574"))
 	g.Expect(err).To(gomega.Not(gomega.HaveOccurred()))
+
 	defer session.Close()
 
 	namedMap, err := coherence.GetNamedMap[string, string](session, "grpc-ns-test")
 	g.Expect(err).To(gomega.Not(gomega.HaveOccurred()))
-
 	_, err = namedMap.Put(ctx, "one", "ONE")
 	g.Expect(err).To(gomega.Not(gomega.HaveOccurred()))
-
 	size, err := namedMap.Size(ctx)
 	g.Expect(err).To(gomega.Not(gomega.HaveOccurred()))
 	g.Expect(size).To(gomega.Equal(1))
