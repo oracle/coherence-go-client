@@ -13,30 +13,15 @@ package main
 import (
 	"context"
 	"github.com/oracle/coherence-go-client/coherence"
+	"github.com/oracle/coherence-go-client/examples/queues/blocking/common"
 	"log"
 	"time"
 )
 
-const (
-	queueNameProcessed = "processed-queue"
-	queueNameOrders    = "orders-queue"
-)
-
-// Order represents a fictitious order.
-type Order struct {
-	OrderID             string        `json:"orderID"`
-	Customer            string        `json:"customer"`
-	OrderStatus         string        `json:"orderStatus"`
-	OrderTotal          float32       `json:"orderTotal"`
-	CreateTime          time.Time     `json:"createTime"`
-	CompleteTime        time.Time     `json:"completeTime"`
-	OrderProcessingTime time.Duration `json:"orderProcessingTime"`
-}
-
 func main() {
 	var (
 		ctx        = context.Background()
-		order      *Order
+		order      *common.Order
 		err        error
 		processed  int
 		processing bool
@@ -49,12 +34,12 @@ func main() {
 	}
 	defer session.Close()
 
-	blockingQueue, err := coherence.GetBlockingNamedQueue[Order](ctx, session, queueNameOrders)
+	blockingQueue, err := coherence.GetBlockingNamedQueue[common.Order](ctx, session, common.QueueNameOrders)
 	if err != nil {
 		panic(err)
 	}
 
-	processedQueue, err := coherence.GetNamedQueue[Order](ctx, session, queueNameProcessed)
+	processedQueue, err := coherence.GetNamedQueue[common.Order](ctx, session, common.QueueNameProcessed)
 	if err != nil {
 		panic(err)
 	}

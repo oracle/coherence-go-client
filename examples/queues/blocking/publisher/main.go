@@ -14,25 +14,13 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/oracle/coherence-go-client/coherence"
+	"github.com/oracle/coherence-go-client/examples/queues/blocking/common"
 	"log"
 	"math/rand"
 	"os"
 	"strconv"
 	"time"
 )
-
-const queueNameOrders = "orders-queue"
-
-// Order represents a fictitious order.
-type Order struct {
-	OrderID             string        `json:"orderID"`
-	Customer            string        `json:"customer"`
-	OrderStatus         string        `json:"orderStatus"`
-	OrderTotal          float32       `json:"orderTotal"`
-	CreateTime          time.Time     `json:"createTime"`
-	CompleteTime        time.Time     `json:"completeTime"`
-	OrderProcessingTime time.Duration `json:"orderProcessingTime"`
-}
 
 func main() {
 	var (
@@ -47,13 +35,8 @@ func main() {
 		return
 	}
 
-	if numOrders, err = strconv.Atoi(os.Args[1]); err != nil {
+	if numOrders, err = strconv.Atoi(os.Args[1]); err != nil || numOrders < 0 {
 		log.Println("Invalid value for number of orders")
-		return
-	}
-
-	if numOrders <= 0 {
-		log.Println("Enter a positive number")
 		return
 	}
 
@@ -64,7 +47,7 @@ func main() {
 	}
 	defer session.Close()
 
-	orderQueue, err := coherence.GetNamedQueue[Order](ctx, session, queueNameOrders)
+	orderQueue, err := coherence.GetNamedQueue[common.Order](ctx, session, common.QueueNameOrders)
 	if err != nil {
 		panic(err)
 	}
@@ -72,7 +55,7 @@ func main() {
 	defer orderQueue.Close()
 
 	for i := 1; i <= numOrders; i++ {
-		newOrder := Order{
+		newOrder := common.Order{
 			OrderID:     uuid.New().String(),
 			Customer:    fmt.Sprintf("Customer %d", i),
 			OrderStatus: "NEW",
