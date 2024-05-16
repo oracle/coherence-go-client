@@ -32,7 +32,7 @@ const (
 	GrpcProxyLookup            = "$GRPC:GrpcProxy"
 	NSPrefix                   = "NameService/string/"
 	NSLocalPort                = "/NameService/localPort"
-	DefaultTimeout       int32 = 300
+	DefaultTimeout       int32 = 10
 )
 
 // DiscoveredCluster defines a discovered cluster.
