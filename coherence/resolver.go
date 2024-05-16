@@ -6,13 +6,6 @@
 
 package coherence
 
-/*
-
-using the nslookup resolver:
-	coherence:///host:port
-
-
-*/
 import (
 	"errors"
 	"fmt"
