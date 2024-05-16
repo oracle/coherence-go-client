@@ -20,6 +20,7 @@ import (
 	"google.golang.org/grpc/resolver"
 	"log"
 	"strings"
+	"sync"
 )
 
 const (
@@ -54,10 +55,14 @@ func (*nsLookupResolverBuilder) Scheme() string { return nsLookupScheme }
 type nsLookupResolver struct {
 	target    resolver.Target
 	cc        resolver.ClientConn
+	mutex     sync.Mutex
 	addrStore map[string][]string
 }
 
 func (r *nsLookupResolver) resolve() {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+
 	grpcEndpoints := generateNSAddresses(r.target.Endpoint())
 	if len(grpcEndpoints) == 0 {
 		msg := "resolver produced zero addresses"
