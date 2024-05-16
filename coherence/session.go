@@ -84,9 +84,9 @@ type SessionOptions struct {
 	TlSConfig          *tls.Config
 }
 
-// NewSession creates a new Session with the specified sessionOptions.
+// NewSession creates a new [Session] with the specified sessionOptions.
 //
-// Example 1: Create a Session that will eventually connect to host "localhost" and gRPC port: 1408 using an insecure connection.
+// Example 1: Create a [Session] that will eventually connect to host "localhost" and gRPC port: 1408 using an insecure connection.
 //
 //	ctx := context.Background()
 //	session, err = coherence.NewSession(ctx, coherence.WithPlainText())
@@ -94,17 +94,25 @@ type SessionOptions struct {
 //	    log.Fatal(err)
 //	}
 //
-// Example 2: Create a Session that will eventually connect to host "acme.com" and gRPC port: 1408
+// Example 2: Create a [Session] that will eventually connect to host "acme.com" and gRPC port: 1408 using an insecure connection.
 //
 //	session, err := coherence.NewSession(ctx, coherence.WithAddress("acme.com:1408"), coherence.WithPlainText())
 //
 // You can also set the environment variable COHERENCE_SERVER_ADDRESS to specify the address.
 //
-// Example 3: Create a Session that will eventually connect to default "localhost:1408" using a secured connection
+// Example 3: Create a [Session] that will eventually connect to default "localhost:1408" using a secured connection.
 //
 //	session, err := coherence.NewSession(ctx)
 //
-// A Session can also be configured using environment variable COHERENCE_SERVER_ADDRESS.
+// Example 4: Create a [Session] that will use the Coherence Name Service to discover the gRPC endpoints using a secured connection.
+//
+//	session, err := coherence.NewSession(ctx, coherence.WithAddress("coherence:///localhost:7574"))
+//
+// Example 5: Create a [Session] that will use the Coherence Name Service to discover the gRPC endpoints when multiple clusters are listening on the same cluster port using a secured connection.
+//
+//	session, err := coherence.NewSession(ctx, coherence.WithAddress("coherence:///localhost:7574/cluster2"))
+//
+// A [Session] can also be configured using environment variable COHERENCE_SERVER_ADDRESS.
 // See [gRPC Naming] for information on values for this.
 //
 // To Configure SSL, you must first enable SSL on the gRPC Proxy, see [gRPC Proxy Server] for details.
