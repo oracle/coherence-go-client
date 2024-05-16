@@ -28,7 +28,9 @@ const (
 
 var (
 	emptyAddresses = make([]string, 0)
-	resolverDebug  = func(v ...any) {}
+	resolverDebug  = func(v ...any) {
+		// noop as default debug mode
+	}
 )
 
 type nsLookupResolverBuilder struct {
