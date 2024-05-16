@@ -8,7 +8,7 @@
 # ----------------------------------------------------------------------------------------------------------------------
 
 # This is the version of the coherence-go-client
-VERSION ?=1.2.0-rc1
+VERSION ?=1.2.1
 CURRDIR := $(shell pwd)
 USER_ID := $(shell echo "`id -u`:`id -g`")
 
@@ -352,6 +352,25 @@ test-discovery: test-clean gotestsum $(BUILD_PROPS) ## Run Discovery tests with 
 	make test-coherence-startup
 	CGO_ENABLED=0 $(GOTESTSUM) --format testname --junitfile $(TEST_LOGS_DIR)/cohctl-test-discovery.xml \
 	  -- $(GO_TEST_FLAGS) -v  ./test/e2e/discovery/...
+	make test-coherence-shutdown
+
+# ----------------------------------------------------------------------------------------------------------------------
+# Executes the Go resolver tests for standalone Coherence
+# ----------------------------------------------------------------------------------------------------------------------
+.PHONY: test-resolver
+test-resolver: test-clean gotestsum $(BUILD_PROPS) ## Run Resolver tests with Coherence
+	COHERENCE_RESOLVER_DEBUG=true CGO_ENABLED=0 $(GOTESTSUM) --format testname --junitfile $(TEST_LOGS_DIR)/cohctl-test-resover.xml \
+	  -- $(GO_TEST_FLAGS) -v  ./test/e2e/resolver/...
+
+# ----------------------------------------------------------------------------------------------------------------------
+# Executes the Go resolver cluster tests for standalone Coherence
+# ----------------------------------------------------------------------------------------------------------------------
+.PHONY: test-resolver-cluster
+test-resolver-cluster: test-clean gotestsum $(BUILD_PROPS) ## Run Resolver tests with Coherence
+	make test-coherence-shutdown || true
+	make test-coherence-startup
+	COHERENCE_RESOLVER_DEBUG=true CGO_ENABLED=0 $(GOTESTSUM) --format testname --junitfile $(TEST_LOGS_DIR)/cohctl-test-resover-cluster.xml \
+	  -- $(GO_TEST_FLAGS) -v  ./test/e2e/resolver_cluster/...
 	make test-coherence-shutdown
 
 # ----------------------------------------------------------------------------------------------------------------------

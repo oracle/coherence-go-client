@@ -573,3 +573,18 @@ func getDockerComposeCommand(arguments ...string) (string, []string) {
 
 	return command, args
 }
+
+func RunNSTestWithNamedMap(ctx context.Context, g *gomega.WithT, session *coherence.Session, cache string) {
+	namedMap, err := coherence.GetNamedMap[string, string](session, cache)
+	g.Expect(err).To(gomega.Not(gomega.HaveOccurred()))
+	defer func() {
+		_ = namedMap.Destroy(ctx)
+	}()
+
+	_, err = namedMap.Put(ctx, "one", "ONE")
+	g.Expect(err).To(gomega.Not(gomega.HaveOccurred()))
+
+	size, err := namedMap.Size(ctx)
+	g.Expect(err).To(gomega.Not(gomega.HaveOccurred()))
+	g.Expect(size).To(gomega.Equal(1))
+}

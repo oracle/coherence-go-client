@@ -54,8 +54,20 @@ The [NewSession] function creates a new session that will connect to a gRPC prox
 
 You can specify the host and port to connect to by specifying the environment variable COHERENCE_SERVER_ADDRESS.
 See [gRPC Naming] for information on values for this.
-You can also pass [coherence.WithAddress]("host:port") to specify the gRPC host and
-port to connect to. The default connection mode is with SSL enabled, but you can use plan-text via using [coherence.WithPlainText]().
+
+You can also pass [coherence.WithAddress]("host:port") to specify the gRPC host and port to connect to. The default
+connection mode is with SSL enabled, but you can use plan-text via using [coherence.WithPlainText]().
+
+	session, err := coherence.NewSession(ctx, coherence.WithPlainText(), coherence.WithAddress("my-host:7574"))
+
+You are also able to use the 'coherence' gRPC resolver address of "coherence:///host:port"
+to connect to the Coherence Name Service, running on the cluster port, and automatically discover the gRPC endpoints. For example:
+
+	session, err := coherence.NewSession(ctx, coherence.WithPlainText(), coherence.WithAddress("coherence:///localhost:7574"))
+
+If you have multiple clusters on the same port, you can also append the cluster name to specify which cluster you wish to contact.
+
+	coherence.WithAddress("coherence:///localhost:7574/cluster2")
 
 To Configure SSL, you must first enable SSL on the gRPC Proxy, see [gRPC Proxy documentation] for details.
 Refer to the section on [NewSession] for more information on setting up a SSL connection on the client.
