@@ -40,6 +40,9 @@ const (
 	// envResolverDebug enables resolver debug messages to be displayed.
 	envResolverDebug = "COHERENCE_RESOLVER_DEBUG"
 
+	// envResolverDebug enables randomization of addresses returned by resolver
+	envResolverRandomize = "COHERENCE_RESOLVER_RANDOMIZE"
+
 	// Integer.MAX_VALUE on Java
 	integerMaxValue = 2147483647
 

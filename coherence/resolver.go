@@ -12,8 +12,10 @@ import (
 	"github.com/oracle/coherence-go-client/coherence/discovery"
 	"google.golang.org/grpc/resolver"
 	"log"
+	"math/rand"
 	"strings"
 	"sync"
+	"time"
 )
 
 const (
@@ -25,6 +27,7 @@ var (
 	resolverDebug  = func(v ...any) {
 		// noop as default debug mode
 	}
+	randomizeAddresses bool
 )
 
 type nsLookupResolverBuilder struct {
@@ -68,7 +71,16 @@ func (r *nsLookupResolver) resolve() {
 	for i, s := range grpcEndpoints {
 		addresses[i] = resolver.Address{Addr: s}
 	}
-	resolverDebug(fmt.Sprintf("resolver produced the following addresses: %v", addresses))
+
+	if randomizeAddresses {
+		// randomize the address list
+		rand.NewSource(time.Now().UnixNano())
+		rand.Shuffle(len(addresses), func(i, j int) {
+			addresses[i], addresses[j] = addresses[j], addresses[i]
+		})
+	}
+
+	resolverDebug(fmt.Sprintf("resolver produced the following addresses: %v, randomize=%v", addresses, randomizeAddresses))
 	_ = r.cc.UpdateState(resolver.State{Addresses: addresses})
 }
 
