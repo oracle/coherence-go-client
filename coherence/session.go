@@ -165,7 +165,7 @@ func NewSession(ctx context.Context, options ...func(session *SessionOptions)) (
 			DisconnectTimeout:  time.Duration(0) * time.Second},
 	}
 
-	if getBoolValueFromEnvVarOrDefault(envResolverRandomize, false) {
+	if getBoolValueFromEnvVarOrDefault(envResolverRandomize, true) {
 		randomizeAddresses = true
 	}
 

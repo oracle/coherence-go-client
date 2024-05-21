@@ -70,8 +70,8 @@ If you have multiple clusters on the same port, you can also append the cluster 
 	coherence.WithAddress("coherence:///localhost:7574/cluster2")
 
 When using the 'coherence' gRPC resolver, the addresses are always tried in the same order as they are returned from the
-Name Service lookup. You can randomize them by setting the environment variable COHERENCE_RESOLVER_RANDOMIZER=true. You
-can also see the addresses that were found by setting COHERENCE_RESOLVER_DEBUG=true.
+Name Service lookup. The Go Client randomizes any addresses, but you can turn this off by setting the
+environment variable COHERENCE_RESOLVER_RANDOMIZER=false.
 
 To Configure SSL, you must first enable SSL on the gRPC Proxy, see [gRPC Proxy documentation] for details.
 Refer to the section on [NewSession] for more information on setting up a SSL connection on the client.
