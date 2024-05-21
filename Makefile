@@ -420,4 +420,4 @@ endef
 .PHONY: gettrivy
 gettrivy:
 	@mkdir -p $(TOOLS_BIN)
-	curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b $(TOOLS_BIN) v0.38.3
+	curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b $(TOOLS_BIN) v0.51.2
