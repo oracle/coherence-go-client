@@ -26,6 +26,7 @@ The Coherence Go client provides the following features:
     and session lifecycle events such as connected, disconnected, reconnected and closed
   - Support for storing Go structs as JSON as well as the ability to serialize to Java objects on the server for access from other Coherence language API's
   - Near cache support to cache frequently accessed data in the Go client to avoid sending requests across the network
+  - Support for Queues in Coherence Community Edition 24.03+
   - Full support for Go generics in all Coherence API's
 
 For more information on Coherence caches, please see the [Coherence Documentation].
@@ -69,9 +70,8 @@ If you have multiple clusters on the same port, you can also append the cluster 
 
 	coherence.WithAddress("coherence:///localhost:7574/cluster2")
 
-When using the 'coherence' gRPC resolver, the addresses are always tried in the same order as they are returned from the
-Name Service lookup. The Go Client randomizes any addresses, but you can turn this off by setting the
-environment variable COHERENCE_RESOLVER_RANDOMIZER=false.
+When using the 'coherence' gRPC resolver, the Go client randomizes any addresses that are returned to help
+load balance across gRPC proxies. You can turn this off by setting the environment variable COHERENCE_RESOLVER_RANDOMIZER=false.
 
 To Configure SSL, you must first enable SSL on the gRPC Proxy, see [gRPC Proxy documentation] for details.
 Refer to the section on [NewSession] for more information on setting up a SSL connection on the client.
@@ -331,7 +331,7 @@ run various scenarios to perform aggregations.
 
 # Responding to cache events
 
-The Coherence Go Client provides the ability to add a [MapListener] that will receive events (inserts, updates, deletes)
+The Coherence Go client provides the ability to add a [MapListener] that will receive events (inserts, updates, deletes)
 that occur against a [NamedMap] or [NamedCache]. You can listen for all events, events based upon a filter or
 vents based upon a key.
 
@@ -394,7 +394,7 @@ vents based upon a key.
 
 # Responding to cache lifecycle events
 
-The Coherence Go Client provides the ability to add a [MapLifecycleListener] that will receive events (truncated and destroyed)
+The Coherence Go client provides the ability to add a [MapLifecycleListener] that will receive events (truncated and destroyed)
 that occur against a [NamedMap] or [NamedCache].
 
 	// consider the example below where we want to listen for all 'truncate' events for a NamedMap.
@@ -437,7 +437,7 @@ that occur against a [NamedMap] or [NamedCache].
 
 # Responding to session lifecycle events
 
-The Coherence Go Client provides the ability to add a [SessionLifecycleListener] that will receive events (connected, closed,
+The Coherence Go client provides the ability to add a [SessionLifecycleListener] that will receive events (connected, closed,
 disconnected or reconnected) that occur against the [Session].
 Note: These events use and experimental gRPC API so may not be reliable or may change in the future. This is due to the
 experimental nature of the underlying gRPC API.
@@ -571,7 +571,7 @@ See the [Queues] documentation for more information on using queues on the Coher
 # Serializing to Java objects on the server
 
 By default, the Coherence Go client serializes any keys and values to JSON and then stores them as JsonObjects in Coherence.
-This is usually sufficient for most applications where you are only accessing your data via the Go Client.
+This is usually sufficient for most applications where you are only accessing your data via the Go client.
 
 If you wish to access your data via other clients such as Java, JavaScript, C++, .NET or Python, it's best to use Java classes, known to Coherence server,
 representing the data model. The following describes how to achieve interoperability with Java.
