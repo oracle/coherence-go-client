@@ -25,7 +25,7 @@ to a Coherence Cluster using gRPC for the network transport.
   * session lifecycle events such as connected, disconnected, reconnected and closed 
 * Support for storing Go structs as JSON as well as the ability to serialize to Java objects on the server for access from other Coherence language API's 
 * Near cache support to cache frequently accessed data in the Go client to avoid sending requests across the network
-* Support for Queues in Coherence Community Edition 24.03+ only
+* Support for Queues in Coherence Community Edition 24.03+
 * Full support for Go generics in all Coherence API's
 
 #### Requirements
