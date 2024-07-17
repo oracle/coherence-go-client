@@ -83,7 +83,7 @@ jobs:
       shell: bash
       run: |
         go get google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.3.0
-        INCLUDE_LONG_RUNNING=true PROFILES=,-jakarta,javax COHERENCE_VERSION=22.06.8 make clean generate-proto build-test-images test-e2e-standalone
+        INCLUDE_LONG_RUNNING=true PROFILES=,-jakarta,javax COHERENCE_VERSION=22.06.9 make clean generate-proto build-test-images test-e2e-standalone
 
     - uses: actions/upload-artifact@v4
       if: failure()
@@ -95,7 +95,7 @@ jobs:
       shell: bash
       run: |
         go get google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.3.0
-        COHERENCE_VERSION=22.06.8 PROFILES=,-jakarta,javax,scope make clean generate-proto build-test-images test-e2e-standalone-scope
+        COHERENCE_VERSION=22.06.9 PROFILES=,-jakarta,javax,scope make clean generate-proto build-test-images test-e2e-standalone-scope
 
     - uses: actions/upload-artifact@v4
       if: failure()
@@ -110,7 +110,7 @@ jobs:
           COHERENCE_TLS_CERTS_PATH=`pwd`/test/utils/certs/guardians-ca.crt \
           COHERENCE_TLS_CLIENT_CERT=`pwd`/test/utils/certs/star-lord.crt \
           COHERENCE_TLS_CLIENT_KEY=`pwd`/test/utils/certs/star-lord.key \
-          COHERENCE_VERSION=22.06.7 PROFILES=,secure,-jakarta,javax make clean certs generate-proto build-test-images test-e2e-standalone
+          COHERENCE_VERSION=22.06.9 PROFILES=,secure,-jakarta,javax make clean certs generate-proto build-test-images test-e2e-standalone
 
     - name: E2E Local Tests SSL (options)
       shell: bash
@@ -119,7 +119,7 @@ jobs:
           COHERENCE_TLS_CERTS_PATH_OPTION=`pwd`/test/utils/certs/guardians-ca.crt \
           COHERENCE_TLS_CLIENT_CERT_OPTION=`pwd`/test/utils/certs/star-lord.crt \
           COHERENCE_TLS_CLIENT_KEY_OPTION=`pwd`/test/utils/certs/star-lord.key \
-          COHERENCE_VERSION=22.06.7 PROFILES=,secure,-jakarta,javax,scope make clean certs generate-proto build-test-images test-e2e-standalone-scope
+          COHERENCE_VERSION=22.06.9 PROFILES=,secure,-jakarta,javax,scope make clean certs generate-proto build-test-images test-e2e-standalone-scope
 
     - name: E2E Local Tests SSL (tlsConfig)
       shell: bash
@@ -128,7 +128,7 @@ jobs:
           COHERENCE_TLS_CERTS_PATH_OPTION=`pwd`/test/utils/certs/guardians-ca.crt \
           COHERENCE_TLS_CLIENT_CERT_OPTION=`pwd`/test/utils/certs/star-lord.crt \
           COHERENCE_TLS_CLIENT_KEY_OPTION=`pwd`/test/utils/certs/star-lord.key \
-          COHERENCE_VERSION=22.06.7 PROFILES=,secure,-jakarta,javax,scope make clean certs generate-proto build-test-images test-e2e-standalone-scope
+          COHERENCE_VERSION=22.06.9 PROFILES=,secure,-jakarta,javax,scope make clean certs generate-proto build-test-images test-e2e-standalone-scope
 
     - uses: actions/upload-artifact@v4
       if: failure()
