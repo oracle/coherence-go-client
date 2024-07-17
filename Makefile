@@ -8,7 +8,7 @@
 # ----------------------------------------------------------------------------------------------------------------------
 
 # This is the version of the coherence-go-client
-VERSION ?=1.2.2
+VERSION ?=1.2.3
 CURRDIR := $(shell pwd)
 USER_ID := $(shell echo "`id -u`:`id -g`")
 
@@ -33,7 +33,7 @@ MVN_VERSION ?= 1.0.0
 SHELL := /bin/bash
 
 # Coherence CE version to run base tests against
-COHERENCE_VERSION ?= 22.06.8
+COHERENCE_VERSION ?= 22.06.9
 COHERENCE_GROUP_ID ?= com.oracle.coherence.ce
 COHERENCE_WKA1 ?= server1
 COHERENCE_WKA2 ?= server1
@@ -205,8 +205,8 @@ golangci: $(TOOLS_BIN)/golangci-lint ## Go code review
 .PHONY: generate-proto
 generate-proto: $(TOOLS_BIN)/protoc ## Generate Proto Files
 	mkdir -p $(PROTO_DIR) || true
-	curl -o $(PROTO_DIR)/services.proto https://raw.githubusercontent.com/oracle/coherence/22.06.8/prj/coherence-grpc/src/main/proto/services.proto
-	curl -o $(PROTO_DIR)/messages.proto https://raw.githubusercontent.com/oracle/coherence/22.06.8/prj/coherence-grpc/src/main/proto/messages.proto
+	curl -o $(PROTO_DIR)/services.proto https://raw.githubusercontent.com/oracle/coherence/22.06.9/prj/coherence-grpc/src/main/proto/services.proto
+	curl -o $(PROTO_DIR)/messages.proto https://raw.githubusercontent.com/oracle/coherence/22.06.9/prj/coherence-grpc/src/main/proto/messages.proto
 	echo "" >> $(PROTO_DIR)/services.proto
 	echo "" >> $(PROTO_DIR)/messages.proto
 	echo 'option go_package = "github.com/oracle/coherence-go-client/proto";' >> $(PROTO_DIR)/services.proto
