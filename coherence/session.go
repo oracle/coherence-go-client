@@ -151,7 +151,7 @@ func NewSession(ctx context.Context, options ...func(session *SessionOptions)) (
 		closed:                false,
 		firstConnectAttempted: false,
 		hasConnected:          false,
-		debug:                 func(v ...any) {},
+		debug:                 func(_ ...any) {},
 		maps:                  make(map[string]interface{}, 0),
 		caches:                make(map[string]interface{}, 0),
 		queues:                make(map[string]interface{}, 0),

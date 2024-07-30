@@ -13,7 +13,7 @@ import (
 	"github.com/oracle/coherence-go-client/coherence"
 	"github.com/oracle/coherence-go-client/coherence/extractors"
 	"github.com/oracle/coherence-go-client/coherence/filters"
-	. "github.com/oracle/coherence-go-client/test/utils"
+	"github.com/oracle/coherence-go-client/test/utils"
 	"log"
 	"sync"
 	"sync/atomic"
@@ -28,16 +28,16 @@ func init() {
 }
 
 var (
-	alvin = Person{ID: 1, Name: "Alvin", Age: 40, Salary: 1000,
+	alvin = utils.Person{ID: 1, Name: "Alvin", Age: 40, Salary: 1000,
 		Languages:   []string{"English", "French"},
-		HomeAddress: Address{Address1: "address1", Address2: "address2", City: "Perth", State: "WA", PostCode: 6000}}
+		HomeAddress: utils.Address{Address1: "address1", Address2: "address2", City: "Perth", State: "WA", PostCode: 6000}}
 
-	bill = Person{ID: 1, Name: "Bill", Age: 45, Salary: 1000,
+	bill = utils.Person{ID: 1, Name: "Bill", Age: 45, Salary: 1000,
 		Languages:   []string{"English", "French"},
-		HomeAddress: Address{Address1: "address1", Address2: "address2", City: "Perth", State: "WA", PostCode: 6000}}
-	charlie = Person{ID: 1, Name: "Charlie", Age: 29, Salary: 1000,
+		HomeAddress: utils.Address{Address1: "address1", Address2: "address2", City: "Perth", State: "WA", PostCode: 6000}}
+	charlie = utils.Person{ID: 1, Name: "Charlie", Age: 29, Salary: 1000,
 		Languages:   []string{"English", "French"},
-		HomeAddress: Address{Address1: "address1", Address2: "address2", City: "Perth", State: "WA", PostCode: 6000}}
+		HomeAddress: utils.Address{Address1: "address1", Address2: "address2", City: "Perth", State: "WA", PostCode: 6000}}
 )
 
 func TestMapAndLifecycleEventsAll(t *testing.T) {
@@ -74,8 +74,8 @@ func TestMapAndLifecycleEventsAll(t *testing.T) {
 	g, session := initTest(t)
 	defer session.Close()
 
-	namedCache := GetNamedCache[string, string](g, session, "test-events-all-cache")
-	namedMap := GetNamedMap[string, string](g, session, "test-events-all-map")
+	namedCache := utils.GetNamedCache[string, string](g, session, "test-events-all-cache")
+	namedMap := utils.GetNamedMap[string, string](g, session, "test-events-all-map")
 
 	runBasicTests(g, namedCache, namedCache.Name(), &expected, -1)
 	runBasicTests(g, namedMap, namedMap.Name(), &expected, -1)
@@ -85,8 +85,8 @@ func TestMapAndLifecycleEventsAll1(t *testing.T) {
 	g, session := initTest(t)
 	defer session.Close()
 
-	namedCache := GetNamedCache[string, string](g, session, "test-lifecycle-release-cache")
-	namedMap := GetNamedMap[string, string](g, session, "test-lifecycle-release-map")
+	namedCache := utils.GetNamedCache[string, string](g, session, "test-lifecycle-release-cache")
+	namedMap := utils.GetNamedMap[string, string](g, session, "test-lifecycle-release-map")
 
 	runReleasedLifecycleTests(g, namedMap)
 	runReleasedLifecycleTests(g, namedCache)
@@ -96,8 +96,8 @@ func TestMapAndLifecycleEventsAll2(t *testing.T) {
 	g, session := initTest(t)
 	defer session.Close()
 
-	namedCache := GetNamedCache[string, string](g, session, "test-lifecycle-all-cache-multi")
-	namedMap := GetNamedMap[string, string](g, session, "test-lifecycle-all-map-multi")
+	namedCache := utils.GetNamedCache[string, string](g, session, "test-lifecycle-all-cache-multi")
+	namedMap := utils.GetNamedMap[string, string](g, session, "test-lifecycle-all-map-multi")
 
 	runMultipleLifecycleTests(g, namedMap)
 	runMultipleLifecycleTests(g, namedCache)
@@ -107,8 +107,8 @@ func TestMapAndLifecycleEventsAll3(t *testing.T) {
 	g, session := initTest(t)
 	defer session.Close()
 
-	namedCache := GetNamedCache[string, string](g, session, "test-lifecycle-all-cache")
-	namedMap := GetNamedMap[string, string](g, session, "test-lifecycle-all-map")
+	namedCache := utils.GetNamedCache[string, string](g, session, "test-lifecycle-all-cache")
+	namedMap := utils.GetNamedMap[string, string](g, session, "test-lifecycle-all-map")
 
 	runBasicLifecycleTests(g, namedMap, namedMap.Name())
 	runBasicLifecycleTests(g, namedCache, namedCache.Name())
@@ -119,8 +119,8 @@ func TestMapAndLifecycleEventsAll4(t *testing.T) {
 	g, session := initTest(t)
 	defer session.Close()
 
-	namedCache := GetNamedCache[string, string](g, session, "test-lifecycle-all-cache")
-	namedMap := GetNamedMap[string, string](g, session, "test-lifecycle-all-map")
+	namedCache := utils.GetNamedCache[string, string](g, session, "test-lifecycle-all-cache")
+	namedMap := utils.GetNamedMap[string, string](g, session, "test-lifecycle-all-map")
 
 	runMultipleLifecycleTests(g, namedMap)
 	runMultipleLifecycleTests(g, namedCache)
@@ -136,11 +136,11 @@ func TestEventDisconnect(t *testing.T) {
 		coherence.WithReadyTimeout(time.Duration(130)*time.Second))
 	defer session.Close()
 
-	namedCache := GetNamedCache[string, string](g, session, "test-reconnect-cache")
+	namedCache := utils.GetNamedCache[string, string](g, session, "test-reconnect-cache")
 
 	RunTestReconnect(g, namedCache, true)
 
-	namedMap := GetNamedMap[string, string](g, session, "test-reconnect-map")
+	namedMap := utils.GetNamedMap[string, string](g, session, "test-reconnect-map")
 	RunTestReconnect(g, namedMap, true)
 }
 
@@ -151,7 +151,7 @@ func TestEventDisconnectWithReadyTimeoutDelay(t *testing.T) {
 	t.Skip("Skipping test temporarily while sorting out reconnect issue")
 
 	fmt.Println("Issue stop of $GRPC:GrpcProxy")
-	_, err := IssuePostRequest("http://127.0.0.1:30000/management/coherence/cluster/services/$GRPC:GrpcProxy/members/1/stop")
+	_, err := utils.IssuePostRequest("http://127.0.0.1:30000/management/coherence/cluster/services/$GRPC:GrpcProxy/members/1/stop")
 	if err != nil {
 		t.Error("Unable to issue post request to stop gRPC proxy")
 	}
@@ -159,11 +159,11 @@ func TestEventDisconnectWithReadyTimeoutDelay(t *testing.T) {
 	g, session := initTest(t, coherence.WithReadyTimeout(time.Duration(130)*time.Second))
 	defer session.Close()
 
-	namedCache := GetNamedCache[string, string](g, session, "test-reconnect-cache")
+	namedCache := utils.GetNamedCache[string, string](g, session, "test-reconnect-cache")
 
 	RunTestReconnect(g, namedCache, false)
 
-	namedMap := GetNamedMap[string, string](g, session, "test-reconnect-map")
+	namedMap := utils.GetNamedMap[string, string](g, session, "test-reconnect-map")
 	RunTestReconnect(g, namedMap, false)
 }
 
@@ -186,8 +186,8 @@ func TestMapEventInsertsOnly(t *testing.T) {
 	g, session := initTest(t)
 	defer session.Close()
 
-	namedCache := GetNamedCache[string, string](g, session, "test-events-inserts-only-cache")
-	namedMap := GetNamedMap[string, string](g, session, "test-events-inserts-only-map")
+	namedCache := utils.GetNamedCache[string, string](g, session, "test-events-inserts-only-cache")
+	namedMap := utils.GetNamedMap[string, string](g, session, "test-events-inserts-only-map")
 
 	runBasicTests(g, namedCache, namedCache.Name(), &expected, filters.MaskInserted)
 	runBasicTests(g, namedMap, namedMap.Name(), &expected, filters.MaskInserted)
@@ -213,8 +213,8 @@ func TestMapEventUpdatesOnly(t *testing.T) {
 	g, session := initTest(t)
 	defer session.Close()
 
-	namedCache := GetNamedCache[string, string](g, session, "test-events-updates-only-cache")
-	namedMap := GetNamedMap[string, string](g, session, "test-events-updates-only-map")
+	namedCache := utils.GetNamedCache[string, string](g, session, "test-events-updates-only-cache")
+	namedMap := utils.GetNamedMap[string, string](g, session, "test-events-updates-only-map")
 
 	runBasicTests(g, namedCache, namedCache.Name(), &expected, filters.MaskUpdated)
 	runBasicTests(g, namedMap, namedMap.Name(), &expected, filters.MaskUpdated)
@@ -240,8 +240,8 @@ func TestMapEventDeletesOnly(t *testing.T) {
 	g, session := initTest(t)
 	defer session.Close()
 
-	namedCache := GetNamedCache[string, string](g, session, "test-events-deletes-only-cache")
-	namedMap := GetNamedMap[string, string](g, session, "test-events-deletes-only-map")
+	namedCache := utils.GetNamedCache[string, string](g, session, "test-events-deletes-only-cache")
+	namedMap := utils.GetNamedMap[string, string](g, session, "test-events-deletes-only-map")
 
 	runBasicTests(g, namedCache, namedCache.Name(), &expected, filters.MaskDeleted)
 	runBasicTests(g, namedMap, namedMap.Name(), &expected, filters.MaskDeleted)
@@ -249,13 +249,13 @@ func TestMapEventDeletesOnly(t *testing.T) {
 
 func TestMapEventMultipleListeners(t *testing.T) {
 	g := gomega.NewWithT(t)
-	session, err := GetSession()
+	session, err := utils.GetSession()
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	defer session.Close()
 
 	testMaps := []coherence.NamedMap[string, string]{
-		GetNamedCache[string, string](g, session, "event-multiple-listeners-cache"),
-		GetNamedMap[string, string](g, session, "event-multiple-listeners-map"),
+		utils.GetNamedCache[string, string](g, session, "event-multiple-listeners-cache"),
+		utils.GetNamedMap[string, string](g, session, "event-multiple-listeners-map"),
 	}
 
 	// run tests against NamedMap and NamedCache
@@ -300,7 +300,7 @@ func RunTestReconnect(g *gomega.WithT, namedMap coherence.NamedMap[string, strin
 		// vs shutdown (which is graceful), for the "$GRPC:GrpcProxy" on node 1.
 		// the client should eventually connect
 		log.Println("Issue stop of $GRPC:GrpcProxy")
-		_, err = IssuePostRequest("http://127.0.0.1:30000/management/coherence/cluster/services/$GRPC:GrpcProxy/members/1/stop")
+		_, err = utils.IssuePostRequest("http://127.0.0.1:30000/management/coherence/cluster/services/$GRPC:GrpcProxy/members/1/stop")
 		g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	}
 
@@ -310,7 +310,7 @@ func RunTestReconnect(g *gomega.WithT, namedMap coherence.NamedMap[string, strin
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 	log.Println("Sleeping to test re-connect")
-	Sleep(5)
+	utils.Sleep(5)
 
 	// add another 'additional' mutations
 	createMutations(g, namedMap, additional)
@@ -415,7 +415,7 @@ func RunTestMultipleListeners(g *gomega.WithT, namedMap coherence.NamedMap[strin
 	g.Expect(err9).ShouldNot(gomega.HaveOccurred())
 
 	// give some time for any events
-	Sleep(1)
+	utils.Sleep(1)
 	listener.waitFor(0, 3*time.Second)
 	listener2.waitFor(expected.total(), 3*time.Second)
 
@@ -444,7 +444,7 @@ func RunTestMultipleListeners(g *gomega.WithT, namedMap coherence.NamedMap[strin
 	g.Expect(err13).ShouldNot(gomega.HaveOccurred())
 
 	// give some time for any events
-	Sleep(1)
+	utils.Sleep(1)
 	listener2.waitFor(0, 3*time.Second)
 	listener2.waitFor(0, 3*time.Second)
 
@@ -455,28 +455,28 @@ func RunTestMultipleListeners(g *gomega.WithT, namedMap coherence.NamedMap[strin
 func TestCustomFilterListener(t *testing.T) {
 	g := gomega.NewWithT(t)
 	ctx = context.Background()
-	session, err := GetSession()
+	session, err := utils.GetSession()
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	defer session.Close()
 
-	cache := GetNamedCache[string, Person](g, session, "event-filter-listener")
-	defer func(cache coherence.NamedCache[string, Person], ctx context.Context) {
+	cache := utils.GetNamedCache[string, utils.Person](g, session, "event-filter-listener")
+	defer func(cache coherence.NamedCache[string, utils.Person], ctx context.Context) {
 		err := cache.Destroy(ctx)
 		if err != nil {
 			log.Printf("Error destroying map %s: %s", cache.Name(), err)
 		}
 	}(cache, ctx)
 
-	noEvents := ExpectedEvents[string, Person]{
-		inserts: []*ValidateEvent[string, Person]{},
-		updates: []*ValidateEvent[string, Person]{},
-		deletes: []*ValidateEvent[string, Person]{},
+	noEvents := ExpectedEvents[string, utils.Person]{
+		inserts: []*ValidateEvent[string, utils.Person]{},
+		updates: []*ValidateEvent[string, utils.Person]{},
+		deletes: []*ValidateEvent[string, utils.Person]{},
 	}
 
 	keyC := "C"
 
-	expected := ExpectedEvents[string, Person]{
-		inserts: []*ValidateEvent[string, Person]{
+	expected := ExpectedEvents[string, utils.Person]{
+		inserts: []*ValidateEvent[string, utils.Person]{
 			{
 				eventType: coherence.EntryInserted,
 				key:       &keyC,
@@ -484,12 +484,12 @@ func TestCustomFilterListener(t *testing.T) {
 				new:       &charlie,
 			},
 		},
-		updates: []*ValidateEvent[string, Person]{},
-		deletes: []*ValidateEvent[string, Person]{},
+		updates: []*ValidateEvent[string, utils.Person]{},
+		deletes: []*ValidateEvent[string, utils.Person]{},
 	}
 
 	f := filters.Less(extractors.Extract[int]("age"), 30)
-	listener := NewCountingMapListener[string, Person]("custom-filter")
+	listener := NewCountingMapListener[string, utils.Person]("custom-filter")
 	err = cache.AddFilterListener(ctx, listener.listener, f)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
@@ -512,28 +512,28 @@ func TestCustomFilterListener(t *testing.T) {
 func TestKeyListener(t *testing.T) {
 	g := gomega.NewWithT(t)
 	ctx = context.Background()
-	session, err := GetSession()
+	session, err := utils.GetSession()
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	defer session.Close()
 
-	cache := GetNamedCache[string, Person](g, session, "event-key-listener")
-	defer func(cache coherence.NamedCache[string, Person], ctx context.Context) {
+	cache := utils.GetNamedCache[string, utils.Person](g, session, "event-key-listener")
+	defer func(cache coherence.NamedCache[string, utils.Person], ctx context.Context) {
 		err := cache.Destroy(ctx)
 		if err != nil {
 			log.Printf("Error destroying map %s: %s", cache.Name(), err)
 		}
 	}(cache, ctx)
 
-	noEvents := ExpectedEvents[string, Person]{
-		inserts: []*ValidateEvent[string, Person]{},
-		updates: []*ValidateEvent[string, Person]{},
-		deletes: []*ValidateEvent[string, Person]{},
+	noEvents := ExpectedEvents[string, utils.Person]{
+		inserts: []*ValidateEvent[string, utils.Person]{},
+		updates: []*ValidateEvent[string, utils.Person]{},
+		deletes: []*ValidateEvent[string, utils.Person]{},
 	}
 
 	keyC := "C"
 
-	expected := ExpectedEvents[string, Person]{
-		inserts: []*ValidateEvent[string, Person]{
+	expected := ExpectedEvents[string, utils.Person]{
+		inserts: []*ValidateEvent[string, utils.Person]{
 			{
 				eventType: coherence.EntryInserted,
 				key:       &keyC,
@@ -541,11 +541,11 @@ func TestKeyListener(t *testing.T) {
 				new:       &charlie,
 			},
 		},
-		updates: []*ValidateEvent[string, Person]{},
-		deletes: []*ValidateEvent[string, Person]{},
+		updates: []*ValidateEvent[string, utils.Person]{},
+		deletes: []*ValidateEvent[string, utils.Person]{},
 	}
 
-	listener := NewCountingMapListener[string, Person]("key-listener")
+	listener := NewCountingMapListener[string, utils.Person]("key-listener")
 	err = cache.AddKeyListener(ctx, listener.listener, keyC)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
@@ -568,12 +568,12 @@ func TestKeyListener(t *testing.T) {
 func TestLiteListeners(t *testing.T) {
 	g := gomega.NewWithT(t)
 	ctx = context.Background()
-	session, err := GetSession()
+	session, err := utils.GetSession()
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	defer session.Close()
 
-	cache := GetNamedCache[string, Person](g, session, "event-lite-listener")
-	defer func(cache coherence.NamedCache[string, Person], ctx context.Context) {
+	cache := utils.GetNamedCache[string, utils.Person](g, session, "event-lite-listener")
+	defer func(cache coherence.NamedCache[string, utils.Person], ctx context.Context) {
 		err := cache.Destroy(ctx)
 		if err != nil {
 			log.Printf("Error destroying map %s: %s", cache.Name(), err)
@@ -583,8 +583,8 @@ func TestLiteListeners(t *testing.T) {
 	keyC := "C"
 	always := filters.Always()
 
-	expectedLite := ExpectedEvents[string, Person]{
-		inserts: []*ValidateEvent[string, Person]{
+	expectedLite := ExpectedEvents[string, utils.Person]{
+		inserts: []*ValidateEvent[string, utils.Person]{
 			{
 				eventType: coherence.EntryInserted,
 				key:       &keyC,
@@ -592,12 +592,12 @@ func TestLiteListeners(t *testing.T) {
 				new:       nil,
 			},
 		},
-		updates: []*ValidateEvent[string, Person]{},
-		deletes: []*ValidateEvent[string, Person]{},
+		updates: []*ValidateEvent[string, utils.Person]{},
+		deletes: []*ValidateEvent[string, utils.Person]{},
 	}
 
-	expectedNonLite := ExpectedEvents[string, Person]{
-		inserts: []*ValidateEvent[string, Person]{
+	expectedNonLite := ExpectedEvents[string, utils.Person]{
+		inserts: []*ValidateEvent[string, utils.Person]{
 			{
 				eventType: coherence.EntryInserted,
 				key:       &keyC,
@@ -605,14 +605,14 @@ func TestLiteListeners(t *testing.T) {
 				new:       &charlie,
 			},
 		},
-		updates: []*ValidateEvent[string, Person]{},
-		deletes: []*ValidateEvent[string, Person]{},
+		updates: []*ValidateEvent[string, utils.Person]{},
+		deletes: []*ValidateEvent[string, utils.Person]{},
 	}
 
-	keyListener := NewCountingMapListener[string, Person]("key")
-	filterListener := NewCountingMapListener[string, Person]("filter")
-	keyListenerLite := NewCountingMapListener[string, Person]("lite-key")
-	filterListenerLite := NewCountingMapListener[string, Person]("lite-filter")
+	keyListener := NewCountingMapListener[string, utils.Person]("key")
+	filterListener := NewCountingMapListener[string, utils.Person]("filter")
+	keyListenerLite := NewCountingMapListener[string, utils.Person]("lite-key")
+	filterListenerLite := NewCountingMapListener[string, utils.Person]("lite-filter")
 
 	err1 := cache.AddKeyListenerLite(ctx, keyListenerLite.listener, keyC)
 	g.Expect(err1).ShouldNot(gomega.HaveOccurred())
@@ -631,7 +631,7 @@ func TestLiteListeners(t *testing.T) {
 
 	err4 := cache.Truncate(ctx)
 	g.Expect(err4).ShouldNot(gomega.HaveOccurred())
-	Sleep(1)
+	utils.Sleep(1)
 	keyListenerLite.reset()
 	filterListenerLite.reset()
 
@@ -690,14 +690,14 @@ func TestLiteListeners(t *testing.T) {
 	expectedLite.validate(g, cache.Name(), filterListenerLite)
 
 	// wait for a few seconds to ensure events didn't come in on the other listeners
-	Sleep(3)
+	utils.Sleep(3)
 
 	g.Expect(keyListener.counter).Should(gomega.Equal(int32(0)))
 	g.Expect(filterListener.counter).Should(gomega.Equal(int32(0)))
 
 	err12 := cache.Truncate(ctx)
 	g.Expect(err12).ShouldNot(gomega.HaveOccurred())
-	Sleep(1)
+	utils.Sleep(1)
 	keyListener.reset()
 	keyListenerLite.reset()
 	filterListener.reset()
@@ -713,7 +713,7 @@ func TestLiteListeners(t *testing.T) {
 	g.Expect(err15).ShouldNot(gomega.HaveOccurred())
 
 	// wait for a few seconds to ensure events didn't come in on the other listeners
-	Sleep(3)
+	utils.Sleep(3)
 	g.Expect(keyListenerLite.counter).Should(gomega.Equal(int32(0)))
 	g.Expect(filterListenerLite.counter).Should(gomega.Equal(int32(0)))
 }
@@ -721,7 +721,7 @@ func TestLiteListeners(t *testing.T) {
 // initTest initializes a test and returns a gomega.WithT nad coherence.Session
 func initTest(t *testing.T, options ...func(session *coherence.SessionOptions)) (*gomega.WithT, *coherence.Session) {
 	g := gomega.NewWithT(t)
-	session, err := GetSession(options...)
+	session, err := utils.GetSession(options...)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	return g, session
 }
@@ -865,7 +865,7 @@ func runMultipleLifecycleTests(g *gomega.WithT, cache coherence.NamedMap[string,
 	defer cache.RemoveLifecycleListener(listener1.listener)
 	defer cache.RemoveLifecycleListener(listener2.listener)
 
-	Sleep(10)
+	utils.Sleep(10)
 
 	_, err := cache.Put(ctx, "A", "A")
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
@@ -1014,12 +1014,12 @@ func NewCountingLifecycleListener[K comparable, V any](name string) *CountingLif
 		listener: coherence.NewMapLifecycleListener[K, V](),
 	}
 
-	countingListener.listener.OnTruncated(func(e coherence.MapLifecycleEvent[K, V]) {
+	countingListener.listener.OnTruncated(func(_ coherence.MapLifecycleEvent[K, V]) {
 		atomic.AddInt32(&countingListener.truncCount, 1)
 		log.Printf("%s: Truncated, count=%d", name, countingListener.truncCount)
-	}).OnDestroyed(func(e coherence.MapLifecycleEvent[K, V]) {
+	}).OnDestroyed(func(_ coherence.MapLifecycleEvent[K, V]) {
 		atomic.AddInt32(&countingListener.destCount, 1)
-	}).OnReleased(func(e coherence.MapLifecycleEvent[K, V]) {
+	}).OnReleased(func(_ coherence.MapLifecycleEvent[K, V]) {
 		atomic.AddInt32(&countingListener.relCount, 1)
 	}).OnAny(func(e coherence.MapLifecycleEvent[K, V]) {
 		log.Printf("[%s] Received event -> %+v", name, e)
@@ -1153,11 +1153,11 @@ func NewReconnectMapListener[K comparable, V any](name string) *ReconnectMapList
 		listener: coherence.NewMapListener[K, V](),
 	}
 
-	reconnectingListener.listener.OnInserted(func(e coherence.MapEvent[K, V]) {
+	reconnectingListener.listener.OnInserted(func(_ coherence.MapEvent[K, V]) {
 		atomic.AddInt32(&reconnectingListener.insertCount, 1)
-	}).OnDeleted(func(e coherence.MapEvent[K, V]) {
+	}).OnDeleted(func(_ coherence.MapEvent[K, V]) {
 		atomic.AddInt32(&reconnectingListener.deleteCount, 1)
-	}).OnUpdated(func(e coherence.MapEvent[K, V]) {
+	}).OnUpdated(func(_ coherence.MapEvent[K, V]) {
 		atomic.AddInt32(&reconnectingListener.updateCount, 1)
 	})
 
@@ -1177,7 +1177,7 @@ func expect[T comparable](f func() T, expectedValue T, timeout int) error {
 		if lastValue == expectedValue {
 			return nil
 		}
-		Sleep(sleepTime)
+		utils.Sleep(sleepTime)
 		duration += sleepTime
 		if duration > 10 {
 			// back off

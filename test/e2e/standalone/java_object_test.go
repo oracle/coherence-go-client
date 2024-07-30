@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Oracle and/or its affiliates.
+ * Copyright (c) 2023, 2024 Oracle and/or its affiliates.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * https://oss.oracle.com/licenses/upl.
  */
@@ -9,7 +9,7 @@ package standalone
 import (
 	"github.com/onsi/gomega"
 	"github.com/oracle/coherence-go-client/coherence"
-	. "github.com/oracle/coherence-go-client/test/utils"
+	"github.com/oracle/coherence-go-client/test/utils"
 	"testing"
 )
 
@@ -36,7 +36,7 @@ type CustomerAddress struct {
 // TestBasicOperationsAgainstMapAndCache runs all tests against NamedMap and NamedCache
 func TestJavaSerializationAgainstMapAndCache(t *testing.T) {
 	g := gomega.NewWithT(t)
-	session, err := GetSession()
+	session, err := utils.GetSession()
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	defer session.Close()
 
@@ -45,8 +45,8 @@ func TestJavaSerializationAgainstMapAndCache(t *testing.T) {
 		nameMap  coherence.NamedMap[int, Customer]
 		test     func(t *testing.T, namedCache coherence.NamedMap[int, Customer])
 	}{
-		{"NamedMapSerializationTest", GetNamedMap[int, Customer](g, session, "customer-map"), RunSerializationTest},
-		{"NamedCacheSerializationTest", GetNamedCache[int, Customer](g, session, "customer-cache"), RunSerializationTest},
+		{"NamedMapSerializationTest", utils.GetNamedMap[int, Customer](g, session, "customer-map"), RunSerializationTest},
+		{"NamedCacheSerializationTest", utils.GetNamedCache[int, Customer](g, session, "customer-cache"), RunSerializationTest},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.testName, func(t *testing.T) {
@@ -115,6 +115,6 @@ func RunSerializationTest(t *testing.T, namedMap coherence.NamedMap[int, Custome
 	g.Expect(customer.Class).To(gomega.Equal(customerClass))
 
 	// now do a test to ensure that the data exists on the server as a Java Object
-	_, err = IssueGetRequest(GetTestContext().RestURL + "/checkCustomerCache/" + namedMap.Name())
+	_, err = utils.IssueGetRequest(utils.GetTestContext().RestURL + "/checkCustomerCache/" + namedMap.Name())
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 }
