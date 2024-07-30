@@ -935,7 +935,7 @@ func newNamedMapReconnectListener[K comparable, V any](nm NamedMapClient[K, V]) 
 		listener: NewSessionLifecycleListener(),
 	}
 
-	listener.listener.OnReconnected(func(e SessionLifecycleEvent) {
+	listener.listener.OnReconnected(func(_ SessionLifecycleEvent) {
 		// re-register listeners for the NamedMap
 		namedMap := convertNamedMapClient[K, V](&nm)
 		if err := reRegisterListeners[K, V](context.Background(), &namedMap, &nm.baseClient); err != nil {

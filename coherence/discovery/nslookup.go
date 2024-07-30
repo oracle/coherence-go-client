@@ -432,14 +432,13 @@ func (conn *tcpconn) read() ([]byte, error) {
 		return nil, errors.New("received a message with a negative length")
 	} else if c == 0 {
 		return nil, errors.New("received a message with a length of zero")
-	} else {
-		data := make([]byte, c)
-		_, err := conn.Read(data)
-		if err != nil {
-			return nil, err
-		}
-		return data, nil
 	}
+	data := make([]byte, c)
+	_, err = conn.Read(data)
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
 }
 
 // readPackedInt reads a packed int.

@@ -421,7 +421,7 @@ func newQueueCacheListener[V any](namedQueue *namedBlockingQueue[V]) *queueCache
 		namedQueue: namedQueue,
 	}
 
-	listener.listener.OnInserted(func(e MapEvent[QueueKey, V]) {
+	listener.listener.OnInserted(func(_ MapEvent[QueueKey, V]) {
 		// notify all registered listeners that an entry has been added to the Queue
 		namedQueue.notifier.notifyAll()
 	})

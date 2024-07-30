@@ -643,7 +643,7 @@ func newNamedCacheReconnectListener[K comparable, V any](nc NamedCacheClient[K, 
 		listener: NewSessionLifecycleListener(),
 	}
 
-	listener.listener.OnReconnected(func(e SessionLifecycleEvent) {
+	listener.listener.OnReconnected(func(_ SessionLifecycleEvent) {
 		// re-register listeners for the NamedCache
 		namedMap := convertNamedCacheClient[K, V](&nc)
 		if err := reRegisterListeners[K, V](context.Background(), &namedMap, &nc.baseClient); err != nil {

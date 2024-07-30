@@ -14,6 +14,7 @@ USER_ID := $(shell echo "`id -u`:`id -g`")
 
 override BUILD_BIN           := $(CURRDIR)/bin
 override PROTO_DIR			 := $(CURRDIR)/etc/proto
+override PROTOV1_DIR		 := $(CURRDIR)/etc/proto-v1
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Set the location of various build tools
@@ -196,8 +197,8 @@ copyright: getcopyright ## Check copyright headers
 # ----------------------------------------------------------------------------------------------------------------------
 .PHONY: golangci
 golangci: $(TOOLS_BIN)/golangci-lint ## Go code review
-	$(TOOLS_BIN)/golangci-lint run -v --timeout=5m  ./...
-	cd examples && $(TOOLS_BIN)/golangci-lint run -v --timeout=5m  ./...
+	$(TOOLS_BIN)/golangci-lint run -v --timeout=5m --max-same-issues=0 ./...
+	cd examples && $(TOOLS_BIN)/golangci-lint run -v --timeout=5m --max-same-issues=0 ./...
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Download and build proto files
@@ -212,6 +213,27 @@ generate-proto: $(TOOLS_BIN)/protoc ## Generate Proto Files
 	echo 'option go_package = "github.com/oracle/coherence-go-client/proto";' >> $(PROTO_DIR)/services.proto
 	echo 'option go_package = "github.com/oracle/coherence-go-client/proto";' >> $(PROTO_DIR)/messages.proto
 	$(TOOLS_BIN)/protoc --proto_path=./etc/proto --go_out=./proto --go_opt=paths=source_relative --go-grpc_out=./proto --go-grpc_opt=paths=source_relative etc/proto/messages.proto etc/proto/services.proto
+
+# ----------------------------------------------------------------------------------------------------------------------
+# Download and build proto files - v1
+# ----------------------------------------------------------------------------------------------------------------------
+.PHONY: generate-proto-v1
+generate-proto-v1: $(TOOLS_BIN)/protoc ## Generate Proto Files v1
+	mkdir -p $(PROTOV1_DIR) || true
+	curl -o $(PROTOV1_DIR)/proxy_service_messages_v1.proto https://raw.githubusercontent.com/oracle/coherence/main/prj/coherence-grpc/src/main/proto/proxy_service_messages_v1.proto
+	curl -o $(PROTOV1_DIR)/proxy_service_v1.proto https://raw.githubusercontent.com/oracle/coherence/main/prj/coherence-grpc/src/main/proto/proxy_service_v1.proto
+	curl -o $(PROTOV1_DIR)/common_messages_v1.proto https://raw.githubusercontent.com/oracle/coherence/main/prj/coherence-grpc/src/main/proto/common_messages_v1.proto
+	curl -o $(PROTOV1_DIR)/cache_service_messages_v1.proto https://raw.githubusercontent.com/oracle/coherence/main/prj/coherence-grpc/src/main/proto/cache_service_messages_v1.proto
+	echo "" >> $(PROTOV1_DIR)/proxy_service_messages_v1.proto
+	echo "" >> $(PROTOV1_DIR)/proxy_service_v1.proto
+	echo "" >> $(PROTOV1_DIR)/common_messages_v1.proto
+	echo "" >> $(PROTOV1_DIR)/cache_service_messages_v1.proto
+	echo 'option go_package = "github.com/oracle/coherence-go-client/proto/v1";' >> $(PROTOV1_DIR)/proxy_service_messages_v1.proto
+	echo 'option go_package = "github.com/oracle/coherence-go-client/proto/v1";' >> $(PROTOV1_DIR)/proxy_service_v1.proto
+	echo 'option go_package = "github.com/oracle/coherence-go-client/proto/v1";' >> $(PROTOV1_DIR)/common_messages_v1.proto
+	echo 'option go_package = "github.com/oracle/coherence-go-client/proto/v1";' >> $(PROTOV1_DIR)/cache_service_messages_v1.proto
+	mkdir ./proto/v1
+	$(TOOLS_BIN)/protoc --proto_path=./etc/proto-v1 --go_out=./proto/v1 --go_opt=paths=source_relative --go-grpc_out=./proto/v1 --go-grpc_opt=paths=source_relative etc/proto-v1/proxy_service_messages_v1.proto etc/proto-v1/proxy_service_v1.proto etc/proto-v1/common_messages_v1.proto etc/proto-v1/cache_service_messages_v1.proto
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -378,7 +400,7 @@ test-resolver-cluster: test-clean gotestsum $(BUILD_PROPS) ## Run Resolver tests
 # ----------------------------------------------------------------------------------------------------------------------
 $(TOOLS_BIN)/golangci-lint:
 	@mkdir -p $(TOOLS_BIN)
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(TOOLS_BIN) v1.52.2
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(TOOLS_BIN) v1.59.1
 
 
 # ----------------------------------------------------------------------------------------------------------------------

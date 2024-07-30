@@ -24,7 +24,7 @@ const (
 
 var (
 	emptyAddresses = make([]string, 0)
-	resolverDebug  = func(v ...any) {
+	resolverDebug  = func(_ ...any) {
 		// noop as default debug mode
 	}
 	randomizeAddresses bool

@@ -265,7 +265,7 @@ func issueRequest(requestType, url string, data []byte) (*http.Response, error) 
 	client := &http.Client{Transport: tr,
 		Timeout: time.Duration(120) * time.Second,
 		Jar:     cookies,
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+		CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
 			return http.ErrUseLastResponse
 		}}
 	req, err = http.NewRequest(requestType, url, bytes.NewBuffer(data))
