@@ -79,6 +79,11 @@ jobs:
       run: |
         make trivy-scan
 
+    - name: Golangci
+      shell: bash
+      run: |
+        make golangci
+
     - name: E2E Local Tests
       shell: bash
       run: |

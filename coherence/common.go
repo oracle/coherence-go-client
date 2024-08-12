@@ -37,6 +37,9 @@ const (
 	// envSessionDebug enables session debug messages to be displayed.
 	envSessionDebug = "COHERENCE_SESSION_DEBUG"
 
+	// envGrpcV1Debug enables gRPCV1 debug messages to be displayed.
+	envGrpcV1Debug = "COHERENCE_GRPCV1_DEBUG"
+
 	// envResolverDebug enables resolver debug messages to be displayed.
 	envResolverDebug = "COHERENCE_RESOLVER_DEBUG"
 
@@ -69,10 +72,10 @@ type InvalidationStrategyType int
 // baseClient is a struct that is used for both NamedMap and NamedCache
 type baseClient[K comparable, V any] struct {
 	session                    *Session
-	name                       string          // Name of the NamedMap or NamedCache
-	sessionOpts                *SessionOptions // Options for the sessions
-	cacheOpts                  *CacheOptions   // Options for the cache or map
-	client                     pb.NamedCacheServiceClient
+	name                       string                     // Name of the NamedMap or NamedCache
+	sessionOpts                *SessionOptions            // Options for the sessions
+	cacheOpts                  *CacheOptions              // Options for the cache or map
+	client                     pb.NamedCacheServiceClient // original v0 client
 	format                     string
 	keySerializer              Serializer[K]
 	valueSerializer            Serializer[V]
@@ -1485,6 +1488,10 @@ func executeValuesNoFilter[K comparable, V any](ctx context.Context, bc *baseCli
 	return ch
 }
 
+func (c *baseClient[K, V]) isGrpcV1() bool {
+	return c.session.IsGrpcV1()
+}
+
 // ensureClientConnection ensures the connection is established and
 // ensures a NewNamedCacheServiceClient is present.
 func (c *baseClient[K, V]) ensureClientConnection() error {
@@ -1505,12 +1512,14 @@ func (c *baseClient[K, V]) ensureClientConnection() error {
 		return err
 	}
 
-	// ensure we have a NamedCacheServiceClient
-	if c.client != nil {
-		return nil
-	}
+	if !c.isGrpcV1() {
+		// ensure we have a NamedCacheServiceClient only if we are using v0
+		if c.client != nil {
+			return nil
+		}
 
-	c.client = pb.NewNamedCacheServiceClient(session.conn)
+		c.client = pb.NewNamedCacheServiceClient(session.conn)
+	}
 
 	return nil
 }

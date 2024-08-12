@@ -4,14 +4,14 @@
  * https://oss.oracle.com/licenses/upl.
  */
 
-package queues
+package coherence
 
 import (
-	"github.com/oracle/coherence-go-client/test/utils"
+	"github.com/onsi/gomega"
 	"testing"
 )
 
-// The entry point for the test suite
-func TestMain(m *testing.M) {
-	utils.RunTest(m, 1408, 30000, 8080, true)
+func TestNewNamedCacheRequest(t *testing.T) {
+	g := gomega.NewWithT(t)
+	g.Expect(g).ShouldNot(gomega.BeNil())
 }

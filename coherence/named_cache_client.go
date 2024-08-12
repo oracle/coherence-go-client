@@ -601,11 +601,15 @@ func getNamedCache[K comparable, V any](session *Session, name string, sOpts *Se
 	}
 
 	namedCache := convertNamedCacheClient[K, V](newCache)
-	manager, err := newMapEventManager(&namedCache, newCache.baseClient, session)
-	if err != nil {
-		return nil, err
+
+	if !session.IsGrpcV1() {
+		// only create event manager if v0
+		manager, err1 := newMapEventManager(&namedCache, newCache.baseClient, session)
+		if err1 != nil {
+			return nil, err1
+		}
+		newCache.baseClient.eventManager = manager
 	}
-	newCache.baseClient.eventManager = manager
 
 	// store the new cache
 	session.caches[name] = newCache

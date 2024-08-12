@@ -886,17 +886,20 @@ func getNamedMap[K comparable, V any](session *Session, name string, sOpts *Sess
 	newMap := &NamedMapClient[K, V]{
 		baseClient: newBaseClient[K, V](session, name, format, sOpts, cacheOptions),
 	}
-	if err := newMap.baseClient.ensureClientConnection(); err != nil {
+	if err = newMap.baseClient.ensureClientConnection(); err != nil {
 		return nil, err
 	}
 
 	namedMap := convertNamedMapClient[K, V](newMap)
 
-	manager, err := newMapEventManager(&namedMap, newMap.baseClient, session)
-	if err != nil {
-		return nil, err
+	if !session.IsGrpcV1() {
+		// only create event manager if v0
+		manager, err1 := newMapEventManager(&namedMap, newMap.baseClient, session)
+		if err1 != nil {
+			return nil, err1
+		}
+		newMap.baseClient.eventManager = manager
 	}
-	newMap.baseClient.eventManager = manager
 
 	// store the new cache
 	session.maps[name] = newMap

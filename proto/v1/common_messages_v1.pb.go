@@ -37,7 +37,7 @@ type ErrorMessage struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	// The test of the error message
+	// The text of the error message
 	Message string `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
 	// An optional Exception serialized using the client's serializer
 	Error []byte `protobuf:"bytes,2,opt,name=error,proto3,oneof" json:"error,omitempty"`

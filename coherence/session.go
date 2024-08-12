@@ -24,6 +24,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -59,6 +60,7 @@ type Session struct {
 	caches                map[string]interface{}
 	maps                  map[string]interface{}
 	queues                map[string]interface{}
+	cacheIDMap            map[string]int32
 	lifecycleMutex        sync.RWMutex
 	lifecycleListeners    []*SessionLifecycleListener
 	sessionConnectCtx     context.Context
@@ -66,6 +68,10 @@ type Session struct {
 	firstConnectAttempted bool           // indicates if the first connection has been attempted
 	hasConnected          bool           // indicates if the session has ever connected
 	debug                 func(v ...any) // a function to output debug messages
+	debugGrpc             func(v ...any) // a function to output debug messages for gRPCV1 connections
+
+	requestID            int64 // request id for gRPC v1
+	v1StreamManagerCache *streamManagerV1
 }
 
 // SessionOptions holds the session attributes like host, port, tls attributes etc.
@@ -155,6 +161,7 @@ func NewSession(ctx context.Context, options ...func(session *SessionOptions)) (
 		maps:                  make(map[string]interface{}, 0),
 		caches:                make(map[string]interface{}, 0),
 		queues:                make(map[string]interface{}, 0),
+		cacheIDMap:            make(map[string]int32, 0),
 		lifecycleListeners:    []*SessionLifecycleListener{},
 		sessOpts: &SessionOptions{
 			PlainText:          false,
@@ -176,6 +183,13 @@ func NewSession(ctx context.Context, options ...func(session *SessionOptions)) (
 		// enable session debugging
 		session.debug = func(v ...any) {
 			log.Println("DEBUG:", v)
+		}
+	}
+
+	if getBoolValueFromEnvVarOrDefault(envGrpcV1Debug, false) {
+		// enable session debugging
+		session.debugGrpc = func(v ...any) {
+			log.Println("DEBUG gRPCV1:", v)
 		}
 	}
 
@@ -322,6 +336,20 @@ func WithTLSConfig(tlsConfig *tls.Config) func(sessionOptions *SessionOptions) {
 	}
 }
 
+func (s *Session) NextRequestID() int64 {
+	return atomic.AddInt64(&s.requestID, 1)
+}
+
+func (s *Session) getCacheID(cache string) *int32 {
+	s.mapMutex.Lock()
+	defer s.mapMutex.Unlock()
+
+	if v, ok := s.cacheIDMap[cache]; ok {
+		return &v
+	}
+	return nil
+}
+
 // ID returns the identifier of a session.
 func (s *Session) ID() string {
 	return s.sessionID.String()
@@ -349,8 +377,8 @@ func (s *Session) Close() {
 }
 
 func (s *Session) String() string {
-	return fmt.Sprintf("Session{id=%s, closed=%v, caches=%d, maps=%d, options=%v}", s.sessionID.String(), s.closed,
-		len(s.caches), len(s.maps), s.sessOpts)
+	return fmt.Sprintf("Session{id=%s, closed=%v, caches=%d, maps=%d, gRPCv1=%v, options=%v}", s.sessionID.String(), s.closed,
+		len(s.caches), len(s.maps), s.IsGrpcV1(), s.sessOpts)
 }
 
 // GetRequestTimeout returns the session timeout in millis.
@@ -422,7 +450,16 @@ func (s *Session) ensureConnection() error {
 	s.conn = conn
 	s.firstConnectAttempted = true
 
-	// register for state change events - This uses and experimental gRPC API
+	// attempt to connect to V1 gRPC endpoint
+	manager, err := newStreamManagerV1(s, cacheServiceProtocol)
+	if err == nil {
+		// save the stream manager for a successful V1 client connection
+		s.v1StreamManagerCache = manager
+	} else {
+		s.debug("error connecting to session via v1, falling back to v0", err)
+	}
+
+	// register for state change events - This uses an experimental gRPC API
 	// so may not be reliable or may change in the future.
 	// refer: https://grpc.github.io/grpc/core/md_doc_connectivity-semantics-and-api.html
 	go func(session *Session) {
@@ -502,6 +539,11 @@ func (s *Session) ensureConnection() error {
 	}(s)
 
 	return nil
+}
+
+// IsGrpcV1 indicates if we are connected to a v1 gRPC client.
+func (s *Session) IsGrpcV1() bool {
+	return s.v1StreamManagerCache != nil
 }
 
 // waitForReady waits until the connection is ready up to the ready session timeout and will

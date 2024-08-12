@@ -232,7 +232,7 @@ generate-proto-v1: $(TOOLS_BIN)/protoc ## Generate Proto Files v1
 	echo 'option go_package = "github.com/oracle/coherence-go-client/proto/v1";' >> $(PROTOV1_DIR)/proxy_service_v1.proto
 	echo 'option go_package = "github.com/oracle/coherence-go-client/proto/v1";' >> $(PROTOV1_DIR)/common_messages_v1.proto
 	echo 'option go_package = "github.com/oracle/coherence-go-client/proto/v1";' >> $(PROTOV1_DIR)/cache_service_messages_v1.proto
-	mkdir ./proto/v1
+	mkdir ./proto/v1 || true
 	$(TOOLS_BIN)/protoc --proto_path=./etc/proto-v1 --go_out=./proto/v1 --go_opt=paths=source_relative --go-grpc_out=./proto/v1 --go-grpc_opt=paths=source_relative etc/proto-v1/proxy_service_messages_v1.proto etc/proto-v1/proxy_service_v1.proto etc/proto-v1/common_messages_v1.proto etc/proto-v1/cache_service_messages_v1.proto
 
 
@@ -306,6 +306,19 @@ test-e2e-standalone-queues: test-clean test gotestsum $(BUILD_PROPS) ## Run e2e 
 	@echo
 	@echo "**** CODE COVERAGE ****"
 	@cat $(COVERAGE_DIR)/cover-functional-queues.html | grep 'github.com/oracle/coherence-go-client/coherence' | grep option | sed 's/^.*github/github/' | sed 's,</option.*,,'
+
+# ----------------------------------------------------------------------------------------------------------------------
+# Executes the Go end to end tests for gRPC v1 tests
+# ----------------------------------------------------------------------------------------------------------------------
+.PHONY: test-v1-base
+test-v1-base: test-clean test gotestsum $(BUILD_PROPS) ## Run e2e tests with Coherence
+	CGO_ENABLED=0 $(GOTESTSUM) --format testname --junitfile $(TEST_LOGS_DIR)/go-client-test-v1.xml \
+	  -- $(GO_TEST_FLAGS) -v -coverprofile=$(COVERAGE_DIR)/cover-functional-v1.out -v ./test/v1/base/... -coverpkg=./coherence/...
+	go tool cover -html=$(COVERAGE_DIR)/cover-functional-v1.out -o $(COVERAGE_DIR)/cover-functional-v1.html
+	@echo
+	@echo "**** CODE COVERAGE ****"
+	@cat $(COVERAGE_DIR)/cover-functional-v1.html | grep 'github.com/oracle/coherence-go-client/coherence' | grep option | sed 's/^.*github/github/' | sed 's,</option.*,,'
+
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Executes the test of the examples
