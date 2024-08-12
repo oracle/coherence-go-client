@@ -114,7 +114,6 @@ func (m *streamManagerV1) ensureStream() (*eventStreamV1, error) {
 		// we must receive a proxy response
 		proxyResponse, err := m.eventStream.grpcStream.Recv()
 		if err != nil || proxyResponse == nil {
-			m.session.debugGrpc("received error", err)
 			cancel()
 			return nil, err
 		}
