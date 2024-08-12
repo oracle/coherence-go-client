@@ -38,6 +38,7 @@ jobs:
       shell: bash
       run: |
         docker pull gcr.io/distroless/java17
+        docker pull gcr.io/distroless/java:11
         uname -a
 
     - name: Set up JDK
@@ -66,11 +67,6 @@ jobs:
       with:
         go-version: '${{ matrix.go-version }}'
 
-    - name: Get Docker Images
-      shell: bash
-      run: |
-        docker pull gcr.io/distroless/java17
-
     - name: Copyright Check
       shell: bash
       run: |
@@ -80,7 +76,7 @@ jobs:
       shell: bash
       run: |
         go get google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.3.0
-        PROFILES=,jakarta,-javax COHERENCE_VERSION=${{ matrix.coherence-version }} make clean generate-proto generate-proto-v1 build-test-images test-v1-base
+        COHERENCE_BASE_IMAGE=gcr.io/distroless/java17 PROFILES=,jakarta,-javax COHERENCE_VERSION=${{ matrix.coherence-version }} make clean generate-proto generate-proto-v1 build-test-images test-v1-base
 
     - uses: actions/upload-artifact@v4
       if: failure()
