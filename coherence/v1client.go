@@ -370,10 +370,9 @@ func (m *streamManagerV1) size(ctx context.Context, cache string) (int32, error)
 		return value, err1
 	}
 
-	// we must have result so process it
 	var message = &wrapperspb.Int32Value{}
 	if err = result.UnmarshalTo(message); err != nil {
-		err = getUnmarshallError("getResponse", err)
+		err = getUnmarshallError("sizeResponse", err)
 		return value, err
 	}
 
@@ -409,7 +408,6 @@ func (m *streamManagerV1) genericBoolValue(ctx context.Context, reqType pb1.Name
 		defer cancel()
 	}
 
-	// remove the entry from the channel
 	defer m.cleanupRequest(req.Id)
 
 	result, err1 := waitForResponse(newCtx, requestType.ch)
@@ -417,10 +415,9 @@ func (m *streamManagerV1) genericBoolValue(ctx context.Context, reqType pb1.Name
 		return value, err1
 	}
 
-	// we must have result so process it
 	var message = &wrapperspb.BoolValue{}
 	if err = result.UnmarshalTo(message); err != nil {
-		err = getUnmarshallError("getResponse", err)
+		err = getUnmarshallError("genericBoolValueResponse", err)
 		return value, err
 	}
 
@@ -465,14 +462,139 @@ func (m *streamManagerV1) get(ctx context.Context, cache string, key []byte) (*[
 	return nil, nil
 }
 
-// get issues a put request for a given key, value and ttl and returns the old value
+// remove issues a get request for a given key and returns the bytes value which could be nil.
+func (m *streamManagerV1) remove(ctx context.Context, cache string, key []byte) (*[]byte, error) {
+	req, err := m.newRemoveRequest(cache, key)
+	if err != nil {
+		return nil, err
+	}
+
+	requestType, err := m.submitRequest(req, pb1.NamedCacheRequestType_Remove)
+	if err != nil {
+		return nil, err
+	}
+
+	newCtx, cancel := m.session.ensureContext(ctx)
+	if cancel != nil {
+		defer cancel()
+	}
+
+	// remove the entry from the channel
+	defer m.cleanupRequest(req.Id)
+
+	result, err1 := waitForResponse(newCtx, requestType.ch)
+	if err1 != nil {
+		return nil, err1
+	}
+
+	// unpack the optional value
+	var message = &wrapperspb.BytesValue{}
+
+	if err = result.UnmarshalTo(message); err != nil {
+		err = getUnmarshallError("putResponse", err)
+		cancel()
+		return nil, err
+	}
+
+	return &message.Value, nil
+}
+
+func (m *streamManagerV1) removeMapping(ctx context.Context, cache string, key []byte, value []byte) (bool, error) {
+	req, err := m.newRemoveMappingRequest(cache, key, value)
+	if err != nil {
+		return false, err
+	}
+
+	requestType, err := m.submitRequest(req, pb1.NamedCacheRequestType_RemoveMapping)
+	if err != nil {
+		return false, err
+	}
+
+	newCtx, cancel := m.session.ensureContext(ctx)
+	if cancel != nil {
+		defer cancel()
+	}
+
+	// remove the entry from the channel
+	defer m.cleanupRequest(req.Id)
+
+	result, err1 := waitForResponse(newCtx, requestType.ch)
+	if err1 != nil {
+		return false, err1
+	}
+
+	var message = &wrapperspb.BoolValue{}
+	if err = result.UnmarshalTo(message); err != nil {
+		err = getUnmarshallError("removeMappingResponse", err)
+		return false, err
+	}
+
+	return message.Value, nil
+}
+
+func (m *streamManagerV1) containsValue(ctx context.Context, cache string, value []byte) (bool, error) {
+	req, err := m.newContainsValueRequest(cache, value)
+	if err != nil {
+		return false, err
+	}
+	return m.containsRequest(ctx, pb1.NamedCacheRequestType_ContainsValue, req)
+}
+
+// containsKey issues a containsKey request for a given key and returns a bool indicating if the key exists.
+func (m *streamManagerV1) containsKey(ctx context.Context, cache string, key []byte) (bool, error) {
+	req, err := m.newContainsKeyRequest(cache, key)
+	if err != nil {
+		return false, err
+	}
+
+	return m.containsRequest(ctx, pb1.NamedCacheRequestType_ContainsKey, req)
+}
+
+// containsRequest creates containKeys or containsValue requests.
+func (m *streamManagerV1) containsRequest(ctx context.Context, reqType pb1.NamedCacheRequestType, req *pb1.ProxyRequest) (bool, error) {
+	requestType, err := m.submitRequest(req, reqType)
+	if err != nil {
+		return false, err
+	}
+
+	newCtx, cancel := m.session.ensureContext(ctx)
+	if cancel != nil {
+		defer cancel()
+	}
+
+	// remove the entry from the channel
+	defer m.cleanupRequest(req.Id)
+
+	result, err1 := waitForResponse(newCtx, requestType.ch)
+	if err1 != nil {
+		return false, err1
+	}
+
+	var message = &wrapperspb.BoolValue{}
+	if err = result.UnmarshalTo(message); err != nil {
+		err = getUnmarshallError("containsKeyResponse", err)
+		return false, err
+	}
+
+	return message.Value, nil
+}
+
 func (m *streamManagerV1) put(ctx context.Context, cache string, key []byte, value []byte, ttl time.Duration) (*[]byte, error) {
+	return m.putGenericRequest(ctx, pb1.NamedCacheRequestType_Put, cache, key, value, ttl)
+}
+
+func (m *streamManagerV1) putIfAbsent(ctx context.Context, cache string, key []byte, value []byte, ttl time.Duration) (*[]byte, error) {
+	return m.putGenericRequest(ctx, pb1.NamedCacheRequestType_PutIfAbsent, cache, key, value, ttl)
+}
+
+// putGenericRequest created a generic put requests, used by put and putIfAbsent.
+func (m *streamManagerV1) putGenericRequest(ctx context.Context, reqType pb1.NamedCacheRequestType, cache string, key []byte, value []byte, ttl time.Duration) (*[]byte, error) {
 	req, err := m.newPutRequest(cache, key, value, ttl)
 	if err != nil {
 		return nil, err
 	}
 
-	requestType, err := m.submitRequest(req, pb1.NamedCacheRequestType_Put)
+	requestType, err := m.submitRequest(req, reqType)
 	if err != nil {
 		return nil, err
 	}
@@ -526,7 +648,7 @@ func waitForResponse(newCtx context.Context, ch chan responseMessage, ensureCach
 		isEnsureCache = len(ensureCache) != 0
 	)
 
-	// wait until we get a complete request or we timeout
+	// wait until we get a complete request or we time out
 	for {
 		// wait on the channel
 		select {
@@ -556,8 +678,8 @@ func waitForResponse(newCtx context.Context, ch chan responseMessage, ensureCach
 }
 
 func getInitDescription(r *pb1.InitResponse) string {
-	return fmt.Sprintf("initResponse{version=%s, protocolVersion=%d, proxyMemberId=%d, %v}",
-		r.GetVersion(), r.GetProtocolVersion(), r.GetProxyMemberId(), string(r.GetUuid()))
+	return fmt.Sprintf("initResponse{version=%s, protocolVersion=%d, proxyMemberId=%d}",
+		r.GetVersion(), r.GetProtocolVersion(), r.GetProxyMemberId())
 }
 
 func getCacheIDMessage(cache string) error {

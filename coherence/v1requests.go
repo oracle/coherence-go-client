@@ -57,6 +57,23 @@ func (m *streamManagerV1) newGenericNamedCacheRequest(cache string, requestType 
 }
 
 func (m *streamManagerV1) newGetRequest(cache string, key []byte) (*pb1.ProxyRequest, error) {
+	return m.newSingleValueBasedRequest(pb1.NamedCacheRequestType_Get, cache, key)
+}
+
+func (m *streamManagerV1) newRemoveRequest(cache string, key []byte) (*pb1.ProxyRequest, error) {
+	return m.newSingleValueBasedRequest(pb1.NamedCacheRequestType_Remove, cache, key)
+}
+
+func (m *streamManagerV1) newContainsKeyRequest(cache string, key []byte) (*pb1.ProxyRequest, error) {
+	return m.newSingleValueBasedRequest(pb1.NamedCacheRequestType_ContainsKey, cache, key)
+}
+
+func (m *streamManagerV1) newContainsValueRequest(cache string, value []byte) (*pb1.ProxyRequest, error) {
+	return m.newSingleValueBasedRequest(pb1.NamedCacheRequestType_ContainsValue, cache, value)
+}
+
+// newSingleValueBasedRequest creates a request where the message contains a single bytes value.
+func (m *streamManagerV1) newSingleValueBasedRequest(reqType pb1.NamedCacheRequestType, cache string, key []byte) (*pb1.ProxyRequest, error) {
 	keyBytes := wrapperspb.Bytes(key)
 
 	anyReq, err := anypb.New(keyBytes)
@@ -70,7 +87,36 @@ func (m *streamManagerV1) newGetRequest(cache string, key []byte) (*pb1.ProxyReq
 		return nil, getCacheIDMessage(cache)
 	}
 
-	return m.newWrapperProxyRequest(cacheID, pb1.NamedCacheRequestType_Get, anyReq)
+	return m.newWrapperProxyRequest(cacheID, reqType, anyReq)
+}
+
+func (m *streamManagerV1) newRemoveMappingRequest(cache string, key []byte, value []byte) (*pb1.ProxyRequest, error) {
+	return m.newKeyAndValueBasedRequest(pb1.NamedCacheRequestType_RemoveMapping, cache, key, value)
+}
+
+func (m *streamManagerV1) newReplaceRequest(cache string, key []byte, value []byte) (*pb1.ProxyRequest, error) {
+	return m.newKeyAndValueBasedRequest(pb1.NamedCacheRequestType_Replace, cache, key, value)
+}
+
+// newKeyAndValueBasedRequest creates a request where the message contains a BinaryKeyAndValue
+func (m *streamManagerV1) newKeyAndValueBasedRequest(reqType pb1.NamedCacheRequestType, cache string, key []byte, value []byte) (*pb1.ProxyRequest, error) {
+	request := &pb1.BinaryKeyAndValue{
+		Key:   key,
+		Value: value,
+	}
+
+	anyReq, err := anypb.New(request)
+	if err != nil {
+		return nil, err
+	}
+
+	// retrieve the cache ID
+	cacheID := m.session.getCacheID(cache)
+	if cacheID == nil {
+		return nil, getCacheIDMessage(cache)
+	}
+
+	return m.newWrapperProxyRequest(cacheID, reqType, anyReq)
 }
 
 func (m *streamManagerV1) newPutRequest(cache string, key []byte, value []byte, ttl time.Duration) (*pb1.ProxyRequest, error) {
