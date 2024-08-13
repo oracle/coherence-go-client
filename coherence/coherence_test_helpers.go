@@ -30,6 +30,10 @@ func TestRemoveMapping(ctx context.Context, session *Session, cache string, key 
 	return session.v1StreamManagerCache.removeMapping(ctx, cache, key, value)
 }
 
+func TestReplace(ctx context.Context, session *Session, cache string, key []byte, value []byte) (*[]byte, error) {
+	return session.v1StreamManagerCache.replace(ctx, cache, key, value)
+}
+
 func TestTruncateCache(ctx context.Context, session *Session, cache string) error {
 	return session.v1StreamManagerCache.truncateCache(ctx, cache)
 }

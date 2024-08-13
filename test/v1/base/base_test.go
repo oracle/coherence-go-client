@@ -134,9 +134,7 @@ func TestPutIfAbsent(t *testing.T) {
 	// issue putIfAbsent again with "value-2", should not be saved as it already exists
 	currentValue, err = coherence.TestPutIfAbsent(ctx, session, cache, key, value2)
 	g.Expect(err).Should(gomega.BeNil())
-
-	getValue, err = serializerString.Deserialize(*currentValue)
-	g.Expect(err).Should(gomega.BeNil())
+	
 	getValue, err = serializerString.Deserialize(*currentValue)
 	g.Expect(err).Should(gomega.BeNil())
 	g.Expect(*getValue).Should(gomega.Equal("value"))
@@ -291,6 +289,55 @@ func TestRemoveMapping(t *testing.T) {
 	g.Expect(removed).Should(gomega.Equal(true))
 
 	assertSize(g, session, cache, 0)
+}
+
+// TestReplace tests the replace mapping request.
+func TestReplace(t *testing.T) {
+	var (
+		g            = gomega.NewWithT(t)
+		ctx          = context.Background()
+		cache        = "test-replace"
+		err          error
+		currentValue *[]byte
+		getValue     *string
+	)
+
+	session := getTestSession(t, g)
+	defer session.Close()
+
+	_ = ensureCache(g, session, cache)
+
+	// create key and value
+	key := ensureSerializedInt32(g, 1)
+	value := ensureSerializedString(g, "value")
+
+	// clear the cache
+	err = coherence.TestClearCache(ctx, session, cache)
+	g.Expect(err).Should(gomega.BeNil())
+
+	assertSize(g, session, cache, 0)
+
+	// no Value for Key exists so will not replace or return old Value
+	currentValue, err = coherence.TestReplace(ctx, session, cache, key, value)
+	g.Expect(err).Should(gomega.BeNil())
+	g.Expect(currentValue).ShouldNot(gomega.BeNil())
+	getValue, err = serializerString.Deserialize(*currentValue)
+	g.Expect(err).Should(gomega.BeNil())
+	g.Expect(getValue).Should(gomega.BeNil())
+
+	// add an entry that we will replace further down
+	_, err = coherence.TestPut(ctx, session, cache, key, value, 0)
+	g.Expect(err).Should(gomega.BeNil())
+	assertSize(g, session, cache, 1)
+
+	// this should work as it's mapped to any Value
+	currentValue, err = coherence.TestReplace(ctx, session, cache, key, value)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	g.Expect(currentValue).To(gomega.Not(gomega.BeNil()))
+
+	getValue, err = serializerString.Deserialize(*currentValue)
+	g.Expect(err).Should(gomega.BeNil())
+	g.Expect(*getValue).Should(gomega.Equal("value"))
 
 }
 

@@ -499,6 +499,41 @@ func (m *streamManagerV1) remove(ctx context.Context, cache string, key []byte) 
 	return &message.Value, nil
 }
 
+func (m *streamManagerV1) replace(ctx context.Context, cache string, key []byte, value []byte) (*[]byte, error) {
+	req, err := m.newReplaceRequest(cache, key, value)
+	if err != nil {
+		return nil, err
+	}
+
+	requestType, err := m.submitRequest(req, pb1.NamedCacheRequestType_Replace)
+	if err != nil {
+		return nil, err
+	}
+
+	newCtx, cancel := m.session.ensureContext(ctx)
+	if cancel != nil {
+		defer cancel()
+	}
+
+	// remove the entry from the channel
+	defer m.cleanupRequest(req.Id)
+
+	result, err1 := waitForResponse(newCtx, requestType.ch)
+	if err1 != nil {
+		return nil, err1
+	}
+
+	var message = &wrapperspb.BytesValue{}
+
+	if err = result.UnmarshalTo(message); err != nil {
+		err = getUnmarshallError("putResponse", err)
+		cancel()
+		return nil, err
+	}
+
+	return &message.Value, nil
+}
+
 func (m *streamManagerV1) removeMapping(ctx context.Context, cache string, key []byte, value []byte) (bool, error) {
 	req, err := m.newRemoveMappingRequest(cache, key, value)
 	if err != nil {
@@ -611,7 +646,6 @@ func (m *streamManagerV1) putGenericRequest(ctx context.Context, reqType pb1.Nam
 		return nil, err1
 	}
 
-	// unpack the optional value
 	var message = &wrapperspb.BytesValue{}
 
 	if err = result.UnmarshalTo(message); err != nil {
