@@ -475,6 +475,46 @@ func TestContainsKey(t *testing.T) {
 	g.Expect(containsKey).To(gomega.Equal(true))
 }
 
+// TestContainsEntry tests the contains key request
+func TestContainsEntry(t *testing.T) {
+	var (
+		g             = gomega.NewWithT(t)
+		ctx           = context.Background()
+		cache         = "test-contains-entry"
+		containsEntry bool
+		err           error
+	)
+
+	session := getTestSession(t, g)
+	defer session.Close()
+
+	_ = ensureCache(g, session, cache)
+
+	// create a key of 1
+	key := ensureSerializedInt32(g, 32)
+	value := ensureSerializedString(g, "value")
+
+	// clear the cache
+	err = coherence.TestClearCache(ctx, session, cache)
+	g.Expect(err).Should(gomega.BeNil())
+
+	assertSize(g, session, cache, 0)
+
+	containsEntry, err = coherence.TestContainsEntry(ctx, session, cache, key, value)
+	g.Expect(err).Should(gomega.BeNil())
+	g.Expect(containsEntry).To(gomega.Equal(false))
+
+	// put a value into the cache
+	_, err = coherence.TestPut(ctx, session, cache, key, value, 0)
+	g.Expect(err).Should(gomega.BeNil())
+
+	assertSize(g, session, cache, 1)
+
+	containsEntry, err = coherence.TestContainsEntry(ctx, session, cache, key, value)
+	g.Expect(err).Should(gomega.BeNil())
+	g.Expect(containsEntry).To(gomega.Equal(true))
+}
+
 // TestContainsValue tests the contains value request.
 func TestContainsValue(t *testing.T) {
 	var (

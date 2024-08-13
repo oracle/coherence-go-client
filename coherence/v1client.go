@@ -483,27 +483,6 @@ func (m *streamManagerV1) replaceMapping(ctx context.Context, cache string, key 
 	return unwrapBool(result)
 }
 
-func unwrapBool(result *anypb.Any) (bool, error) {
-	var message = &wrapperspb.BoolValue{}
-	if err := result.UnmarshalTo(message); err != nil {
-		err = getUnmarshallError("unwrapBool", err)
-		return false, err
-	}
-
-	return message.Value, nil
-}
-
-func unwrapBytes(result *anypb.Any) (*[]byte, error) {
-	var message = &wrapperspb.BytesValue{}
-
-	if err := result.UnmarshalTo(message); err != nil {
-		err = getUnmarshallError("unwrapBytes", err)
-		return nil, err
-	}
-
-	return &message.Value, nil
-}
-
 // remove issues a get request for a given key and returns the bytes value which could be nil.
 func (m *streamManagerV1) remove(ctx context.Context, cache string, key []byte) (*[]byte, error) {
 	req, err := m.newRemoveRequest(cache, key)
@@ -592,6 +571,14 @@ func (m *streamManagerV1) containsValue(ctx context.Context, cache string, value
 		return false, err
 	}
 	return m.containsRequest(ctx, pb1.NamedCacheRequestType_ContainsValue, req)
+}
+
+func (m *streamManagerV1) containsEntry(ctx context.Context, cache string, key []byte, value []byte) (bool, error) {
+	req, err := m.newContainsEntryRequest(cache, key, value)
+	if err != nil {
+		return false, err
+	}
+	return m.containsRequest(ctx, pb1.NamedCacheRequestType_ContainsEntry, req)
 }
 
 // containsKey issues a containsKey request for a given key and returns a bool indicating if the key exists.
@@ -714,6 +701,27 @@ func waitForResponse(newCtx context.Context, ch chan responseMessage, ensureCach
 			return result, newCtx.Err()
 		}
 	}
+}
+
+func unwrapBool(result *anypb.Any) (bool, error) {
+	var message = &wrapperspb.BoolValue{}
+	if err := result.UnmarshalTo(message); err != nil {
+		err = getUnmarshallError("unwrapBool", err)
+		return false, err
+	}
+
+	return message.Value, nil
+}
+
+func unwrapBytes(result *anypb.Any) (*[]byte, error) {
+	var message = &wrapperspb.BytesValue{}
+
+	if err := result.UnmarshalTo(message); err != nil {
+		err = getUnmarshallError("unwrapBytes", err)
+		return nil, err
+	}
+
+	return &message.Value, nil
 }
 
 func getInitDescription(r *pb1.InitResponse) string {

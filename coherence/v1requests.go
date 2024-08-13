@@ -98,6 +98,10 @@ func (m *streamManagerV1) newReplaceRequest(cache string, key []byte, value []by
 	return m.newKeyAndValueBasedRequest(pb1.NamedCacheRequestType_Replace, cache, key, value)
 }
 
+func (m *streamManagerV1) newContainsEntryRequest(cache string, key []byte, value []byte) (*pb1.ProxyRequest, error) {
+	return m.newKeyAndValueBasedRequest(pb1.NamedCacheRequestType_ContainsEntry, cache, key, value)
+}
+
 // newKeyAndValueBasedRequest creates a request where the message contains a BinaryKeyAndValue
 func (m *streamManagerV1) newKeyAndValueBasedRequest(reqType pb1.NamedCacheRequestType, cache string, key []byte, value []byte) (*pb1.ProxyRequest, error) {
 	request := &pb1.BinaryKeyAndValue{

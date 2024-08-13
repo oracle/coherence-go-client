@@ -66,6 +66,10 @@ func TestContainsValue(ctx context.Context, session *Session, cache string, valu
 	return session.v1StreamManagerCache.containsValue(ctx, cache, value)
 }
 
+func TestContainsEntry(ctx context.Context, session *Session, cache string, key []byte, value []byte) (bool, error) {
+	return session.v1StreamManagerCache.containsEntry(ctx, cache, key, value)
+}
+
 func TestGet(ctx context.Context, session *Session, cache string, key []byte) (*[]byte, error) {
 	return session.v1StreamManagerCache.get(ctx, cache, key)
 }
