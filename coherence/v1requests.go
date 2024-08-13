@@ -141,6 +141,27 @@ func (m *streamManagerV1) newPutRequest(cache string, key []byte, value []byte, 
 	return m.newWrapperProxyRequest(cacheID, pb1.NamedCacheRequestType_Put, anyReq)
 }
 
+func (m *streamManagerV1) newReplaceMappingRequest(cache string, key []byte, prevValue []byte, newValue []byte) (*pb1.ProxyRequest, error) {
+	replaceMappingRequest := &pb1.ReplaceMappingRequest{
+		Key:           key,
+		PreviousValue: prevValue,
+		NewValue:      newValue,
+	}
+
+	anyReq, err := anypb.New(replaceMappingRequest)
+	if err != nil {
+		return nil, err
+	}
+
+	// retrieve the cache ID
+	cacheID := m.session.getCacheID(cache)
+	if cacheID == nil {
+		return nil, getCacheIDMessage(cache)
+	}
+
+	return m.newWrapperProxyRequest(cacheID, pb1.NamedCacheRequestType_ReplaceMapping, anyReq)
+}
+
 func (m *streamManagerV1) newProxyRequest(message *anypb.Any) *pb1.ProxyRequest {
 	return &pb1.ProxyRequest{
 		Id: m.session.NextRequestID(),

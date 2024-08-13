@@ -134,7 +134,7 @@ func TestPutIfAbsent(t *testing.T) {
 	// issue putIfAbsent again with "value-2", should not be saved as it already exists
 	currentValue, err = coherence.TestPutIfAbsent(ctx, session, cache, key, value2)
 	g.Expect(err).Should(gomega.BeNil())
-	
+
 	getValue, err = serializerString.Deserialize(*currentValue)
 	g.Expect(err).Should(gomega.BeNil())
 	g.Expect(*getValue).Should(gomega.Equal("value"))
@@ -291,7 +291,7 @@ func TestRemoveMapping(t *testing.T) {
 	assertSize(g, session, cache, 0)
 }
 
-// TestReplace tests the replace mapping request.
+// TestReplace tests the replace request.
 func TestReplace(t *testing.T) {
 	var (
 		g            = gomega.NewWithT(t)
@@ -338,7 +338,54 @@ func TestReplace(t *testing.T) {
 	getValue, err = serializerString.Deserialize(*currentValue)
 	g.Expect(err).Should(gomega.BeNil())
 	g.Expect(*getValue).Should(gomega.Equal("value"))
+}
 
+// TestReplaceMapping tests the replace mapping request.
+func TestReplaceMapping(t *testing.T) {
+	var (
+		g      = gomega.NewWithT(t)
+		ctx    = context.Background()
+		cache  = "test-replace-mapping"
+		err    error
+		result bool
+	)
+
+	session := getTestSession(t, g)
+	defer session.Close()
+
+	_ = ensureCache(g, session, cache)
+
+	// create key and value
+	key := ensureSerializedInt32(g, 1)
+	value := ensureSerializedString(g, "value")
+	valueReplace := ensureSerializedString(g, "value replace")
+	valueNew := ensureSerializedString(g, "value new")
+
+	// clear the cache
+	err = coherence.TestClearCache(ctx, session, cache)
+	g.Expect(err).Should(gomega.BeNil())
+
+	assertSize(g, session, cache, 0)
+
+	// no Value for Key exists so will not replace and should return false
+	result, err = coherence.TestReplaceMapping(ctx, session, cache, key, valueReplace, value)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	g.Expect(result).To(gomega.Equal(false))
+
+	// add an entry that we will replace further down
+	_, err = coherence.TestPut(ctx, session, cache, key, value, 0)
+	g.Expect(err).Should(gomega.BeNil())
+	assertSize(g, session, cache, 1)
+
+	// value exists but doesn't match so should return false
+	result, err = coherence.TestReplaceMapping(ctx, session, cache, key, valueReplace, value)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	g.Expect(result).To(gomega.Equal(false))
+
+	// now try replacing where exists and matches
+	result, err = coherence.TestReplaceMapping(ctx, session, cache, key, value, valueNew)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	g.Expect(result).To(gomega.Equal(true))
 }
 
 // TestClearAndTruncate tests the clear and truncate requests.
