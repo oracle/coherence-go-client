@@ -8,9 +8,11 @@ package base
 
 import (
 	"context"
+	"fmt"
 	"github.com/google/uuid"
 	"github.com/onsi/gomega"
 	"github.com/oracle/coherence-go-client/coherence"
+	pb1 "github.com/oracle/coherence-go-client/proto/v1"
 	"github.com/oracle/coherence-go-client/test/utils"
 	"sync"
 	"testing"
@@ -138,6 +140,48 @@ func TestPutIfAbsent(t *testing.T) {
 	getValue, err = serializerString.Deserialize(*currentValue)
 	g.Expect(err).Should(gomega.BeNil())
 	g.Expect(*getValue).Should(gomega.Equal("value"))
+}
+
+// TestPutAll tests the putAll request.
+func TestPutAll(t *testing.T) {
+	var (
+		g       = gomega.NewWithT(t)
+		ctx     = context.Background()
+		cache   = "test-put-all"
+		err     error
+		entries = generateEntries(g, 10)
+	)
+
+	session := getTestSession(t, g)
+	defer session.Close()
+
+	_ = ensureCache(g, session, cache)
+
+	// clear the cache
+	err = coherence.TestClearCache(ctx, session, cache)
+	g.Expect(err).Should(gomega.BeNil())
+
+	assertSize(g, session, cache, 0)
+
+	// test putAll with no expiry
+	err = coherence.TestPutAll(ctx, session, cache, entries, 0)
+	g.Expect(err).Should(gomega.BeNil())
+	assertSize(g, session, cache, 10)
+
+	// clear the cache
+	err = coherence.TestClearCache(ctx, session, cache)
+	g.Expect(err).Should(gomega.BeNil())
+
+	assertSize(g, session, cache, 0)
+
+	// test putAll with expiry
+	err = coherence.TestPutAll(ctx, session, cache, entries, time.Duration(4)*time.Second)
+	g.Expect(err).Should(gomega.BeNil())
+	assertSize(g, session, cache, 10)
+
+	utils.Sleep(5)
+
+	assertSize(g, session, cache, 0)
 }
 
 // TestPutWithExpiry tests the put with expiry
@@ -555,6 +599,50 @@ func TestContainsValue(t *testing.T) {
 	g.Expect(containsValue).To(gomega.Equal(true))
 }
 
+// TestGetAll tests the contains value request.
+func TestGetAll(t *testing.T) {
+	var (
+		g       = gomega.NewWithT(t)
+		ctx     = context.Background()
+		cache   = "test-get-all"
+		err     error
+		entries = generateEntries(g, 100)
+	)
+
+	session := getTestSession(t, g)
+	defer session.Close()
+
+	_ = ensureCache(g, session, cache)
+
+	key1 := ensureSerializedInt32(g, 1)
+	key2 := ensureSerializedInt32(g, 2)
+
+	// clear the cache
+	err = coherence.TestClearCache(ctx, session, cache)
+	g.Expect(err).Should(gomega.BeNil())
+
+	assertSize(g, session, cache, 0)
+
+	err = coherence.TestPutAll(ctx, session, cache, entries, 0)
+	g.Expect(err).Should(gomega.BeNil())
+	assertSize(g, session, cache, 100)
+
+	keys := make([][]byte, 2)
+	keys[0] = key1
+	keys[1] = key2
+
+	ch, err := coherence.TestGetAll(ctx, session, cache, keys)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+
+	for v := range ch {
+		g.Expect(v.Err).ShouldNot(gomega.HaveOccurred())
+		key := ensureDeserializedInt32(g, v.Key)
+		val := ensureDeserializedString(g, v.Value)
+		g.Expect(key).ShouldNot(gomega.BeNil())
+		g.Expect(val).ShouldNot(gomega.BeNil())
+	}
+}
+
 // TestDestroyCache tests the destroy cache request.
 func TestDestroyCache(t *testing.T) {
 	var (
@@ -676,6 +764,18 @@ func ensureSerializedString(g *gomega.WithT, v string) []byte {
 	return value
 }
 
+func ensureDeserializedInt32(g *gomega.WithT, data []byte) int32 {
+	value, err := serializerInt32.Deserialize(data)
+	g.Expect(err).Should(gomega.BeNil())
+	return *value
+}
+
+func ensureDeserializedString(g *gomega.WithT, data []byte) string {
+	value, err := serializerString.Deserialize(data)
+	g.Expect(err).Should(gomega.BeNil())
+	return *value
+}
+
 func ensureCache(g *gomega.WithT, session *coherence.Session, cache string) *int32 {
 	ctx := context.Background()
 
@@ -692,4 +792,17 @@ func ensureCache(g *gomega.WithT, session *coherence.Session, cache string) *int
 	g.Expect(ready).To(gomega.BeTrue())
 
 	return cacheID
+}
+
+func generateEntries(g *gomega.WithT, count int) []*pb1.BinaryKeyAndValue {
+	entries := make([]*pb1.BinaryKeyAndValue, 0)
+
+	// populate the entries
+	for i := 1; i <= count; i++ {
+		entries = append(entries, &pb1.BinaryKeyAndValue{
+			Key:   ensureSerializedInt32(g, int32(i)),
+			Value: ensureSerializedString(g, fmt.Sprintf("value-%v", i)),
+		})
+	}
+	return entries
 }

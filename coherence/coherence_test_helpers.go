@@ -74,8 +74,16 @@ func TestGet(ctx context.Context, session *Session, cache string, key []byte) (*
 	return session.v1StreamManagerCache.get(ctx, cache, key)
 }
 
+func TestGetAll(ctx context.Context, session *Session, cache string, keys [][]byte) (<-chan BinaryKeyAndValue, error) {
+	return session.v1StreamManagerCache.getAll(ctx, cache, keys)
+}
+
 func TestPut(ctx context.Context, session *Session, cache string, key []byte, value []byte, ttl time.Duration) (*[]byte, error) {
 	return session.v1StreamManagerCache.put(ctx, cache, key, value, ttl)
+}
+
+func TestPutAll(ctx context.Context, session *Session, cache string, entries []*pb1.BinaryKeyAndValue, ttl time.Duration) error {
+	return session.v1StreamManagerCache.putAll(ctx, cache, entries, ttl)
 }
 
 func TestRemove(ctx context.Context, session *Session, cache string, key []byte) (*[]byte, error) {

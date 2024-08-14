@@ -618,6 +618,28 @@ func (m *streamManagerV1) put(ctx context.Context, cache string, key []byte, val
 	return m.putGenericRequest(ctx, pb1.NamedCacheRequestType_Put, cache, key, value, ttl)
 }
 
+func (m *streamManagerV1) putAll(ctx context.Context, cache string, entries []*pb1.BinaryKeyAndValue, ttl time.Duration) error {
+	req, err := m.newPutAllRequest(cache, entries, ttl)
+	if err != nil {
+		return err
+	}
+
+	requestType, err := m.submitRequest(req, pb1.NamedCacheRequestType_PutAll)
+	if err != nil {
+		return err
+	}
+
+	newCtx, cancel := m.session.ensureContext(ctx)
+	if cancel != nil {
+		defer cancel()
+	}
+
+	defer m.cleanupRequest(req.Id)
+
+	_, err = waitForResponse(newCtx, requestType.ch)
+	return err
+}
+
 func (m *streamManagerV1) putIfAbsent(ctx context.Context, cache string, key []byte, value []byte, ttl time.Duration) (*[]byte, error) {
 	return m.putGenericRequest(ctx, pb1.NamedCacheRequestType_PutIfAbsent, cache, key, value, ttl)
 }
@@ -649,6 +671,70 @@ func (m *streamManagerV1) putGenericRequest(ctx context.Context, reqType pb1.Nam
 	return unwrapBytes(result)
 }
 
+type BinaryKeyAndValue struct {
+	Key   []byte
+	Value []byte
+	Err   error
+}
+
+func (m *streamManagerV1) getAll(ctx context.Context, cache string, keys [][]byte) (<-chan BinaryKeyAndValue, error) {
+	req, err := m.newGetAllRequest(cache, keys)
+	if err != nil {
+		return nil, err
+	}
+
+	requestType, err := m.submitRequest(req, pb1.NamedCacheRequestType_GetAll)
+	if err != nil {
+		return nil, err
+	}
+
+	// create a channel that will be populated by the streaming request
+	ch := make(chan BinaryKeyAndValue)
+
+	newCtx, cancel := m.session.ensureContext(ctx)
+
+	// this channel will receive entries back from the stream
+	respChannel := waitForStreamingResponse(newCtx, requestType.ch)
+
+	go func() {
+		defer m.cleanupRequest(req.Id)
+		if cancel != nil {
+			defer cancel()
+		}
+
+		// nolint:gosimple
+		for {
+			select {
+			case resp := <-respChannel:
+				// received a streamed response of type pb1.BinaryKeyAndValue
+				var response = BinaryKeyAndValue{}
+				if resp.err != nil {
+					response.Err = fmt.Errorf("error: %v", resp.err)
+				}
+
+				if resp.message != nil {
+					key, value, err1 := unwrapBinaryKeyAndValue(resp.namedCacheResponse.Message)
+					if err1 != nil {
+						response.Err = err1
+					} else {
+						response.Key = *key
+						response.Value = *value
+					}
+					m.session.debugGrpc("received response", resp.message)
+					ch <- response
+				}
+
+				if resp.complete {
+					close(ch)
+					break
+				}
+			}
+		}
+	}()
+
+	return ch, nil
+}
+
 func (m *streamManagerV1) cleanupRequest(reqID int64) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
@@ -674,7 +760,8 @@ func waitForResponse(newCtx context.Context, ch chan responseMessage, ensureCach
 		isEnsureCache = len(ensureCache) != 0
 	)
 
-	// wait until we get a complete request or we time out
+	// wait until we get a complete request, or we time out
+	// nolint:gosimple
 	for {
 		// wait on the channel
 		select {
@@ -689,7 +776,7 @@ func waitForResponse(newCtx context.Context, ch chan responseMessage, ensureCach
 					// standard case where we want to return the names cache result message
 					result = defaultFunction(resp)
 				} else {
-					// special case for ensureCache, return the cache id and it will be handled by ensureCache
+					// special case for ensureCache, return the cache id, and it will be handled by ensureCache
 					result, err = anypb.New(wrapperspb.Int32(resp.namedCacheResponse.CacheId))
 				}
 			}
@@ -701,6 +788,44 @@ func waitForResponse(newCtx context.Context, ch chan responseMessage, ensureCach
 			return result, newCtx.Err()
 		}
 	}
+}
+
+// waitForStreamingResponse
+func waitForStreamingResponse(newCtx context.Context, ch chan responseMessage) <-chan responseMessage {
+	var chMessage = make(chan responseMessage) // channel to send back to caller
+
+	go func() {
+		// wait until we get a complete request, or we time out
+		for {
+			// wait on the channel
+			select {
+			case resp := <-ch:
+				var response = responseMessage{}
+				if resp.err != nil {
+					response.err = resp.err
+				}
+
+				if resp.namedCacheResponse != nil {
+					// unpack the result message if we have valid named cache response
+					response.message = defaultFunction(resp)
+				}
+
+				// write the request to the response channel
+				chMessage <- resp
+				if resp.complete {
+					return
+				}
+			case <-newCtx.Done():
+				e := fmt.Sprintf("%v", newCtx.Err())
+				chMessage <- responseMessage{
+					err: &e,
+				}
+				close(chMessage)
+			}
+		}
+	}()
+
+	return chMessage
 }
 
 func unwrapBool(result *anypb.Any) (bool, error) {
@@ -722,6 +847,16 @@ func unwrapBytes(result *anypb.Any) (*[]byte, error) {
 	}
 
 	return &message.Value, nil
+}
+
+func unwrapBinaryKeyAndValue(result *anypb.Any) (*[]byte, *[]byte, error) {
+	var message = &pb1.BinaryKeyAndValue{}
+	if err := result.UnmarshalTo(message); err != nil {
+		err = getUnmarshallError("unwrapBinaryKeyAndValue", err)
+		return nil, nil, err
+	}
+
+	return &message.Key, &message.Value, nil
 }
 
 func getInitDescription(r *pb1.InitResponse) string {

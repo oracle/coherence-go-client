@@ -43,17 +43,11 @@ func (m *streamManagerV1) newEnsureCacheRequest(cache string) (*pb1.ProxyRequest
 		return nil, err
 	}
 
-	return m.newWrapperProxyRequest(nil, pb1.NamedCacheRequestType_EnsureCache, anyReq)
+	return m.newWrapperProxyRequest("", pb1.NamedCacheRequestType_EnsureCache, anyReq)
 }
 
 func (m *streamManagerV1) newGenericNamedCacheRequest(cache string, requestType pb1.NamedCacheRequestType) (*pb1.ProxyRequest, error) {
-	// retrieve the cache ID
-	cacheID := m.session.getCacheID(cache)
-	if cacheID == nil {
-		return nil, getCacheIDMessage(cache)
-	}
-
-	return m.newWrapperProxyRequest(cacheID, requestType, nil)
+	return m.newWrapperProxyRequest(cache, requestType, nil)
 }
 
 func (m *streamManagerV1) newGetRequest(cache string, key []byte) (*pb1.ProxyRequest, error) {
@@ -81,13 +75,7 @@ func (m *streamManagerV1) newSingleValueBasedRequest(reqType pb1.NamedCacheReque
 		return nil, err
 	}
 
-	// retrieve the cache ID
-	cacheID := m.session.getCacheID(cache)
-	if cacheID == nil {
-		return nil, getCacheIDMessage(cache)
-	}
-
-	return m.newWrapperProxyRequest(cacheID, reqType, anyReq)
+	return m.newWrapperProxyRequest(cache, reqType, anyReq)
 }
 
 func (m *streamManagerV1) newRemoveMappingRequest(cache string, key []byte, value []byte) (*pb1.ProxyRequest, error) {
@@ -114,13 +102,7 @@ func (m *streamManagerV1) newKeyAndValueBasedRequest(reqType pb1.NamedCacheReque
 		return nil, err
 	}
 
-	// retrieve the cache ID
-	cacheID := m.session.getCacheID(cache)
-	if cacheID == nil {
-		return nil, getCacheIDMessage(cache)
-	}
-
-	return m.newWrapperProxyRequest(cacheID, reqType, anyReq)
+	return m.newWrapperProxyRequest(cache, reqType, anyReq)
 }
 
 func (m *streamManagerV1) newPutRequest(cache string, key []byte, value []byte, ttl time.Duration) (*pb1.ProxyRequest, error) {
@@ -136,13 +118,35 @@ func (m *streamManagerV1) newPutRequest(cache string, key []byte, value []byte, 
 		return nil, err
 	}
 
-	// retrieve the cache ID
-	cacheID := m.session.getCacheID(cache)
-	if cacheID == nil {
-		return nil, getCacheIDMessage(cache)
+	return m.newWrapperProxyRequest(cache, pb1.NamedCacheRequestType_Put, anyReq)
+}
+
+func (m *streamManagerV1) newPutAllRequest(cache string, entries []*pb1.BinaryKeyAndValue, ttl time.Duration) (*pb1.ProxyRequest, error) {
+	millis := ttl.Milliseconds()
+	putAllRequest := &pb1.PutAllRequest{
+		Entries: entries,
+		Ttl:     &millis,
 	}
 
-	return m.newWrapperProxyRequest(cacheID, pb1.NamedCacheRequestType_Put, anyReq)
+	anyReq, err := anypb.New(putAllRequest)
+	if err != nil {
+		return nil, err
+	}
+
+	return m.newWrapperProxyRequest(cache, pb1.NamedCacheRequestType_PutAll, anyReq)
+}
+
+func (m *streamManagerV1) newGetAllRequest(cache string, keys [][]byte) (*pb1.ProxyRequest, error) {
+	getAllRequest := &pb1.CollectionOfBytesValues{
+		Values: keys,
+	}
+
+	anyReq, err := anypb.New(getAllRequest)
+	if err != nil {
+		return nil, err
+	}
+
+	return m.newWrapperProxyRequest(cache, pb1.NamedCacheRequestType_GetAll, anyReq)
 }
 
 func (m *streamManagerV1) newReplaceMappingRequest(cache string, key []byte, prevValue []byte, newValue []byte) (*pb1.ProxyRequest, error) {
@@ -157,13 +161,7 @@ func (m *streamManagerV1) newReplaceMappingRequest(cache string, key []byte, pre
 		return nil, err
 	}
 
-	// retrieve the cache ID
-	cacheID := m.session.getCacheID(cache)
-	if cacheID == nil {
-		return nil, getCacheIDMessage(cache)
-	}
-
-	return m.newWrapperProxyRequest(cacheID, pb1.NamedCacheRequestType_ReplaceMapping, anyReq)
+	return m.newWrapperProxyRequest(cache, pb1.NamedCacheRequestType_ReplaceMapping, anyReq)
 }
 
 func (m *streamManagerV1) newProxyRequest(message *anypb.Any) *pb1.ProxyRequest {
@@ -189,7 +187,17 @@ func newNamedCacheRequest(cacheID *int32, reqType pb1.NamedCacheRequestType, mes
 	return anyReq, nil
 }
 
-func (m *streamManagerV1) newWrapperProxyRequest(cacheID *int32, requestType pb1.NamedCacheRequestType, message *anypb.Any) (*pb1.ProxyRequest, error) {
+func (m *streamManagerV1) newWrapperProxyRequest(cache string, requestType pb1.NamedCacheRequestType, message *anypb.Any) (*pb1.ProxyRequest, error) {
+	var cacheID *int32
+
+	// validate the cache ID if it is not a ensure cache request
+	if cache != "" {
+		cacheID = m.session.getCacheID(cache)
+		if cacheID == nil {
+			return nil, getCacheIDMessage(cache)
+		}
+	}
+
 	ncRequest, err := newNamedCacheRequest(cacheID, requestType, message)
 
 	if err != nil {
