@@ -10,6 +10,7 @@ import (
 	"context"
 	"github.com/oracle/coherence-go-client/coherence/filters"
 	"github.com/oracle/coherence-go-client/coherence/processors"
+	pb1 "github.com/oracle/coherence-go-client/proto/v1"
 	"time"
 )
 
@@ -138,6 +139,9 @@ type NamedMap[K comparable, V any] interface {
 	// PutAll copies all the mappings from the specified map to the NamedMap.
 	PutAll(ctx context.Context, entries map[K]V) error
 
+	// PutAllWithExpiry copies all the mappings from the specified map to the NamedMap and set the ttl.
+	PutAllWithExpiry(ctx context.Context, entries map[K]V, ttl time.Duration) error
+
 	// PutIfAbsent adds the specified mapping if the key is not already associated with a value in the NamedMap.
 	// Error will be equal to coherence. V will be nil if there was no previous value.
 	PutIfAbsent(ctx context.Context, key K, value V) (*V, error)
@@ -251,4 +255,9 @@ type StreamedEntry[K comparable, V any] struct {
 type Entry[K comparable, V any] struct {
 	Key   K
 	Value V
+}
+
+type EventSubmitter interface {
+	generateMapLifecycleEvent(eventType MapLifecycleEventType)
+	generateMapEvent(mapEvent *pb1.MapEventMessage)
 }

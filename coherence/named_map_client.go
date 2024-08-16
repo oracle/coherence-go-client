@@ -446,6 +446,13 @@ func (nm *NamedMapClient[K, V]) Release() {
 	// remove the NamedMap from the session.maps map
 	delete(s.maps, nm.Name())
 
+	// remove the cacheID mapping
+	if s.IsGrpcV1() {
+		s.cacheIDMapMutex.Lock()
+		delete(s.cacheIDMap, nm.Name())
+		s.cacheIDMapMutex.Unlock()
+	}
+
 	if nm.namedMapReconnectListener.listener != nil {
 		s.RemoveSessionLifecycleListener(nm.namedMapReconnectListener.listener)
 	}
@@ -675,7 +682,7 @@ func (nm *NamedMapClient[K, V]) Name() string {
 //	    log.Fatal(err)
 //	}
 func (nm *NamedMapClient[K, V]) PutAll(ctx context.Context, entries map[K]V) error {
-	return executePutAll(ctx, &nm.baseClient, entries)
+	return executePutAll(ctx, &nm.baseClient, entries, 0)
 }
 
 // PutIfAbsent adds the specified mapping if the key is not already associated with a value in the [NamedMap]
@@ -892,7 +899,13 @@ func getNamedMap[K comparable, V any](session *Session, name string, sOpts *Sess
 
 	namedMap := convertNamedMapClient[K, V](newMap)
 
-	if !session.IsGrpcV1() {
+	if session.IsGrpcV1() {
+		// ensure the cache via gRPC v1
+		_, err = session.v1StreamManagerCache.ensureCache(context.Background(), name)
+		if err != nil {
+			return nil, err
+		}
+	} else {
 		// only create event manager if v0
 		manager, err1 := newMapEventManager(&namedMap, newMap.baseClient, session)
 		if err1 != nil {

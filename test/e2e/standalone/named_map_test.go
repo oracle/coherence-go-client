@@ -53,6 +53,8 @@ func TestBasicCrudOperationsVariousTypes(t *testing.T) {
 		err     error
 		session *coherence.Session
 	)
+	t.Setenv("COHERENCE_SESSION_DEBUG", "true")
+	t.Setenv("COHERENCE_GRPCV1_DEBUG", "true")
 
 	session, err = utils.GetSession()
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
@@ -181,6 +183,9 @@ func getNewNamedCache[K comparable, V any](g *gomega.WithT, session *coherence.S
 // TestBasicOperationsAgainstMapAndCache runs all tests against NamedMap and NamedCache.
 func TestBasicOperationsAgainstMapAndCache(t *testing.T) {
 	g := gomega.NewWithT(t)
+	t.Setenv("COHERENCE_SESSION_DEBUG", "true")
+	t.Setenv("COHERENCE_GRPCV1_DEBUG", "true")
+
 	session, err := utils.GetSession()
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	defer session.Close()
@@ -208,8 +213,8 @@ func TestBasicOperationsAgainstMapAndCache(t *testing.T) {
 		{"NamedCacheRunTestReplaceMapping", utils.GetNamedCache[int, utils.Person](g, session, "replace-mapping-cache"), RunTestReplaceMapping},
 		{"NamedMapRunTestRemoveMapping", utils.GetNamedMap[int, utils.Person](g, session, "remove-mapping-map"), RunTestRemoveMapping},
 		{"NamedCacheRunTestRemoveMapping", utils.GetNamedCache[int, utils.Person](g, session, "remove-mapping-cache"), RunTestRemoveMapping},
-		{"NamedMapRunTestPutAll", utils.GetNamedMap[int, utils.Person](g, session, "remove-mapping-map"), RunTestPutAll},
-		{"NamedCacheRunTestPutAll", utils.GetNamedCache[int, utils.Person](g, session, "remove-mapping-cache"), RunTestPutAll},
+		{"NamedMapRunTestPutAll", utils.GetNamedMap[int, utils.Person](g, session, "put-all-map"), RunTestPutAll},
+		{"NamedCacheRunTestPutAll", utils.GetNamedCache[int, utils.Person](g, session, "put-all-cache"), RunTestPutAll},
 		{"NamedMapRunTestContainsValue", utils.GetNamedMap[int, utils.Person](g, session, "contains-value-map"), RunTestContainsValue},
 		{"NamedCacheRunTestContainsValue", utils.GetNamedCache[int, utils.Person](g, session, "contains-value-cache"), RunTestContainsValue},
 		{"NamedMapRunTestContainsEntry", utils.GetNamedMap[int, utils.Person](g, session, "contains-entry-map"), RunTestContainsEntry},
@@ -237,7 +242,7 @@ func TestBasicOperationsAgainstMapAndCache(t *testing.T) {
 		{"NamedMapRunTestValues", utils.GetNamedMap[int, utils.Person](g, session, "values-map"), RunTestValuesLong},
 		{"NamedCacheRunTestValues", utils.GetNamedCache[int, utils.Person](g, session, "values-cache"), RunTestValuesLong},
 		{"NamedMapRunTestIsReady", utils.GetNamedMap[int, utils.Person](g, session, "is-ready-map"), RunTestIsReady},
-		{"NamedCacheRunTestIsReady", utils.GetNamedCache[int, utils.Person](g, session, "is-read-cache"), RunTestIsReady},
+		{"NamedCacheRunTestIsReady", utils.GetNamedCache[int, utils.Person](g, session, "is-ready-cache"), RunTestIsReady},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.testName, func(t *testing.T) {
@@ -290,6 +295,10 @@ func RunTestBasicCrudOperations(t *testing.T, namedMap coherence.NamedMap[int, u
 		person1   = utils.Person{ID: 1, Name: "Tim"}
 		oldPerson *utils.Person
 	)
+
+	result, err = namedMap.Get(ctx, person1.ID)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	g.Expect(result).To(gomega.BeNil())
 
 	oldPerson, err = namedMap.Put(ctx, person1.ID, person1)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
@@ -693,7 +702,6 @@ func RunTestPutAll(t *testing.T, namedMap coherence.NamedMap[int, utils.Person])
 		g.Expect(err).ShouldNot(gomega.HaveOccurred())
 		g.Expect(found).To(gomega.BeTrue())
 	}
-
 }
 
 func RunTestValuesFilter(t *testing.T, namedMap coherence.NamedMap[int, utils.Person]) {

@@ -641,6 +641,7 @@ func TestGetAll(t *testing.T) {
 		g.Expect(key).ShouldNot(gomega.BeNil())
 		g.Expect(val).ShouldNot(gomega.BeNil())
 	}
+
 }
 
 // TestDestroyCache tests the destroy cache request.

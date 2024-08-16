@@ -49,6 +49,45 @@ func TestPutWithExpiry(t *testing.T) {
 	g.Expect(err).To(gomega.HaveOccurred())
 }
 
+func TestPutAllWithExpiry(t *testing.T) {
+	var (
+		g     = gomega.NewWithT(t)
+		err   error
+		found bool
+		size  int
+	)
+
+	session, err := utils.GetSession()
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	defer session.Close()
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	namedCache := utils.GetNamedCache[int, utils.Person](g, session, "put-all-with-expiry")
+
+	// only run for v1 client
+	if !namedCache.GetSession().IsGrpcV1() {
+		return
+	}
+
+	err = namedCache.PutAllWithExpiry(ctx, peopleData, time.Duration(4)*time.Second)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+
+	size, err = namedCache.Size(ctx)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	g.Expect(size).To(gomega.Equal(len(peopleData)))
+
+	for k := range peopleData {
+		found, err = namedCache.ContainsKey(ctx, k)
+		g.Expect(err).ShouldNot(gomega.HaveOccurred())
+		g.Expect(found).To(gomega.BeTrue())
+	}
+
+	utils.Sleep(6)
+	size, err = namedCache.Size(ctx)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	g.Expect(size).To(gomega.Equal(0))
+
+}
+
 // TestPutWithExpiryUsingCacheOption tests that we can se an overall expiry for the cache and this is applied
 // when using standard Put().
 func TestPutWithExpiryUsingCacheOption(t *testing.T) {

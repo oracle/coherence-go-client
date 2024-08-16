@@ -91,7 +91,7 @@ func TestRemove(ctx context.Context, session *Session, cache string, key []byte)
 }
 
 func TestPutIfAbsent(ctx context.Context, session *Session, cache string, key []byte, value []byte) (*[]byte, error) {
-	return session.v1StreamManagerCache.putIfAbsent(ctx, cache, key, value, 0)
+	return session.v1StreamManagerCache.putIfAbsent(ctx, cache, key, value)
 }
 
 // GetSessionCacheID returns the cache id for a cache name

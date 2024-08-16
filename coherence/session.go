@@ -60,6 +60,7 @@ type Session struct {
 	caches                map[string]interface{}
 	maps                  map[string]interface{}
 	queues                map[string]interface{}
+	cacheIDMapMutex       sync.RWMutex
 	cacheIDMap            map[string]int32
 	lifecycleMutex        sync.RWMutex
 	lifecycleListeners    []*SessionLifecycleListener
@@ -342,11 +343,44 @@ func (s *Session) NextRequestID() int64 {
 }
 
 func (s *Session) getCacheID(cache string) *int32 {
-	s.mapMutex.Lock()
-	defer s.mapMutex.Unlock()
+	s.cacheIDMapMutex.Lock()
+	defer s.cacheIDMapMutex.Unlock()
 
 	if v, ok := s.cacheIDMap[cache]; ok {
 		return &v
+	}
+	return nil
+}
+
+func (s *Session) getCacheNameFromCacheID(cacheID int32) *string {
+	s.cacheIDMapMutex.Lock()
+	defer s.cacheIDMapMutex.Unlock()
+
+	for k, v := range s.cacheIDMap {
+		if v == cacheID {
+			return &k
+		}
+	}
+
+	return nil
+}
+
+func (s *Session) getNamedMapClient(name string) interface{} {
+	s.mapMutex.Lock()
+	defer s.mapMutex.Unlock()
+
+	if existingCache, ok := s.maps[name]; ok {
+		return existingCache
+	}
+	return nil
+}
+
+func (s *Session) getNamedCacheClient(name string) interface{} {
+	s.mapMutex.Lock()
+	defer s.mapMutex.Unlock()
+
+	if existingCache, ok := s.caches[name]; ok {
+		return existingCache
 	}
 	return nil
 }

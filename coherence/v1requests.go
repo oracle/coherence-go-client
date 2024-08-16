@@ -105,7 +105,7 @@ func (m *streamManagerV1) newKeyAndValueBasedRequest(reqType pb1.NamedCacheReque
 	return m.newWrapperProxyRequest(cache, reqType, anyReq)
 }
 
-func (m *streamManagerV1) newPutRequest(cache string, key []byte, value []byte, ttl time.Duration) (*pb1.ProxyRequest, error) {
+func (m *streamManagerV1) newPutRequest(reqType pb1.NamedCacheRequestType, cache string, key []byte, value []byte, ttl time.Duration) (*pb1.ProxyRequest, error) {
 	millis := ttl.Milliseconds()
 	putRequest := &pb1.PutRequest{
 		Key:   key,
@@ -118,7 +118,7 @@ func (m *streamManagerV1) newPutRequest(cache string, key []byte, value []byte, 
 		return nil, err
 	}
 
-	return m.newWrapperProxyRequest(cache, pb1.NamedCacheRequestType_Put, anyReq)
+	return m.newWrapperProxyRequest(cache, reqType, anyReq)
 }
 
 func (m *streamManagerV1) newPutAllRequest(cache string, entries []*pb1.BinaryKeyAndValue, ttl time.Duration) (*pb1.ProxyRequest, error) {

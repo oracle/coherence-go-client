@@ -193,16 +193,50 @@ func (m *streamManagerV1) ensureStream() (*eventStreamV1, error) {
 func (m *streamManagerV1) processNamedCacheResponse(reqID int64, resp *responseMessage) {
 	if reqID == 0 {
 		// this is a map event or cache lifecycle event so dispatch it
-		// TODO: Dispatch event
-		m.session.debugGrpc(resp)
+		m.session.debugGrpc("Event, CacheId=", resp.namedCacheResponse.CacheId, ", Type=", resp.namedCacheResponse.Type)
 
-		switch resp.namedCacheResponse.Type {
-		case pb1.ResponseType_Destroyed:
-			log.Printf("id=%v, destroyed, %v", reqID, resp)
-		case pb1.ResponseType_Truncated:
-			log.Printf("id=%v, truncated, %v", reqID, resp)
-		case pb1.ResponseType_MapEvent:
-			log.Printf("id=%v, mapevent, %v", reqID, resp)
+		// for a map event we must get the cache name and then looking the base client so
+		// we can send the event to the right place
+		cacheID := resp.namedCacheResponse.CacheId
+		if cacheID == 0 {
+			log.Printf("received an event %v with cacheID = 0", resp.namedCacheResponse.Type)
+			return
+		}
+
+		cacheName := m.session.getCacheNameFromCacheID(cacheID)
+		if cacheName == nil {
+			log.Printf("unable to find cache name from cache id %v", cacheID)
+			return
+		}
+
+		// determine if the cache is a map or cache
+		var client interface{}
+
+		client = m.session.getNamedCacheClient(*cacheName)
+		if client == nil {
+			client = m.session.getNamedMapClient(*cacheName)
+		}
+
+		if eventSubmitter, ok := client.(EventSubmitter); ok {
+			m.session.debugGrpc("found client %v", client)
+			switch resp.namedCacheResponse.Type {
+			case pb1.ResponseType_Destroyed:
+				eventSubmitter.generateMapLifecycleEvent(Destroyed)
+				log.Printf("id=%v, destroyed, %v", reqID, resp)
+				// TODO: need to actually destroy the cache reference, where can we do this where it is safe?
+			case pb1.ResponseType_Truncated:
+				eventSubmitter.generateMapLifecycleEvent(Truncated)
+				log.Printf("id=%v, truncated, %v", reqID, resp)
+			case pb1.ResponseType_MapEvent:
+				// convert to MapEventMessage
+				mapEventMessage, err1 := unwrapMapEvent(resp.message)
+				if err1 != nil {
+					log.Printf("unable to unwrap MapEvent: %v", err1)
+				} else {
+					eventSubmitter.generateMapEvent(mapEventMessage)
+					log.Printf("id=%v, mapevent, %v", reqID, mapEventMessage)
+				}
+			}
 		}
 
 		return
@@ -274,11 +308,11 @@ func (m *streamManagerV1) ensureCache(ctx context.Context, cache string) (*int32
 		return nil, err
 	}
 
-	// store the cache id in the session
+	// store the cache id in the session , no lock required as already locked
 	cacheID = &message.Value
-	m.session.mapMutex.Lock()
+	//m.session.mapMutex.Lock()
 	m.session.cacheIDMap[cache] = *cacheID
-	m.session.mapMutex.Unlock()
+	//m.session.mapMutex.Unlock()
 
 	return cacheID, nil
 }
@@ -302,9 +336,9 @@ func (m *streamManagerV1) destroyCache(ctx context.Context, cache string) error 
 	}
 
 	// remove the cache from the map
-	m.session.mapMutex.Lock()
+	m.session.cacheIDMapMutex.Lock()
 	delete(m.session.cacheIDMap, cache)
-	m.session.mapMutex.Unlock()
+	m.session.cacheIDMapMutex.Unlock()
 
 	return nil
 }
@@ -640,13 +674,13 @@ func (m *streamManagerV1) putAll(ctx context.Context, cache string, entries []*p
 	return err
 }
 
-func (m *streamManagerV1) putIfAbsent(ctx context.Context, cache string, key []byte, value []byte, ttl time.Duration) (*[]byte, error) {
-	return m.putGenericRequest(ctx, pb1.NamedCacheRequestType_PutIfAbsent, cache, key, value, ttl)
+func (m *streamManagerV1) putIfAbsent(ctx context.Context, cache string, key []byte, value []byte) (*[]byte, error) {
+	return m.putGenericRequest(ctx, pb1.NamedCacheRequestType_PutIfAbsent, cache, key, value, 0)
 }
 
 // putGenericRequest created a generic put requests, used by put and putIfAbsent.
 func (m *streamManagerV1) putGenericRequest(ctx context.Context, reqType pb1.NamedCacheRequestType, cache string, key []byte, value []byte, ttl time.Duration) (*[]byte, error) {
-	req, err := m.newPutRequest(cache, key, value, ttl)
+	req, err := m.newPutRequest(reqType, cache, key, value, ttl)
 	if err != nil {
 		return nil, err
 	}
@@ -847,6 +881,17 @@ func unwrapBytes(result *anypb.Any) (*[]byte, error) {
 	}
 
 	return &message.Value, nil
+}
+
+func unwrapMapEvent(result *anypb.Any) (*pb1.MapEventMessage, error) {
+	var message = &pb1.MapEventMessage{}
+
+	if err := result.UnmarshalTo(message); err != nil {
+		err = getUnmarshallError("unwrapMapEvent", err)
+		return nil, err
+	}
+
+	return message, nil
 }
 
 func unwrapBinaryKeyAndValue(result *anypb.Any) (*[]byte, *[]byte, error) {

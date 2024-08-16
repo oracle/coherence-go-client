@@ -149,6 +149,13 @@ func (nc *NamedCacheClient[K, V]) Release() {
 	// remove the NamedCache from the session.cache map
 	delete(s.caches, nc.Name())
 
+	// remove the cacheID mapping
+	if s.IsGrpcV1() {
+		s.cacheIDMapMutex.Lock()
+		delete(s.cacheIDMap, nc.Name())
+		s.cacheIDMapMutex.Unlock()
+	}
+
 	if nc.namedCacheReconnectListener.listener != nil {
 		s.RemoveSessionLifecycleListener(nc.namedCacheReconnectListener.listener)
 	}
@@ -378,7 +385,30 @@ func (nc *NamedCacheClient[K, V]) Name() string {
 //	    log.Fatal(err)
 //	}
 func (nc *NamedCacheClient[K, V]) PutAll(ctx context.Context, entries map[K]V) error {
-	return executePutAll(ctx, &nc.baseClient, entries)
+	return executePutAll(ctx, &nc.baseClient, entries, 0)
+}
+
+// PutAllWithExpiry copies all the mappings from the specified map to this [NamedCache] and sets the ttl for each entry.
+// This is the most efficient way to add multiple entries into a [NamedCache] as it
+// is carried out in parallel and no previous values are returned.
+//
+//	var peopleData = map[int]Person{
+//	    1: {ID: 1, Name: "Tim", Age: 21},
+//	    2: {ID: 2, Name: "Andrew", Age: 44},
+//	    3: {ID: 3, Name: "Helen", Age: 20},
+//	    4: {ID: 4, Name: "Alexa", Age: 12},
+//	}
+//
+//	namedCache, err := coherence.GetNamedCache[int, Person](session, "people")
+//	if err != nil {
+//	    log.Fatal(err)
+//	}
+//
+//	if err = namedCache.PutAll(ctx, peopleData, time.Duration(5) * time.Second); err != nil {
+//	    log.Fatal(err)
+//	}
+func (nc *NamedCacheClient[K, V]) PutAllWithExpiry(ctx context.Context, entries map[K]V, ttl time.Duration) error {
+	return executePutAll(ctx, &nc.baseClient, entries, ttl)
 }
 
 // PutIfAbsent adds the specified mapping if the key is not already associated with a value in the [NamedCache]
@@ -602,7 +632,13 @@ func getNamedCache[K comparable, V any](session *Session, name string, sOpts *Se
 
 	namedCache := convertNamedCacheClient[K, V](newCache)
 
-	if !session.IsGrpcV1() {
+	if session.IsGrpcV1() {
+		// ensure the cache via gRPC v1
+		_, err = session.v1StreamManagerCache.ensureCache(context.Background(), name)
+		if err != nil {
+			return nil, err
+		}
+	} else {
 		// only create event manager if v0
 		manager, err1 := newMapEventManager(&namedCache, newCache.baseClient, session)
 		if err1 != nil {
