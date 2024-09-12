@@ -13,6 +13,10 @@ import (
 	"time"
 )
 
+var (
+	emptyByte = make([]byte, 0)
+)
+
 func (m *streamManagerV1) newInitRequest() *pb1.ProxyRequest {
 	req := pb1.InitRequest{
 		ClientUuid:               m.session.sessionID[:],
@@ -121,6 +125,36 @@ func (m *streamManagerV1) newPutRequest(reqType pb1.NamedCacheRequestType, cache
 	return m.newWrapperProxyRequest(cache, reqType, anyReq)
 }
 
+func (m *streamManagerV1) newIndexRequest(cache string, add bool, binExtractor []byte, sorted *bool, binComparator []byte) (*pb1.ProxyRequest, error) {
+	indexRequest := &pb1.IndexRequest{
+		Add:        add,
+		Extractor:  binExtractor,
+		Sorted:     sorted,
+		Comparator: binComparator,
+	}
+
+	anyReq, err := anypb.New(indexRequest)
+	if err != nil {
+		return nil, err
+	}
+
+	return m.newWrapperProxyRequest(cache, pb1.NamedCacheRequestType_Index, anyReq)
+}
+
+func (m *streamManagerV1) newAggregateRequest(cache string, agent []byte, keysOrFilter *pb1.KeysOrFilter) (*pb1.ProxyRequest, error) {
+	aggregateRequest := &pb1.ExecuteRequest{
+		Agent: agent,
+		Keys:  keysOrFilter,
+	}
+
+	anyReq, err := anypb.New(aggregateRequest)
+	if err != nil {
+		return nil, err
+	}
+
+	return m.newWrapperProxyRequest(cache, pb1.NamedCacheRequestType_Aggregate, anyReq)
+}
+
 func (m *streamManagerV1) newPutAllRequest(cache string, entries []*pb1.BinaryKeyAndValue, ttl time.Duration) (*pb1.ProxyRequest, error) {
 	millis := ttl.Milliseconds()
 	putAllRequest := &pb1.PutAllRequest{
@@ -147,6 +181,59 @@ func (m *streamManagerV1) newGetAllRequest(cache string, keys [][]byte) (*pb1.Pr
 	}
 
 	return m.newWrapperProxyRequest(cache, pb1.NamedCacheRequestType_GetAll, anyReq)
+}
+
+func (m *streamManagerV1) newInvokeRequest(cache string, agent []byte, keysOrFilter *pb1.KeysOrFilter) (*pb1.ProxyRequest, error) {
+	invokeRequest := &pb1.ExecuteRequest{
+		Agent: agent,
+		Keys:  keysOrFilter,
+	}
+
+	anyReq, err := anypb.New(invokeRequest)
+	if err != nil {
+		return nil, err
+	}
+
+	return m.newWrapperProxyRequest(cache, pb1.NamedCacheRequestType_Invoke, anyReq)
+}
+
+func (m *streamManagerV1) newEntrySetRequest(cache string, filter []byte) (*pb1.ProxyRequest, error) {
+	entrySetRequest := &pb1.QueryRequest{
+		Filter: filter,
+	}
+
+	anyReq, err := anypb.New(entrySetRequest)
+	if err != nil {
+		return nil, err
+	}
+
+	return m.newWrapperProxyRequest(cache, pb1.NamedCacheRequestType_QueryEntries, anyReq)
+}
+
+func (m *streamManagerV1) newValuesFilterRequest(cache string, filter []byte) (*pb1.ProxyRequest, error) {
+	entrySetRequest := &pb1.QueryRequest{
+		Filter: filter,
+	}
+
+	anyReq, err := anypb.New(entrySetRequest)
+	if err != nil {
+		return nil, err
+	}
+
+	return m.newWrapperProxyRequest(cache, pb1.NamedCacheRequestType_QueryValues, anyReq)
+}
+
+func (m *streamManagerV1) newKeySetRequest(cache string, filter []byte) (*pb1.ProxyRequest, error) {
+	entrySetRequest := &pb1.QueryRequest{
+		Filter: filter,
+	}
+
+	anyReq, err := anypb.New(entrySetRequest)
+	if err != nil {
+		return nil, err
+	}
+
+	return m.newWrapperProxyRequest(cache, pb1.NamedCacheRequestType_QueryKeys, anyReq)
 }
 
 func (m *streamManagerV1) newReplaceMappingRequest(cache string, key []byte, prevValue []byte, newValue []byte) (*pb1.ProxyRequest, error) {

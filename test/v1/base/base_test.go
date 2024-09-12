@@ -12,6 +12,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/onsi/gomega"
 	"github.com/oracle/coherence-go-client/coherence"
+	"github.com/oracle/coherence-go-client/coherence/aggregators"
+	"github.com/oracle/coherence-go-client/coherence/filters"
+	"github.com/oracle/coherence-go-client/coherence/processors"
 	pb1 "github.com/oracle/coherence-go-client/proto/v1"
 	"github.com/oracle/coherence-go-client/test/utils"
 	"sync"
@@ -21,7 +24,9 @@ import (
 
 var (
 	serializerInt32  = coherence.NewSerializer[int32]("json")
+	serializerInt64  = coherence.NewSerializer[int64]("json")
 	serializerString = coherence.NewSerializer[string]("json")
+	serializerAny    = coherence.NewSerializer[any]("json")
 )
 
 // TestEnsureCache tests the ensureCache request.
@@ -599,7 +604,7 @@ func TestContainsValue(t *testing.T) {
 	g.Expect(containsValue).To(gomega.Equal(true))
 }
 
-// TestGetAll tests the contains value request.
+// TestGetAll tests the get all request.
 func TestGetAll(t *testing.T) {
 	var (
 		g       = gomega.NewWithT(t)
@@ -641,7 +646,46 @@ func TestGetAll(t *testing.T) {
 		g.Expect(key).ShouldNot(gomega.BeNil())
 		g.Expect(val).ShouldNot(gomega.BeNil())
 	}
+}
 
+// TestInvoke tests the invoke request.
+func TestInvoke(t *testing.T) {
+	var (
+		g       = gomega.NewWithT(t)
+		ctx     = context.Background()
+		cache   = "test-invoke"
+		err     error
+		entries = generateEntries(g, 100)
+	)
+
+	session := getTestSession(t, g)
+	defer session.Close()
+
+	_ = ensureCache(g, session, cache)
+
+	binProcessor := ensureSerializedAny(g, processors.Preload())
+
+	// clear the cache
+	err = coherence.TestClearCache(ctx, session, cache)
+	g.Expect(err).Should(gomega.BeNil())
+
+	assertSize(g, session, cache, 0)
+
+	err = coherence.TestPutAll(ctx, session, cache, entries, 0)
+	g.Expect(err).Should(gomega.BeNil())
+	assertSize(g, session, cache, 100)
+
+	keys := makeInt32Keys(g, 3)
+
+	keysOrFilterKeys := &pb1.KeysOrFilter_Keys{Keys: &pb1.CollectionOfBytesValues{Values: keys}}
+	keysOrFilter := &pb1.KeysOrFilter{KeyOrFilter: keysOrFilterKeys}
+
+	ch, err := coherence.TestInvoke(ctx, session, cache, binProcessor, keysOrFilter)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+
+	for v := range ch {
+		g.Expect(v.Err).ShouldNot(gomega.HaveOccurred())
+	}
 }
 
 // TestDestroyCache tests the destroy cache request.
@@ -670,6 +714,69 @@ func TestDestroyCache(t *testing.T) {
 	// cache id should not exist
 	cacheID := coherence.GetSessionCacheID(session, validCache)
 	g.Expect(cacheID).To(gomega.BeNil())
+}
+
+// TestAggregate tests the aggregate request.
+func TestAggregate(t *testing.T) {
+	var (
+		g      = gomega.NewWithT(t)
+		ctx    = context.Background()
+		cache  = "aggregate"
+		err    error
+		count  = 10
+		result *[]byte
+	)
+
+	session := getTestSession(t, g)
+	defer session.Close()
+
+	_ = ensureCache(g, session, cache)
+
+	value := ensureSerializedInt32(g, int32(1))
+
+	for i := 0; i < count; i++ {
+		key := ensureSerializedInt32(g, int32(i))
+		_, err = coherence.TestPut(ctx, session, cache, key, value, 0)
+		g.Expect(err).Should(gomega.BeNil())
+	}
+
+	assertSize(g, session, cache, int32(10))
+
+	binAggregator := ensureSerializedAny(g, aggregators.Count())
+	binFilter := ensureSerializedAny(g, filters.Always())
+
+	// test filter
+	keysOrFilterFilter := &pb1.KeysOrFilter_Filter{Filter: binFilter}
+	keysOrFilter := &pb1.KeysOrFilter{KeyOrFilter: keysOrFilterFilter}
+
+	result, err = coherence.TestAggregate(ctx, session, cache, binAggregator, keysOrFilter)
+	g.Expect(err).Should(gomega.BeNil())
+	g.Expect(result).ShouldNot(gomega.BeNil())
+
+	// deserialized value should be int64(10)
+	g.Expect(ensureDeserializedInt64(g, *result)).To(gomega.Equal(int64(10)))
+
+	// test keys
+	keys := makeInt32Keys(g, 2)
+
+	keysOrFilterKeys := &pb1.KeysOrFilter_Keys{Keys: &pb1.CollectionOfBytesValues{Values: keys}}
+	keysOrFilter = &pb1.KeysOrFilter{KeyOrFilter: keysOrFilterKeys}
+
+	result, err = coherence.TestAggregate(ctx, session, cache, binAggregator, keysOrFilter)
+	g.Expect(err).Should(gomega.BeNil())
+	g.Expect(result).ShouldNot(gomega.BeNil())
+
+	// deserialized value should be int64(2) as we have 2 keys
+	g.Expect(ensureDeserializedInt64(g, *result)).To(gomega.Equal(int64(2)))
+
+}
+
+func makeInt32Keys(g *gomega.WithT, count int) [][]byte {
+	keys := make([][]byte, count)
+	for i := 0; i < count; i++ {
+		keys[i] = ensureSerializedInt32(g, int32(i+1))
+	}
+	return keys
 }
 
 // TestGoRoutines tests multiple go routines to ensure that we have no locking issues.
@@ -765,8 +872,20 @@ func ensureSerializedString(g *gomega.WithT, v string) []byte {
 	return value
 }
 
+func ensureSerializedAny(g *gomega.WithT, v any) []byte {
+	value, err := serializerAny.Serialize(v)
+	g.Expect(err).Should(gomega.BeNil())
+	return value
+}
+
 func ensureDeserializedInt32(g *gomega.WithT, data []byte) int32 {
 	value, err := serializerInt32.Deserialize(data)
+	g.Expect(err).Should(gomega.BeNil())
+	return *value
+}
+
+func ensureDeserializedInt64(g *gomega.WithT, data []byte) int64 {
+	value, err := serializerInt64.Deserialize(data)
 	g.Expect(err).Should(gomega.BeNil())
 	return *value
 }

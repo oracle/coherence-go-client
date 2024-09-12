@@ -545,6 +545,33 @@ func (m *streamManagerV1) remove(ctx context.Context, cache string, key []byte) 
 	return unwrapBytes(result)
 }
 
+func (m *streamManagerV1) aggregate(ctx context.Context, cache string, agent []byte, keyOrFilter *pb1.KeysOrFilter) (*[]byte, error) {
+	req, err := m.newAggregateRequest(cache, agent, keyOrFilter)
+	if err != nil {
+		return nil, err
+	}
+
+	requestType, err := m.submitRequest(req, pb1.NamedCacheRequestType_Aggregate)
+	if err != nil {
+		return nil, err
+	}
+
+	newCtx, cancel := m.session.ensureContext(ctx)
+	if cancel != nil {
+		defer cancel()
+	}
+
+	// remove the entry from the channel
+	defer m.cleanupRequest(req.Id)
+
+	result, err1 := waitForResponse(newCtx, requestType.ch)
+	if err1 != nil {
+		return nil, err1
+	}
+
+	return unwrapBytes(result)
+}
+
 func (m *streamManagerV1) replace(ctx context.Context, cache string, key []byte, value []byte) (*[]byte, error) {
 	req, err := m.newReplaceRequest(cache, key, value)
 	if err != nil {
@@ -674,6 +701,36 @@ func (m *streamManagerV1) putAll(ctx context.Context, cache string, entries []*p
 	return err
 }
 
+func (m *streamManagerV1) addIndex(ctx context.Context, cache string, binExtractor []byte, sorted *bool, binComparator []byte) error {
+	return m.index(ctx, cache, true, binExtractor, sorted, binComparator)
+}
+
+func (m *streamManagerV1) removeIndex(ctx context.Context, cache string, binExtractor []byte) error {
+	return m.index(ctx, cache, false, binExtractor, nil, emptyByte)
+}
+
+func (m *streamManagerV1) index(ctx context.Context, cache string, add bool, binExtractor []byte, sorted *bool, binComparator []byte) error {
+	req, err := m.newIndexRequest(cache, add, binExtractor, sorted, binComparator)
+	if err != nil {
+		return err
+	}
+
+	requestType, err := m.submitRequest(req, pb1.NamedCacheRequestType_Index)
+	if err != nil {
+		return err
+	}
+
+	newCtx, cancel := m.session.ensureContext(ctx)
+	if cancel != nil {
+		defer cancel()
+	}
+
+	defer m.cleanupRequest(req.Id)
+
+	_, err = waitForResponse(newCtx, requestType.ch)
+	return err
+}
+
 func (m *streamManagerV1) putIfAbsent(ctx context.Context, cache string, key []byte, value []byte) (*[]byte, error) {
 	return m.putGenericRequest(ctx, pb1.NamedCacheRequestType_PutIfAbsent, cache, key, value, 0)
 }
@@ -711,6 +768,16 @@ type BinaryKeyAndValue struct {
 	Err   error
 }
 
+type BinaryKey struct {
+	Key []byte
+	Err error
+}
+
+type BinaryValue struct {
+	Value []byte
+	Err   error
+}
+
 func (m *streamManagerV1) getAll(ctx context.Context, cache string, keys [][]byte) (<-chan BinaryKeyAndValue, error) {
 	req, err := m.newGetAllRequest(cache, keys)
 	if err != nil {
@@ -722,6 +789,66 @@ func (m *streamManagerV1) getAll(ctx context.Context, cache string, keys [][]byt
 		return nil, err
 	}
 
+	return m.getStreamingResponseKeyAndValue(ctx, requestType, req.Id)
+}
+
+func (m *streamManagerV1) invoke(ctx context.Context, cache string, agent []byte, keyOrFilter *pb1.KeysOrFilter) (<-chan BinaryKeyAndValue, error) {
+	req, err := m.newInvokeRequest(cache, agent, keyOrFilter)
+	if err != nil {
+		return nil, err
+	}
+
+	requestType, err := m.submitRequest(req, pb1.NamedCacheRequestType_Invoke)
+	if err != nil {
+		return nil, err
+	}
+
+	return m.getStreamingResponseKeyAndValue(ctx, requestType, req.Id)
+}
+
+func (m *streamManagerV1) entrySetFilter(ctx context.Context, cache string, filter []byte) (<-chan BinaryKeyAndValue, error) {
+	req, err := m.newEntrySetRequest(cache, filter)
+	if err != nil {
+		return nil, err
+	}
+
+	requestType, err := m.submitRequest(req, pb1.NamedCacheRequestType_QueryEntries)
+	if err != nil {
+		return nil, err
+	}
+
+	return m.getStreamingResponseKeyAndValue(ctx, requestType, req.Id)
+}
+
+func (m *streamManagerV1) keySetFilter(ctx context.Context, cache string, filter []byte) (<-chan BinaryKey, error) {
+	req, err := m.newKeySetRequest(cache, filter)
+	if err != nil {
+		return nil, err
+	}
+
+	requestType, err := m.submitRequest(req, pb1.NamedCacheRequestType_QueryKeys)
+	if err != nil {
+		return nil, err
+	}
+
+	return m.getStreamingResponseKey(ctx, requestType, req.Id)
+}
+
+func (m *streamManagerV1) valuesFilter(ctx context.Context, cache string, filter []byte) (<-chan BinaryValue, error) {
+	req, err := m.newValuesFilterRequest(cache, filter)
+	if err != nil {
+		return nil, err
+	}
+
+	requestType, err := m.submitRequest(req, pb1.NamedCacheRequestType_QueryValues)
+	if err != nil {
+		return nil, err
+	}
+
+	return m.getStreamingResponseValue(ctx, requestType, req.Id)
+}
+
+func (m *streamManagerV1) getStreamingResponseKeyAndValue(ctx context.Context, requestType namedCacheRequest, reqID int64) (<-chan BinaryKeyAndValue, error) {
 	// create a channel that will be populated by the streaming request
 	ch := make(chan BinaryKeyAndValue)
 
@@ -731,7 +858,7 @@ func (m *streamManagerV1) getAll(ctx context.Context, cache string, keys [][]byt
 	respChannel := waitForStreamingResponse(newCtx, requestType.ch)
 
 	go func() {
-		defer m.cleanupRequest(req.Id)
+		defer m.cleanupRequest(reqID)
 		if cancel != nil {
 			defer cancel()
 		}
@@ -753,6 +880,100 @@ func (m *streamManagerV1) getAll(ctx context.Context, cache string, keys [][]byt
 					} else {
 						response.Key = *key
 						response.Value = *value
+					}
+					m.session.debugGrpc("received response", resp.message)
+					ch <- response
+				}
+
+				if resp.complete {
+					close(ch)
+					break
+				}
+			}
+		}
+	}()
+
+	return ch, nil
+}
+
+func (m *streamManagerV1) getStreamingResponseValue(ctx context.Context, requestType namedCacheRequest, reqID int64) (<-chan BinaryValue, error) {
+	// create a channel that will be populated by the streaming request
+	ch := make(chan BinaryValue)
+
+	newCtx, cancel := m.session.ensureContext(ctx)
+
+	// this channel will receive entries back from the stream
+	respChannel := waitForStreamingResponse(newCtx, requestType.ch)
+
+	go func() {
+		defer m.cleanupRequest(reqID)
+		if cancel != nil {
+			defer cancel()
+		}
+
+		// nolint:gosimple
+		for {
+			select {
+			case resp := <-respChannel:
+				// received a streamed response of type pb1.BinarValue
+				var response = BinaryValue{}
+				if resp.err != nil {
+					response.Err = fmt.Errorf("error: %v", resp.err)
+				}
+
+				if resp.message != nil {
+					value, err1 := unwrapBytes(resp.namedCacheResponse.Message)
+					if err1 != nil {
+						response.Err = err1
+					} else {
+						response.Value = *value
+					}
+					m.session.debugGrpc("received response", resp.message)
+					ch <- response
+				}
+
+				if resp.complete {
+					close(ch)
+					break
+				}
+			}
+		}
+	}()
+
+	return ch, nil
+}
+
+func (m *streamManagerV1) getStreamingResponseKey(ctx context.Context, requestType namedCacheRequest, reqID int64) (<-chan BinaryKey, error) {
+	// create a channel that will be populated by the streaming request
+	ch := make(chan BinaryKey)
+
+	newCtx, cancel := m.session.ensureContext(ctx)
+
+	// this channel will receive entries back from the stream
+	respChannel := waitForStreamingResponse(newCtx, requestType.ch)
+
+	go func() {
+		defer m.cleanupRequest(reqID)
+		if cancel != nil {
+			defer cancel()
+		}
+
+		// nolint:gosimple
+		for {
+			select {
+			case resp := <-respChannel:
+				// received a streamed response of type pb1.BytesValue
+				var response = BinaryKey{}
+				if resp.err != nil {
+					response.Err = fmt.Errorf("error: %v", resp.err)
+				}
+
+				if resp.message != nil {
+					key, err1 := unwrapBytes(resp.namedCacheResponse.Message)
+					if err1 != nil {
+						response.Err = err1
+					} else {
+						response.Key = *key
 					}
 					m.session.debugGrpc("received response", resp.message)
 					ch <- response

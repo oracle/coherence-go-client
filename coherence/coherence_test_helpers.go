@@ -94,6 +94,14 @@ func TestPutIfAbsent(ctx context.Context, session *Session, cache string, key []
 	return session.v1StreamManagerCache.putIfAbsent(ctx, cache, key, value)
 }
 
+func TestAggregate(ctx context.Context, session *Session, cache string, agent []byte, keysOrFilter *pb1.KeysOrFilter) (*[]byte, error) {
+	return session.v1StreamManagerCache.aggregate(ctx, cache, agent, keysOrFilter)
+}
+
+func TestInvoke(ctx context.Context, session *Session, cache string, agent []byte, keysOrFilter *pb1.KeysOrFilter) (<-chan BinaryKeyAndValue, error) {
+	return session.v1StreamManagerCache.invoke(ctx, cache, agent, keysOrFilter)
+}
+
 // GetSessionCacheID returns the cache id for a cache name
 func GetSessionCacheID(session *Session, cache string) *int32 {
 	return session.getCacheID(cache)

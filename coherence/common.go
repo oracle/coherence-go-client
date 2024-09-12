@@ -198,6 +198,10 @@ func executeAddIndex[K comparable, V, T, E any](ctx context.Context, bc *baseCli
 		return err
 	}
 
+	if bc.session.IsGrpcV1() {
+		return bc.session.v1StreamManagerCache.addIndex(newCtx, bc.name, binExtractor, &sorted, binComparator)
+	}
+
 	addIndexRequest := pb.AddIndexRequest{
 		Cache: bc.name, Scope: bc.sessionOpts.Scope, Format: bc.format, Extractor: binExtractor, Sorted: sorted, Comparator: binComparator}
 	_, err = bc.client.AddIndex(newCtx, &addIndexRequest)
@@ -224,6 +228,10 @@ func executeRemoveIndex[K comparable, V, T, E any](ctx context.Context, bc *base
 	binExtractor, err = extractorSerializer.Serialize(extractor)
 	if err != nil {
 		return err
+	}
+
+	if bc.session.IsGrpcV1() {
+		return bc.session.v1StreamManagerCache.removeIndex(newCtx, bc.name, binExtractor)
 	}
 
 	removeIndexRequest := pb.RemoveIndexRequest{
@@ -676,6 +684,7 @@ func executeGetAll[K comparable, V any](ctx context.Context, bc *baseClient[K, V
 	return ch
 }
 
+// executeGetAllV1 executes a getAll() when connected to v1 gRPC proxy.
 func executeGetAllV1[K comparable, V any](ctx context.Context, bc *baseClient[K, V], binKeys [][]byte, ch chan *StreamedEntry[K, V]) {
 	nearCache := bc.nearCache
 	chGetAll, err := bc.session.v1StreamManagerCache.getAll(ctx, bc.name, binKeys)
@@ -708,6 +717,135 @@ func executeGetAllV1[K comparable, V any](ctx context.Context, bc *baseClient[K,
 		}
 
 		ch <- &StreamedEntry[K, V]{Key: *key, Value: *value}
+	}
+}
+
+// executeInvokeAllFilterOrKeysV1 executes an invokeAll() when connected to v1 gRPC proxy.
+func executeInvokeAllFilterOrKeysV1[K comparable, V any, R any](ctx context.Context, bc *baseClient[K, V], agent []byte, binKeys [][]byte, binFilter []byte, ch chan *StreamedValue[R]) {
+	keysOrFilter := ensureKeysOrFilterGrpcV1(binKeys, binFilter)
+	chInvoke, err := bc.session.v1StreamManagerCache.invoke(ctx, bc.name, agent, keysOrFilter)
+
+	if err != nil {
+		ch <- &StreamedValue[R]{Err: err}
+		close(ch)
+	}
+
+	getStreamedValues[K, V, R](bc, ch, chInvoke)
+}
+
+// executeInvokeAllFilterOrKeysV1 executes an invokeAll() when connected to v1 gRPC proxy.
+func executeInvokeEntrySetFilterV1[K comparable, V any](ctx context.Context, bc *baseClient[K, V], binFilter []byte, ch chan *StreamedEntry[K, V]) {
+	chInvoke, err := bc.session.v1StreamManagerCache.entrySetFilter(ctx, bc.name, binFilter)
+
+	if err != nil {
+		ch <- &StreamedEntry[K, V]{Err: err}
+		close(ch)
+	}
+
+	getStreamedEntries[K, V](bc, ch, chInvoke)
+}
+
+// executeKeySetFilterV1 executes an keySet with filter when connected to v1 gRPC proxy.
+func executeKeySetFilterV1[K comparable, V any](ctx context.Context, bc *baseClient[K, V], binFilter []byte, ch chan *StreamedKey[K]) {
+	chInvoke, err := bc.session.v1StreamManagerCache.keySetFilter(ctx, bc.name, binFilter)
+
+	if err != nil {
+		ch <- &StreamedKey[K]{Err: err}
+		close(ch)
+	}
+
+	getStreamedKeys[K, V](bc, ch, chInvoke)
+}
+
+// executeValuesFilterV1 executes an values with filter when connected to v1 gRPC proxy.
+func executeValuesFilterV1[K comparable, V any](ctx context.Context, bc *baseClient[K, V], binFilter []byte, ch chan *StreamedValue[V]) {
+	chInvoke, err := bc.session.v1StreamManagerCache.valuesFilter(ctx, bc.name, binFilter)
+
+	if err != nil {
+		ch <- &StreamedValue[V]{Err: err}
+		close(ch)
+	}
+
+	getStreamedValuesWithEntry[K, V, V](bc, ch, chInvoke)
+}
+
+func getStreamedEntries[K comparable, V any](bc *baseClient[K, V], chResponse chan *StreamedEntry[K, V], ch <-chan BinaryKeyAndValue) {
+	var (
+		key   *K
+		value *V
+		err   error
+	)
+
+	for v := range ch {
+		// deserialize key and value
+		if key, err = bc.keySerializer.Deserialize(v.Key); err != nil {
+			chResponse <- &StreamedEntry[K, V]{Err: err}
+			close(chResponse)
+			return
+		}
+		if value, err = bc.valueSerializer.Deserialize(v.Value); err != nil {
+			chResponse <- &StreamedEntry[K, V]{Err: err}
+			close(chResponse)
+			return
+		}
+
+		chResponse <- &StreamedEntry[K, V]{Key: *key, Value: *value}
+	}
+}
+
+func getStreamedKeys[K comparable, V any](bc *baseClient[K, V], chResponse chan *StreamedKey[K], ch <-chan BinaryKey) {
+	var (
+		key *K
+		err error
+	)
+
+	for v := range ch {
+		// deserialize key
+		if key, err = bc.keySerializer.Deserialize(v.Key); err != nil {
+			chResponse <- &StreamedKey[K]{Err: err}
+			close(chResponse)
+			return
+		}
+
+		chResponse <- &StreamedKey[K]{Key: *key}
+	}
+}
+
+func getStreamedValues[K comparable, V any, R any](bc *baseClient[K, V], chResponse chan *StreamedValue[R], ch <-chan BinaryKeyAndValue) {
+	var (
+		value *R
+		err   error
+	)
+
+	for v := range ch {
+		// deserialize key and value
+		resultSerializer := NewSerializer[R](bc.format)
+		if value, err = resultSerializer.Deserialize(v.Value); err != nil {
+			chResponse <- &StreamedValue[R]{Err: err}
+			close(chResponse)
+			return
+		}
+
+		chResponse <- &StreamedValue[R]{Value: *value}
+	}
+}
+
+func getStreamedValuesWithEntry[K comparable, V any, R any](bc *baseClient[K, V], chResponse chan *StreamedValue[R], ch <-chan BinaryValue) {
+	var (
+		value *R
+		err   error
+	)
+
+	for v := range ch {
+		// deserialize key and value
+		resultSerializer := NewSerializer[R](bc.format)
+		if value, err = resultSerializer.Deserialize(v.Value); err != nil {
+			chResponse <- &StreamedValue[R]{Err: err}
+			close(chResponse)
+			return
+		}
+
+		chResponse <- &StreamedValue[R]{Value: *value}
 	}
 }
 
@@ -776,16 +914,38 @@ func executeAggregate[K comparable, V, R any](ctx context.Context, bc *baseClien
 	}
 	// else keys and filter are empty
 
-	request := pb.AggregateRequest{Keys: binKeys, Cache: bc.name,
-		Format: bc.format, Scope: bc.sessionOpts.Scope, Aggregator: binAggregator,
-		Filter: binFilter}
+	if bc.session.IsGrpcV1() {
+		res, err1 := bc.session.v1StreamManagerCache.aggregate(newCtx, bc.name, binAggregator, ensureKeysOrFilterGrpcV1(binKeys, binFilter))
+		if err1 != nil {
+			return zeroValue, err1
+		}
 
-	result, err = bc.client.Aggregate(newCtx, &request)
-	if err != nil {
-		return zeroValue, err
+		result = ensureBytesValue(res)
+	} else {
+		request := pb.AggregateRequest{Keys: binKeys, Cache: bc.name,
+			Format: bc.format, Scope: bc.sessionOpts.Scope, Aggregator: binAggregator,
+			Filter: binFilter}
+
+		result, err = bc.client.Aggregate(newCtx, &request)
+		if err != nil {
+			return zeroValue, err
+		}
 	}
 
 	return resultSerializer.Deserialize(result.Value)
+}
+
+func ensureKeysOrFilterGrpcV1(binKeys [][]byte, binFilter []byte) *pb1.KeysOrFilter {
+	keysOrFilter := &pb1.KeysOrFilter{}
+	if len(binKeys) != 0 {
+		keysOrFilterKeys := &pb1.KeysOrFilter_Keys{Keys: &pb1.CollectionOfBytesValues{Values: binKeys}}
+		keysOrFilter.KeyOrFilter = keysOrFilterKeys
+	} else {
+		keysOrFilterFilter := &pb1.KeysOrFilter_Filter{Filter: binFilter}
+		keysOrFilter.KeyOrFilter = keysOrFilterFilter
+	}
+
+	return keysOrFilter
 }
 
 // executeInvoke executes the Invoke operation against a baseClient.
@@ -818,12 +978,16 @@ func executeInvoke[K comparable, V any, R any](ctx context.Context, bc *baseClie
 		return zeroValue, err
 	}
 
-	request := pb.InvokeRequest{Key: binKey, Cache: bc.name,
-		Format: bc.format, Scope: bc.sessionOpts.Scope, Processor: binProcessor}
+	if bc.session.IsGrpcV1() {
+		fmt.Println("TODO")
+	} else {
+		request := pb.InvokeRequest{Key: binKey, Cache: bc.name,
+			Format: bc.format, Scope: bc.sessionOpts.Scope, Processor: binProcessor}
 
-	result, err = bc.client.Invoke(newCtx, &request)
-	if err != nil {
-		return zeroValue, err
+		result, err = bc.client.Invoke(newCtx, &request)
+		if err != nil {
+			return zeroValue, err
+		}
 	}
 
 	return resultSerializer.Deserialize(result.Value)
@@ -870,6 +1034,13 @@ func executeInvokeAllFilterOrKeys[K comparable, V any, R any](ctx context.Contex
 		if cancel != nil {
 			defer cancel()
 		}
+
+		if bc.session.IsGrpcV1() {
+			executeInvokeAllFilterOrKeysV1(ctx, bc, binProcessor, binKeys, binFilter, ch)
+			close(ch)
+			return
+		}
+
 		request := pb.InvokeAllRequest{Cache: bc.name, Filter: binFilter, Keys: binKeys,
 			Processor: binProcessor, Format: bc.format, Scope: bc.sessionOpts.Scope}
 		valuesClient, err1 := bc.client.InvokeAll(newCtx, &request)
@@ -971,6 +1142,12 @@ func executeKeySetFilter[K comparable, V any](ctx context.Context, bc *baseClien
 	go func() {
 		if cancel != nil {
 			defer cancel()
+		}
+
+		if bc.session.IsGrpcV1() {
+			executeKeySetFilterV1(ctx, bc, binFilter, ch)
+			close(ch)
+			return
 		}
 
 		request := pb.KeySetRequest{Cache: bc.name, Filter: binFilter,
@@ -1533,6 +1710,12 @@ func executeEntrySetFilter[K comparable, V any](ctx context.Context, bc *baseCli
 			defer cancel()
 		}
 
+		if bc.session.IsGrpcV1() {
+			executeInvokeEntrySetFilterV1(ctx, bc, binFilter, ch)
+			close(ch)
+			return
+		}
+
 		var (
 			request = pb.EntrySetRequest{Cache: bc.name, Filter: binFilter,
 				Format: bc.format, Scope: bc.sessionOpts.Scope}
@@ -1609,6 +1792,12 @@ func executeValues[K comparable, V any](ctx context.Context, bc *baseClient[K, V
 	go func() {
 		if cancel != nil {
 			defer cancel()
+		}
+
+		if bc.session.IsGrpcV1() {
+			executeValuesFilterV1(ctx, bc, binFilter, ch)
+			close(ch)
+			return
 		}
 		request := pb.ValuesRequest{Cache: bc.name, Filter: binFilter,
 			Format: bc.format, Scope: bc.sessionOpts.Scope}
