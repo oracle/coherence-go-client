@@ -979,15 +979,36 @@ func executeInvoke[K comparable, V any, R any](ctx context.Context, bc *baseClie
 	}
 
 	if bc.session.IsGrpcV1() {
-		fmt.Println("TODO")
-	} else {
-		request := pb.InvokeRequest{Key: binKey, Cache: bc.name,
-			Format: bc.format, Scope: bc.sessionOpts.Scope, Processor: binProcessor}
+		binKeys := make([][]byte, 1)
+		binKeys[0] = binKey
 
-		result, err = bc.client.Invoke(newCtx, &request)
-		if err != nil {
-			return zeroValue, err
+		// create a channel from which we will get the first value
+		ch := make(chan *StreamedValue[R])
+
+		go func() {
+			defer close(ch)
+			executeInvokeAllFilterOrKeysV1(ctx, bc, binProcessor, binKeys, emptyByte, ch)
+		}()
+
+		v, ok := <-ch
+		if !ok {
+			// channel has closed, no data to return
+			return nil, nil
 		}
+
+		if v.Err != nil {
+			return zeroValue, v.Err
+		}
+		return &v.Value, nil
+	}
+
+	// gRPC v0
+	request := pb.InvokeRequest{Key: binKey, Cache: bc.name,
+		Format: bc.format, Scope: bc.sessionOpts.Scope, Processor: binProcessor}
+
+	result, err = bc.client.Invoke(newCtx, &request)
+	if err != nil {
+		return zeroValue, err
 	}
 
 	return resultSerializer.Deserialize(result.Value)
