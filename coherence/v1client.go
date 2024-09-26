@@ -57,6 +57,7 @@ type namedCacheRequest struct {
 	ch          chan responseMessage
 }
 
+// streamManagerV1 holds the data for a gRPC V1 connection.
 type streamManagerV1 struct {
 	session       *Session
 	mutex         sync.RWMutex

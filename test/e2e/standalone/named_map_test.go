@@ -827,7 +827,7 @@ func RunTestInvokeAllKeysAndFilter(t *testing.T, namedMap coherence.NamedMap[int
 	var (
 		g            = gomega.NewWithT(t)
 		resultsKey   = make([]int, 0)
-		resultsValue = make([]int, 0)
+		resultsValue []int
 		person       *utils.Person
 	)
 
