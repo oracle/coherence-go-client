@@ -57,14 +57,26 @@ type nsLookupResolver struct {
 
 func (r *nsLookupResolver) resolve() {
 	r.mutex.Lock()
+	grpcEndpoints := generateNSAddresses(r.target.Endpoint())
 	defer r.mutex.Unlock()
 
-	grpcEndpoints := generateNSAddresses(r.target.Endpoint())
 	if len(grpcEndpoints) == 0 {
-		msg := "resolver produced zero addresses"
-		resolverDebug(msg)
-		r.cc.ReportError(errors.New(msg))
-		return
+		// try 8 times over 2 seconds to get gRPC addresses as we may be in the middle of fail-over
+		for i := 0; i < 8; i++ {
+			resolverDebug("retrying NSLookup attempt", i)
+			time.Sleep(time.Duration(250) * time.Millisecond)
+			grpcEndpoints = generateNSAddresses(r.target.Endpoint())
+			if len(grpcEndpoints) != 0 {
+				break
+			}
+		}
+
+		if len(grpcEndpoints) == 0 {
+			msg := "resolver produced zero addresses"
+			resolverDebug(msg)
+			r.cc.ReportError(errors.New(msg))
+			return
+		}
 	}
 
 	addresses := make([]resolver.Address, len(grpcEndpoints))
