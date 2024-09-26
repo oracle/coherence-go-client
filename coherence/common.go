@@ -721,7 +721,20 @@ func executeGetAllV1[K comparable, V any](ctx context.Context, bc *baseClient[K,
 }
 
 // executeInvokeAllFilterOrKeysV1 executes an invokeAll() when connected to v1 gRPC proxy.
-func executeInvokeAllFilterOrKeysV1[K comparable, V any, R any](ctx context.Context, bc *baseClient[K, V], agent []byte, binKeys [][]byte, binFilter []byte, ch chan *StreamedValue[R]) {
+func executeInvokeAllFilterOrKeysV1[K comparable, V any, R any](ctx context.Context, bc *baseClient[K, V], agent []byte, binKeys [][]byte, binFilter []byte, ch chan *StreamedEntry[K, R]) {
+	keysOrFilter := ensureKeysOrFilterGrpcV1(binKeys, binFilter)
+	chInvoke, err := bc.session.v1StreamManagerCache.invoke(ctx, bc.name, agent, keysOrFilter)
+
+	if err != nil {
+		ch <- &StreamedEntry[K, R]{Err: err}
+		close(ch)
+	}
+
+	getStreamedEntry[K, V, R](bc, ch, chInvoke)
+}
+
+// executeInvokeAllFilterOrKeysV1 executes an invokeAll() when connected to v1 gRPC proxy.
+func executeInvokeAllFilterOrKeysV1Value[K comparable, V any, R any](ctx context.Context, bc *baseClient[K, V], agent []byte, binKeys [][]byte, binFilter []byte, ch chan *StreamedValue[R]) {
 	keysOrFilter := ensureKeysOrFilterGrpcV1(binKeys, binFilter)
 	chInvoke, err := bc.session.v1StreamManagerCache.invoke(ctx, bc.name, agent, keysOrFilter)
 
@@ -730,7 +743,7 @@ func executeInvokeAllFilterOrKeysV1[K comparable, V any, R any](ctx context.Cont
 		close(ch)
 	}
 
-	getStreamedValues[K, V, R](bc, ch, chInvoke)
+	getStreamedValuesWithEntry[K, V, R](bc, ch, chInvoke)
 }
 
 // executeInvokeAllFilterOrKeysV1 executes an invokeAll() when connected to v1 gRPC proxy.
@@ -766,7 +779,7 @@ func executeValuesFilterV1[K comparable, V any](ctx context.Context, bc *baseCli
 		close(ch)
 	}
 
-	getStreamedValuesWithEntry[K, V, V](bc, ch, chInvoke)
+	getStreamedValuesWithValue[K, V, V](bc, ch, chInvoke)
 }
 
 func getStreamedEntries[K comparable, V any](bc *baseClient[K, V], chResponse chan *StreamedEntry[K, V], ch <-chan BinaryKeyAndValue) {
@@ -811,14 +824,40 @@ func getStreamedKeys[K comparable, V any](bc *baseClient[K, V], chResponse chan 
 	}
 }
 
-func getStreamedValues[K comparable, V any, R any](bc *baseClient[K, V], chResponse chan *StreamedValue[R], ch <-chan BinaryKeyAndValue) {
+// getStreamedValues returns the binary key and value for an entry processor, but will just return the key
+func getStreamedEntry[K comparable, V any, R any](bc *baseClient[K, V], chResponse chan *StreamedEntry[K, R], ch <-chan BinaryKeyAndValue) {
 	var (
+		key   *K
 		value *R
 		err   error
 	)
 
 	for v := range ch {
 		// deserialize key and value
+		resultSerializer := NewSerializer[R](bc.format)
+		if value, err = resultSerializer.Deserialize(v.Value); err != nil {
+			chResponse <- &StreamedEntry[K, R]{Err: err}
+			return
+		}
+
+		if key, err = bc.keySerializer.Deserialize(v.Key); err != nil {
+			chResponse <- &StreamedEntry[K, R]{Err: err}
+			close(chResponse)
+			return
+		}
+
+		chResponse <- &StreamedEntry[K, R]{Key: *key, Value: *value}
+	}
+}
+
+func getStreamedValuesWithEntry[K comparable, V any, R any](bc *baseClient[K, V], chResponse chan *StreamedValue[R], ch <-chan BinaryKeyAndValue) {
+	var (
+		value *R
+		err   error
+	)
+
+	for v := range ch {
+		// deserialize the result only
 		resultSerializer := NewSerializer[R](bc.format)
 		if value, err = resultSerializer.Deserialize(v.Value); err != nil {
 			chResponse <- &StreamedValue[R]{Err: err}
@@ -830,14 +869,14 @@ func getStreamedValues[K comparable, V any, R any](bc *baseClient[K, V], chRespo
 	}
 }
 
-func getStreamedValuesWithEntry[K comparable, V any, R any](bc *baseClient[K, V], chResponse chan *StreamedValue[R], ch <-chan BinaryValue) {
+func getStreamedValuesWithValue[K comparable, V any, R any](bc *baseClient[K, V], chResponse chan *StreamedValue[R], ch <-chan BinaryValue) {
 	var (
 		value *R
 		err   error
 	)
 
 	for v := range ch {
-		// deserialize key and value
+		// deserialize the result only
 		resultSerializer := NewSerializer[R](bc.format)
 		if value, err = resultSerializer.Deserialize(v.Value); err != nil {
 			chResponse <- &StreamedValue[R]{Err: err}
@@ -987,7 +1026,7 @@ func executeInvoke[K comparable, V any, R any](ctx context.Context, bc *baseClie
 
 		go func() {
 			defer close(ch)
-			executeInvokeAllFilterOrKeysV1(ctx, bc, binProcessor, binKeys, emptyByte, ch)
+			executeInvokeAllFilterOrKeysV1Value(ctx, bc, binProcessor, binKeys, emptyByte, ch)
 		}()
 
 		v, ok := <-ch
@@ -1015,17 +1054,17 @@ func executeInvoke[K comparable, V any, R any](ctx context.Context, bc *baseClie
 }
 
 // executeInvokeAll executes the InvokeAll operation with filter or keys, against a baseClient.
-func executeInvokeAllFilterOrKeys[K comparable, V any, R any](ctx context.Context, bc *baseClient[K, V], fltr filters.Filter, keys []K, proc processors.Processor) <-chan *StreamedValue[R] {
+func executeInvokeAllFilterOrKeys[K comparable, V any, R any](ctx context.Context, bc *baseClient[K, V], fltr filters.Filter, keys []K, proc processors.Processor) <-chan *StreamedEntry[K, R] {
 	var (
 		err          = bc.ensureClientConnection()
 		binFilter    = make([]byte, 0)
 		binProcessor = make([]byte, 0)
 		binKeys      = make([][]byte, 0)
-		ch           = make(chan *StreamedValue[R])
+		ch           = make(chan *StreamedEntry[K, R])
 	)
 
 	if err != nil {
-		ch <- &StreamedValue[R]{Err: err}
+		ch <- &StreamedEntry[K, R]{Err: err}
 		return ch
 	}
 
@@ -1033,20 +1072,20 @@ func executeInvokeAllFilterOrKeys[K comparable, V any, R any](ctx context.Contex
 
 	procSerializer := NewSerializer[any](bc.format)
 	if binProcessor, err = procSerializer.Serialize(proc); err != nil {
-		ch <- &StreamedValue[R]{Err: err}
+		ch <- &StreamedEntry[K, R]{Err: err}
 		return ch
 	}
 
 	if fltr != nil {
 		if binFilter, err = NewSerializer[any](bc.format).Serialize(fltr); err != nil {
-			ch <- &StreamedValue[R]{Err: err}
+			ch <- &StreamedEntry[K, R]{Err: err}
 			return ch
 		}
 	}
 	if len(keys) > 0 {
 		// serialize the array of keys
 		if binKeys, err = serializeKeys[K](bc.keySerializer, keys); err != nil {
-			ch <- &StreamedValue[R]{Err: err}
+			ch <- &StreamedEntry[K, R]{Err: err}
 			return ch
 		}
 	}
@@ -1068,14 +1107,15 @@ func executeInvokeAllFilterOrKeys[K comparable, V any, R any](ctx context.Contex
 		resultSerializer := NewSerializer[R](bc.format)
 
 		if err1 != nil {
-			ch <- &StreamedValue[R]{Err: err1}
+			ch <- &StreamedEntry[K, R]{Err: err1}
 			close(ch)
 			return
 		}
 
 		for {
 			var (
-				m        = new(wrapperspb.BytesValue)
+				m        = new(pb.Entry)
+				key      *K
 				response *R
 			)
 			err1 = valuesClient.RecvMsg(m)
@@ -1084,7 +1124,7 @@ func executeInvokeAllFilterOrKeys[K comparable, V any, R any](ctx context.Contex
 				close(ch)
 				return
 			} else if err1 != nil {
-				ch <- &StreamedValue[R]{Err: err1}
+				ch <- &StreamedEntry[K, R]{Err: err1}
 				close(ch)
 				return
 			}
@@ -1092,12 +1132,18 @@ func executeInvokeAllFilterOrKeys[K comparable, V any, R any](ctx context.Contex
 			response, err1 = resultSerializer.Deserialize(m.Value)
 
 			if err1 != nil {
-				ch <- &StreamedValue[R]{Err: err1}
+				ch <- &StreamedEntry[K, R]{Err: err1}
+				close(ch)
+				return
+			}
+			key, err1 = bc.keySerializer.Deserialize(m.Key)
+			if err1 != nil {
+				ch <- &StreamedEntry[K, R]{Err: err1}
 				close(ch)
 				return
 			}
 
-			ch <- &StreamedValue[R]{Value: *response}
+			ch <- &StreamedEntry[K, R]{Key: *key, Value: *response}
 		}
 	}()
 
@@ -1109,8 +1155,14 @@ func executeKeySet[K comparable, V any](ctx context.Context, bc *baseClient[K, V
 	var (
 		err  = bc.ensureClientConnection()
 		ch   = make(chan *StreamedKey[K])
-		iter = newKeyPageIterator[K, V](ctx, bc)
+		iter keyPageIterator[K, V]
 	)
+
+	if bc.isGrpcV1() {
+		iter = newKeyPageIteratorV1[K, V](ctx, bc)
+	} else {
+		iter = newKeyPageIterator[K, V](ctx, bc)
+	}
 
 	if err != nil {
 		ch <- &StreamedKey[K]{Err: err}
@@ -1673,8 +1725,9 @@ func executeIsReady[K comparable, V any](ctx context.Context, bc *baseClient[K, 
 // executeEntrySet executes the KeySet operation against a baseClient.
 func executeEntrySet[K comparable, V any](ctx context.Context, bc *baseClient[K, V]) <-chan *StreamedEntry[K, V] {
 	var (
-		err = bc.ensureClientConnection()
-		ch  = make(chan *StreamedEntry[K, V])
+		err  = bc.ensureClientConnection()
+		ch   = make(chan *StreamedEntry[K, V])
+		iter entryPageIterator[K, V]
 	)
 
 	if err != nil {
@@ -1682,7 +1735,11 @@ func executeEntrySet[K comparable, V any](ctx context.Context, bc *baseClient[K,
 		return ch
 	}
 
-	iter := newEntryPageIterator[K, V](ctx, bc)
+	if bc.isGrpcV1() {
+		iter = newEntryPageIteratorV1[K, V](ctx, bc)
+	} else {
+		iter = newEntryPageIterator[K, V](ctx, bc)
+	}
 
 	go func() {
 		for {
@@ -1864,8 +1921,9 @@ func executeValues[K comparable, V any](ctx context.Context, bc *baseClient[K, V
 // executeValuesNoFilter executes the Values operation against a baseClient when no filter is required.
 func executeValuesNoFilter[K comparable, V any](ctx context.Context, bc *baseClient[K, V]) <-chan *StreamedValue[V] {
 	var (
-		err = bc.ensureClientConnection()
-		ch  = make(chan *StreamedValue[V])
+		err  = bc.ensureClientConnection()
+		ch   = make(chan *StreamedValue[V])
+		iter valuePageIterator[K, V]
 	)
 
 	if err != nil {
@@ -1873,7 +1931,11 @@ func executeValuesNoFilter[K comparable, V any](ctx context.Context, bc *baseCli
 		return ch
 	}
 
-	iter := newValuePageIterator[K, V](ctx, bc)
+	if bc.isGrpcV1() {
+		iter = newValuePageIteratorV1[K, V](ctx, bc)
+	} else {
+		iter = newValuePageIterator[K, V](ctx, bc)
+	}
 
 	go func() {
 		for {

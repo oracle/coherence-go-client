@@ -109,6 +109,26 @@ func (m *streamManagerV1) newKeyAndValueBasedRequest(reqType pb1.NamedCacheReque
 	return m.newWrapperProxyRequest(cache, reqType, anyReq)
 }
 
+// newPageOfEntriesRequest creates a request for a page of entries using the given cookie
+func (m *streamManagerV1) newPageOfEntriesRequest(cache string, cookie []byte) (*pb1.ProxyRequest, error) {
+	anyReq, err := anypb.New(wrapperspb.Bytes(cookie))
+	if err != nil {
+		return nil, err
+	}
+
+	return m.newWrapperProxyRequest(cache, pb1.NamedCacheRequestType_PageOfEntries, anyReq)
+}
+
+// newPageOfEntriesRequest creates a request for a page of keys using the given cookie
+func (m *streamManagerV1) newPageOfKeysRequest(cache string, cookie []byte) (*pb1.ProxyRequest, error) {
+	anyReq, err := anypb.New(wrapperspb.Bytes(cookie))
+	if err != nil {
+		return nil, err
+	}
+
+	return m.newWrapperProxyRequest(cache, pb1.NamedCacheRequestType_PageOfKeys, anyReq)
+}
+
 func (m *streamManagerV1) newPutRequest(reqType pb1.NamedCacheRequestType, cache string, key []byte, value []byte, ttl time.Duration) (*pb1.ProxyRequest, error) {
 	millis := ttl.Milliseconds()
 	putRequest := &pb1.PutRequest{
@@ -277,7 +297,7 @@ func newNamedCacheRequest(cacheID *int32, reqType pb1.NamedCacheRequestType, mes
 func (m *streamManagerV1) newWrapperProxyRequest(cache string, requestType pb1.NamedCacheRequestType, message *anypb.Any) (*pb1.ProxyRequest, error) {
 	var cacheID *int32
 
-	// validate the cache ID if it is not a ensure cache request
+	// validate the cache ID if it is not an ensure cache request
 	if cache != "" {
 		cacheID = m.session.getCacheID(cache)
 		if cacheID == nil {

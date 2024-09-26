@@ -218,7 +218,7 @@ func (m *streamManagerV1) processNamedCacheResponse(reqID int64, resp *responseM
 		}
 
 		if eventSubmitter, ok := client.(EventSubmitter); ok {
-			m.session.debugGrpc("found client %v", client)
+			m.session.debugGrpc("found client", client)
 			switch resp.namedCacheResponse.Type {
 			case pb1.ResponseType_Destroyed:
 				eventSubmitter.generateMapLifecycleEvent(Destroyed)
@@ -366,6 +366,11 @@ func (m *streamManagerV1) genericCacheRequest(ctx context.Context, reqType pb1.N
 
 	// remove the entry from the channel
 	defer m.cleanupRequest(req.Id)
+
+	if reqType == pb1.NamedCacheRequestType_Destroy {
+		// special case for destroy
+		return nil
+	}
 
 	_, err1 := waitForResponse(newCtx, requestType.ch)
 	if err1 != nil {
@@ -763,19 +768,22 @@ func (m *streamManagerV1) putGenericRequest(ctx context.Context, reqType pb1.Nam
 }
 
 type BinaryKeyAndValue struct {
-	Key   []byte
-	Value []byte
-	Err   error
+	Key    []byte
+	Value  []byte
+	Err    error
+	Cookie []byte
 }
 
 type BinaryKey struct {
-	Key []byte
-	Err error
+	Key    []byte
+	Err    error
+	Cookie []byte
 }
 
 type BinaryValue struct {
-	Value []byte
-	Err   error
+	Value  []byte
+	Err    error
+	Cookie []byte
 }
 
 func (m *streamManagerV1) getAll(ctx context.Context, cache string, keys [][]byte) (<-chan BinaryKeyAndValue, error) {
@@ -790,6 +798,34 @@ func (m *streamManagerV1) getAll(ctx context.Context, cache string, keys [][]byt
 	}
 
 	return m.getStreamingResponseKeyAndValue(ctx, requestType, req.Id)
+}
+
+func (m *streamManagerV1) keyAndValuePage(ctx context.Context, cache string, cookie []byte) (<-chan BinaryKeyAndValue, error) {
+	req, err := m.newPageOfEntriesRequest(cache, cookie)
+	if err != nil {
+		return nil, err
+	}
+
+	requestType, err := m.submitRequest(req, pb1.NamedCacheRequestType_PageOfEntries)
+	if err != nil {
+		return nil, err
+	}
+
+	return m.getStreamingResponseKeyAndValue(ctx, requestType, req.Id, true)
+}
+
+func (m *streamManagerV1) keyPage(ctx context.Context, cache string, cookie []byte) (<-chan BinaryKey, error) {
+	req, err := m.newPageOfKeysRequest(cache, cookie)
+	if err != nil {
+		return nil, err
+	}
+
+	requestType, err := m.submitRequest(req, pb1.NamedCacheRequestType_PageOfKeys)
+	if err != nil {
+		return nil, err
+	}
+
+	return m.getStreamingResponseKey(ctx, requestType, req.Id, true)
 }
 
 func (m *streamManagerV1) invoke(ctx context.Context, cache string, agent []byte, keyOrFilter *pb1.KeysOrFilter) (<-chan BinaryKeyAndValue, error) {
@@ -848,7 +884,13 @@ func (m *streamManagerV1) valuesFilter(ctx context.Context, cache string, filter
 	return m.getStreamingResponseValue(ctx, requestType, req.Id)
 }
 
-func (m *streamManagerV1) getStreamingResponseKeyAndValue(ctx context.Context, requestType namedCacheRequest, reqID int64) (<-chan BinaryKeyAndValue, error) {
+func (m *streamManagerV1) getStreamingResponseKeyAndValue(ctx context.Context, requestType namedCacheRequest, reqID int64, paged ...bool) (<-chan BinaryKeyAndValue, error) {
+	isPaged := false
+	if len(paged) == 1 {
+		// if paged is true the first response will always be the cookie
+		isPaged = paged[0]
+	}
+
 	// create a channel that will be populated by the streaming request
 	ch := make(chan BinaryKeyAndValue)
 
@@ -858,6 +900,8 @@ func (m *streamManagerV1) getStreamingResponseKeyAndValue(ctx context.Context, r
 	respChannel := waitForStreamingResponse(newCtx, requestType.ch)
 
 	go func() {
+		isFirst := true
+
 		defer m.cleanupRequest(reqID)
 		if cancel != nil {
 			defer cancel()
@@ -874,12 +918,25 @@ func (m *streamManagerV1) getStreamingResponseKeyAndValue(ctx context.Context, r
 				}
 
 				if resp.message != nil {
-					key, value, err1 := unwrapBinaryKeyAndValue(resp.namedCacheResponse.Message)
-					if err1 != nil {
-						response.Err = err1
+					// check if we are paged, and it is the first response as this will be the cookie
+					if isPaged && isFirst {
+						isFirst = false
+						cookie, err1 := unwrapBytes(resp.namedCacheResponse.Message)
+						if err1 != nil {
+							response.Err = err1
+						} else {
+							// store the cookie
+							response.Cookie = *cookie
+						}
 					} else {
-						response.Key = *key
-						response.Value = *value
+						// otherwise this is s standard key and value
+						key, value, err1 := unwrapBinaryKeyAndValue(resp.namedCacheResponse.Message)
+						if err1 != nil {
+							response.Err = err1
+						} else {
+							response.Key = *key
+							response.Value = *value
+						}
 					}
 					m.session.debugGrpc("received response", resp.message)
 					ch <- response
@@ -896,7 +953,13 @@ func (m *streamManagerV1) getStreamingResponseKeyAndValue(ctx context.Context, r
 	return ch, nil
 }
 
-func (m *streamManagerV1) getStreamingResponseValue(ctx context.Context, requestType namedCacheRequest, reqID int64) (<-chan BinaryValue, error) {
+func (m *streamManagerV1) getStreamingResponseValue(ctx context.Context, requestType namedCacheRequest, reqID int64, paged ...bool) (<-chan BinaryValue, error) {
+	isPaged := false
+	if len(paged) == 1 {
+		// if paged is true the first response will always be the cookie
+		isPaged = paged[0]
+	}
+
 	// create a channel that will be populated by the streaming request
 	ch := make(chan BinaryValue)
 
@@ -906,6 +969,8 @@ func (m *streamManagerV1) getStreamingResponseValue(ctx context.Context, request
 	respChannel := waitForStreamingResponse(newCtx, requestType.ch)
 
 	go func() {
+		isFirst := true
+
 		defer m.cleanupRequest(reqID)
 		if cancel != nil {
 			defer cancel()
@@ -915,18 +980,30 @@ func (m *streamManagerV1) getStreamingResponseValue(ctx context.Context, request
 		for {
 			select {
 			case resp := <-respChannel:
-				// received a streamed response of type pb1.BinarValue
+				// received a streamed response of type pb1.BinaryValue
 				var response = BinaryValue{}
 				if resp.err != nil {
 					response.Err = fmt.Errorf("error: %v", resp.err)
 				}
 
 				if resp.message != nil {
-					value, err1 := unwrapBytes(resp.namedCacheResponse.Message)
-					if err1 != nil {
-						response.Err = err1
+					// check if we are paged, and it is the first response as this will be the cookie
+					if isPaged && isFirst {
+						isFirst = false
+						cookie, err1 := unwrapBytes(resp.namedCacheResponse.Message)
+						if err1 != nil {
+							response.Err = err1
+						} else {
+							// store the cookie
+							response.Cookie = *cookie
+						}
 					} else {
-						response.Value = *value
+						value, err1 := unwrapBytes(resp.namedCacheResponse.Message)
+						if err1 != nil {
+							response.Err = err1
+						} else {
+							response.Value = *value
+						}
 					}
 					m.session.debugGrpc("received response", resp.message)
 					ch <- response
@@ -943,7 +1020,13 @@ func (m *streamManagerV1) getStreamingResponseValue(ctx context.Context, request
 	return ch, nil
 }
 
-func (m *streamManagerV1) getStreamingResponseKey(ctx context.Context, requestType namedCacheRequest, reqID int64) (<-chan BinaryKey, error) {
+func (m *streamManagerV1) getStreamingResponseKey(ctx context.Context, requestType namedCacheRequest, reqID int64, paged ...bool) (<-chan BinaryKey, error) {
+	isPaged := false
+	if len(paged) == 1 {
+		// if paged is true the first response will always be the cookie
+		isPaged = paged[0]
+	}
+
 	// create a channel that will be populated by the streaming request
 	ch := make(chan BinaryKey)
 
@@ -953,6 +1036,8 @@ func (m *streamManagerV1) getStreamingResponseKey(ctx context.Context, requestTy
 	respChannel := waitForStreamingResponse(newCtx, requestType.ch)
 
 	go func() {
+		isFirst := true
+
 		defer m.cleanupRequest(reqID)
 		if cancel != nil {
 			defer cancel()
@@ -969,11 +1054,23 @@ func (m *streamManagerV1) getStreamingResponseKey(ctx context.Context, requestTy
 				}
 
 				if resp.message != nil {
-					key, err1 := unwrapBytes(resp.namedCacheResponse.Message)
-					if err1 != nil {
-						response.Err = err1
+					// check if we are paged, and it is the first response as this will be the cookie
+					if isPaged && isFirst {
+						isFirst = false
+						cookie, err1 := unwrapBytes(resp.namedCacheResponse.Message)
+						if err1 != nil {
+							response.Err = err1
+						} else {
+							// store the cookie
+							response.Cookie = *cookie
+						}
 					} else {
-						response.Key = *key
+						key, err1 := unwrapBytes(resp.namedCacheResponse.Message)
+						if err1 != nil {
+							response.Err = err1
+						} else {
+							response.Key = *key
+						}
 					}
 					m.session.debugGrpc("received response", resp.message)
 					ch <- response

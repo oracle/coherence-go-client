@@ -78,6 +78,10 @@ func TestGetAll(ctx context.Context, session *Session, cache string, keys [][]by
 	return session.v1StreamManagerCache.getAll(ctx, cache, keys)
 }
 
+func TestKeyAndValuePage(ctx context.Context, session *Session, cache string, cookie []byte) (<-chan BinaryKeyAndValue, error) {
+	return session.v1StreamManagerCache.keyAndValuePage(ctx, cache, cookie)
+}
+
 func TestPut(ctx context.Context, session *Session, cache string, key []byte, value []byte, ttl time.Duration) (*[]byte, error) {
 	return session.v1StreamManagerCache.put(ctx, cache, key, value, ttl)
 }

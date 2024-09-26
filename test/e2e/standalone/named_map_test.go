@@ -825,9 +825,10 @@ func RunTestGetAll(t *testing.T, namedMap coherence.NamedMap[int, utils.Person])
 
 func RunTestInvokeAllKeysAndFilter(t *testing.T, namedMap coherence.NamedMap[int, utils.Person]) {
 	var (
-		g       = gomega.NewWithT(t)
-		results = make([]int, 0)
-		person  *utils.Person
+		g            = gomega.NewWithT(t)
+		resultsKey   = make([]int, 0)
+		resultsValue = make([]int, 0)
+		person       *utils.Person
 	)
 
 	// populate the cache
@@ -839,12 +840,14 @@ func RunTestInvokeAllKeysAndFilter(t *testing.T, namedMap coherence.NamedMap[int
 	for se := range ch {
 		g.Expect(se.Err).ShouldNot(gomega.HaveOccurred())
 		g.Expect(se.Value).ShouldNot(gomega.BeNil())
-		results = append(results, se.Value)
+		resultsKey = append(resultsKey, se.Key)
 	}
-	g.Expect(len(results)).To(gomega.Equal(2))
-	// the results are the keys that were updates
-	g.Expect(containsValue[int](results, 1)).Should(gomega.BeTrue())
-	g.Expect(containsValue[int](results, 2)).Should(gomega.BeTrue())
+
+	g.Expect(len(resultsKey)).To(gomega.Equal(2))
+
+	// the resultsKey are the keys that were updated
+	g.Expect(containsValue[int](resultsKey, 1)).Should(gomega.BeTrue())
+	g.Expect(containsValue[int](resultsKey, 2)).Should(gomega.BeTrue())
 
 	// reset and run for InvokeAllKeysBlind
 	populatePeople(g, namedMap)
@@ -857,7 +860,8 @@ func RunTestInvokeAllKeysAndFilter(t *testing.T, namedMap coherence.NamedMap[int
 	g.Expect(person.Age).To(gomega.Equal(34))
 
 	// reset and run for filter
-	results = make([]int, 0)
+	resultsKey = make([]int, 0)
+	resultsValue = make([]int, 0)
 
 	// run a processor to increment the age of people who are older than 1
 	ch2 := coherence.InvokeAllFilter[int, utils.Person, int](ctx, namedMap,
@@ -866,11 +870,13 @@ func RunTestInvokeAllKeysAndFilter(t *testing.T, namedMap coherence.NamedMap[int
 	for se := range ch2 {
 		g.Expect(se.Err).ShouldNot(gomega.HaveOccurred())
 		g.Expect(se.Value).ShouldNot(gomega.BeNil())
-		results = append(results, se.Value)
+		resultsKey = append(resultsKey, se.Key)
+		resultsValue = append(resultsValue, se.Value)
 	}
 
 	// should match all entries
-	g.Expect(len(results)).To(gomega.Equal(4))
+	g.Expect(len(resultsKey)).To(gomega.Equal(4))
+	g.Expect(len(resultsValue)).To(gomega.Equal(4))
 
 	// reset and run for InvokeAllFilterBlind
 	populatePeople(g, namedMap)

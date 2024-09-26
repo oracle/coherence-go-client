@@ -648,6 +648,47 @@ func TestGetAll(t *testing.T) {
 	}
 }
 
+// TestGetAll tests the get all request.
+func TestKeyAndValuePage(t *testing.T) {
+	var (
+		g       = gomega.NewWithT(t)
+		ctx     = context.Background()
+		cache   = "test-key-and-value-page"
+		err     error
+		entries = generateEntries(g, 100)
+	)
+
+	session := getTestSession(t, g)
+	defer session.Close()
+
+	_ = ensureCache(g, session, cache)
+
+	// clear the cache
+	err = coherence.TestClearCache(ctx, session, cache)
+	g.Expect(err).Should(gomega.BeNil())
+
+	assertSize(g, session, cache, 0)
+
+	err = coherence.TestPutAll(ctx, session, cache, entries, 0)
+	g.Expect(err).Should(gomega.BeNil())
+	assertSize(g, session, cache, 100)
+
+	cookie := make([]byte, 0)
+
+	ch, err := coherence.TestKeyAndValuePage(ctx, session, cache, cookie)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+
+	for v := range ch {
+		g.Expect(v.Err).ShouldNot(gomega.HaveOccurred())
+		if len(v.Cookie) == 0 {
+			key := ensureDeserializedInt32(g, v.Key)
+			val := ensureDeserializedString(g, v.Value)
+			g.Expect(key).ShouldNot(gomega.BeNil())
+			g.Expect(val).ShouldNot(gomega.BeNil())
+		}
+	}
+}
+
 // TestInvoke tests the invoke request.
 func TestInvoke(t *testing.T) {
 	var (

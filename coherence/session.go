@@ -400,6 +400,10 @@ func (s *Session) Close() {
 		s.closed = true
 
 		s.mapMutex.Unlock()
+
+		if s.IsGrpcV1() {
+			_ = s.v1StreamManagerCache.eventStream.grpcStream.CloseSend()
+		}
 		s.dispatch(Closed, func() SessionLifecycleEvent {
 			return newSessionLifecycleEvent(s, Closed)
 		})

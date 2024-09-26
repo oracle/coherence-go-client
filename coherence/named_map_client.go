@@ -75,7 +75,7 @@ func Invoke[K comparable, V, R any](ctx context.Context, nm NamedMap[K, V], key 
 //	        fmt.Println(se.Value)
 //	    }
 //	}
-func InvokeAllFilter[K comparable, V any, R any](ctx context.Context, nm NamedMap[K, V], fltr filters.Filter, proc processors.Processor) <-chan *StreamedValue[R] {
+func InvokeAllFilter[K comparable, V any, R any](ctx context.Context, nm NamedMap[K, V], fltr filters.Filter, proc processors.Processor) <-chan *StreamedEntry[K, R] {
 	return executeInvokeAllFilterOrKeys[K, V, R](ctx, nm.getBaseClient(), fltr, []K{}, proc)
 }
 
@@ -111,7 +111,7 @@ func InvokeAllFilterBlind[K comparable, V any](ctx context.Context, nm NamedMap[
 // The type parameter is R = type of the result of the invocation.
 //
 // The example below shows how to run an entry processor to increment the age of any people with keys 1 and 2. This function
-// returns a stream of  [StreamedValue][R] of the values changed.
+// returns a stream of  [StreamedEntry][K, R] of the values changed.
 //
 //	namedMap, err := coherence.GetNamedMap[int, Person](session, "people")
 //	if err != nil {
@@ -126,10 +126,10 @@ func InvokeAllFilterBlind[K comparable, V any](ctx context.Context, nm NamedMap[
 //	        log.Println(se.Err)
 //	    } else {
 //	        // process the result which will be the key of the person changed
-//	        fmt.Println(se.Value)
+//	        fmt.Println(se.Key, se.Value)
 //	    }
 //	}
-func InvokeAllKeys[K comparable, V any, R any](ctx context.Context, nm NamedMap[K, V], keys []K, proc processors.Processor) <-chan *StreamedValue[R] {
+func InvokeAllKeys[K comparable, V any, R any](ctx context.Context, nm NamedMap[K, V], keys []K, proc processors.Processor) <-chan *StreamedEntry[K, R] {
 	return executeInvokeAllFilterOrKeys[K, V, R](ctx, nm.getBaseClient(), nil, keys, proc)
 }
 
@@ -163,7 +163,7 @@ func InvokeAllKeysBlind[K comparable, V any](ctx context.Context, nm NamedMap[K,
 // The type parameter is R = type of the result of the invocation.
 //
 // The example below shows how to run an entry processor to increment the age of all people. This function
-// returns a stream of [StreamedValue][R] of the values changed.
+// returns a stream of [StreamedEntry][K, R] of the values changed.
 //
 //	namedMap, err := coherence.GetNamedMap[int, Person](session, "people")
 //	if err != nil {
@@ -178,10 +178,10 @@ func InvokeAllKeysBlind[K comparable, V any](ctx context.Context, nm NamedMap[K,
 //	        log.Println(se.Err)
 //	    } else {
 //	        // process the result which will be the key of the person changed
-//	        fmt.Println(se.Value)
+//	        fmt.Println(se.Key, se.Value)
 //	    }
 //	}
-func InvokeAll[K comparable, V any, R any](ctx context.Context, nm NamedMap[K, V], proc processors.Processor) <-chan *StreamedValue[R] {
+func InvokeAll[K comparable, V any, R any](ctx context.Context, nm NamedMap[K, V], proc processors.Processor) <-chan *StreamedEntry[K, R] {
 	return executeInvokeAllFilterOrKeys[K, V, R](ctx, nm.getBaseClient(), filters.Always(), nil, proc)
 }
 
