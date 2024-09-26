@@ -83,11 +83,9 @@ func TestGetAndPutRequests(t *testing.T) {
 
 	assertSize(g, session, cache, 1)
 
-	// issue a get, and we should get back the correct value
 	currentValue, err = coherence.TestGet(ctx, session, cache, key)
 	g.Expect(err).Should(gomega.BeNil())
 	g.Expect(currentValue).ShouldNot(gomega.BeNil())
-
 	getValue, err = serializerString.Deserialize(*currentValue)
 	g.Expect(err).Should(gomega.BeNil())
 	g.Expect(*getValue).Should(gomega.Equal("value"))
@@ -124,16 +122,15 @@ func TestPutIfAbsent(t *testing.T) {
 	currentValue, err = coherence.TestPutIfAbsent(ctx, session, cache, key, value)
 	g.Expect(err).Should(gomega.BeNil())
 	getValue, err = serializerString.Deserialize(*currentValue)
+
 	g.Expect(err).Should(gomega.BeNil())
 	g.Expect(getValue).Should(gomega.BeNil())
-
 	assertSize(g, session, cache, 1)
 
 	// issue a get, and we should get back the correct value
 	currentValue, err = coherence.TestGet(ctx, session, cache, key)
 	g.Expect(err).Should(gomega.BeNil())
 	g.Expect(currentValue).ShouldNot(gomega.BeNil())
-
 	getValue, err = serializerString.Deserialize(*currentValue)
 	g.Expect(err).Should(gomega.BeNil())
 	g.Expect(*getValue).Should(gomega.Equal("value"))
@@ -202,20 +199,17 @@ func TestPutWithExpiry(t *testing.T) {
 
 	session := getTestSession(t, g)
 	defer session.Close()
-
 	_ = ensureCache(g, session, cache)
 
 	// create key and value
 	key := ensureSerializedInt32(g, 32)
 	value := ensureSerializedString(g, "value")
 
-	// clear the cache
 	err = coherence.TestClearCache(ctx, session, cache)
 	g.Expect(err).Should(gomega.BeNil())
 
 	assertSize(g, session, cache, 0)
-
-	// put a value into the cache
+	
 	currentValue, err = coherence.TestPut(ctx, session, cache, key, value, time.Duration(4)*time.Second)
 	g.Expect(err).Should(gomega.BeNil())
 	// result of put with no value will be "null"
