@@ -1006,18 +1006,18 @@ func newNamedMapReconnectListener[K comparable, V any](nm NamedMapClient[K, V]) 
 
 func newBaseClient[K comparable, V any](session *Session, name string, format string, sOpts *SessionOptions, cOpts *CacheOptions) baseClient[K, V] {
 	bc := baseClient[K, V]{
-		session:            session,
-		name:               name,
-		sessionOpts:        sOpts,
-		format:             format,
-		keySerializer:      NewSerializer[K](format),
-		valueSerializer:    NewSerializer[V](format),
-		mutex:              &sync.RWMutex{},
-		cacheOpts:          cOpts,
-		keyListenersV1:     map[K]*listenerGroupV1[K, V]{},
-		filterListenersV1:  map[filters.Filter]*listenerGroupV1[K, V]{},
-		filterIDToGroupV1:  map[int64]*listenerGroupV1[K, V]{},
-		lifecycleListeners: make([]*MapLifecycleListener[K, V], 0),
+		session:              session,
+		name:                 name,
+		sessionOpts:          sOpts,
+		format:               format,
+		keySerializer:        NewSerializer[K](format),
+		valueSerializer:      NewSerializer[V](format),
+		mutex:                &sync.RWMutex{},
+		cacheOpts:            cOpts,
+		keyListenersV1:       map[K]*listenerGroupV1[K, V]{},
+		filterListenersV1:    map[filters.Filter]*listenerGroupV1[K, V]{},
+		filterIDToGroupV1:    map[int64]*listenerGroupV1[K, V]{},
+		lifecycleListenersV1: make([]*MapLifecycleListener[K, V], 0),
 	}
 
 	// if near cache options specified then setup internal local cache

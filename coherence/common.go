@@ -90,10 +90,10 @@ type baseClient[K comparable, V any] struct {
 	nearCacheLifecycleListener *namedCacheNearLifecyleListener[K, V]
 
 	// gRPC v1 listeners registered
-	keyListenersV1     map[K]*listenerGroupV1[K, V]
-	filterListenersV1  map[filters.Filter]*listenerGroupV1[K, V]
-	filterIDToGroupV1  map[int64]*listenerGroupV1[K, V]
-	lifecycleListeners []*MapLifecycleListener[K, V]
+	keyListenersV1       map[K]*listenerGroupV1[K, V]
+	filterListenersV1    map[filters.Filter]*listenerGroupV1[K, V]
+	filterIDToGroupV1    map[int64]*listenerGroupV1[K, V]
+	lifecycleListenersV1 []*MapLifecycleListener[K, V]
 }
 
 // CacheOptions holds various cache options.
@@ -330,6 +330,8 @@ func executeRelease[K comparable, V any](bc *baseClient[K, V], nm NamedMap[K, V]
 		if manager := bc.eventManager; manager != nil {
 			manager.close()
 		}
+	} else {
+		bc.generateMapLifecycleEvent(nm, Released)
 	}
 	bc.released = true
 }
@@ -1981,15 +1983,15 @@ func (bc *baseClient[K, V]) isGrpcV1() bool {
 
 // generateMapLifecycleEvent emits the [MapLifeCycleEvent] for v1 clients.
 func (bc *baseClient[K, V]) generateMapLifecycleEvent(client interface{}, eventType MapLifecycleEventType) {
-	if namedMap, ok := client.(NamedMap[K, V]); ok {
-		listeners := bc.lifecycleListeners
+	if namedMap, ok := client.(NamedMap[K, V]); ok || client == nil {
+		listeners := bc.lifecycleListenersV1
 		event := newMapLifecycleEvent(namedMap, eventType)
 		for _, l := range listeners {
 			e := *l
 			e.getEmitter().emit(eventType, event)
 		}
 
-		if eventType == Destroyed || eventType == Released {
+		if eventType == Destroyed {
 			executeRelease[K, V](bc, namedMap)
 		}
 	}

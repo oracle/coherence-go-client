@@ -208,7 +208,8 @@ func (m *streamManagerV1) processNamedCacheResponse(reqID int64, resp *responseM
 
 		cacheName := m.session.getCacheNameFromCacheID(cacheID)
 		if cacheName == nil {
-			log.Printf("unable to find cache name from cache id %v", cacheID)
+			log.Printf("unable to find cache name from cache id %v it may have been released", cacheID)
+			// cache may have already been release
 			return
 		}
 
@@ -221,23 +222,21 @@ func (m *streamManagerV1) processNamedCacheResponse(reqID int64, resp *responseM
 		}
 
 		if eventSubmitter, ok := client.(EventSubmitter); ok {
-			m.session.debugGrpc("found client", client)
 			switch resp.namedCacheResponse.Type {
 			case pb1.ResponseType_Destroyed:
 				eventSubmitter.generateMapLifecycleEvent(client, Destroyed)
-				log.Printf("id=%v, destroyed, %v", reqID, resp)
+				m.session.debugGrpc(Destroyed)
 				// TODO: need to actually destroy the cache reference, where can we do this where it is safe?
 			case pb1.ResponseType_Truncated:
 				eventSubmitter.generateMapLifecycleEvent(client, Truncated)
-				log.Printf("id=%v, truncated, %v", reqID, resp)
+				m.session.debugGrpc("id=%v, truncated, %v", reqID, resp)
 			case pb1.ResponseType_MapEvent:
-				// convert to MapEventMessage
-				mapEventMessage, err1 := unwrapMapEvent(resp.message)
+				mapEventMessage, err1 := unwrapMapEvent(resp.namedCacheResponse)
 				if err1 != nil {
 					log.Printf("unable to unwrap MapEvent: %v", err1)
 				} else {
+					m.session.debugGrpc("received mapEvent", mapEventMessage)
 					eventSubmitter.generateMapEvent(client, mapEventMessage)
-					log.Printf("id=%v, mapevent, %v", reqID, mapEventMessage)
 				}
 			}
 		}
@@ -1220,12 +1219,12 @@ func (bc *baseClient[K, V]) addLifecycleListener(listener MapLifecycleListener[K
 	bc.mutex.Lock()
 	defer bc.mutex.Unlock()
 
-	for _, e := range bc.lifecycleListeners {
+	for _, e := range bc.lifecycleListenersV1 {
 		if *e == listener {
 			return
 		}
 	}
-	bc.lifecycleListeners = append(bc.lifecycleListeners, &listener)
+	bc.lifecycleListenersV1 = append(bc.lifecycleListenersV1, &listener)
 }
 
 // removeLifecycleListener removes the specified [MapLifecycleListener].
@@ -1234,7 +1233,7 @@ func (bc *baseClient[K, V]) removeLifecycleListener(listener MapLifecycleListene
 	defer bc.mutex.Unlock()
 
 	idx := -1
-	listeners := bc.lifecycleListeners
+	listeners := bc.lifecycleListenersV1
 	for i, c := range listeners {
 		if *c == listener {
 			idx = i
@@ -1243,7 +1242,7 @@ func (bc *baseClient[K, V]) removeLifecycleListener(listener MapLifecycleListene
 	}
 	if idx != -1 {
 		result := append(listeners[:idx], listeners[idx+1:]...)
-		bc.lifecycleListeners = result
+		bc.lifecycleListenersV1 = result
 	}
 }
 
@@ -1268,10 +1267,10 @@ func unwrapBytes(result *anypb.Any) (*[]byte, error) {
 	return &message.Value, nil
 }
 
-func unwrapMapEvent(result *anypb.Any) (*pb1.MapEventMessage, error) {
+func unwrapMapEvent(result *pb1.NamedCacheResponse) (*pb1.MapEventMessage, error) {
 	var message = &pb1.MapEventMessage{}
 
-	if err := result.UnmarshalTo(message); err != nil {
+	if err := result.Message.UnmarshalTo(message); err != nil {
 		err = getUnmarshallError("unwrapMapEvent", err)
 		return nil, err
 	}

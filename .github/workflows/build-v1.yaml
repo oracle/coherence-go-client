@@ -5,7 +5,7 @@
 # ---------------------------------------------------------------------------
 # Coherence Go Client GitHub Actions CI build V1.
 # ---------------------------------------------------------------------------
-name: CI - V1
+name: CI - V1 Base
 
 on:
   workflow_dispatch:
@@ -24,8 +24,10 @@ jobs:
           - 1.20.x
           - 1.21.x
           - 1.22.x
+          - 1.23.x
         coherence-version:
-          - 24.09-SNAPSHOT
+          - 24.09
+          - 24.09.1-SNAPSHOT
 
 #   Checkout the source, we need a depth of zero to fetch all of the history otherwise
 #   the copyright check cannot work out the date of the files from Git.

@@ -319,9 +319,9 @@ func RunTestReconnect(g *gomega.WithT, namedMap coherence.NamedMap[string, strin
 	f2 := func() int32 { return listener.updatedCount() }
 	f3 := func() int32 { return listener.deletedCount() }
 
-	g.Expect(expect[int32](f1, int32(iterations+additional), 120)).To(gomega.BeNil())
-	g.Expect(expect[int32](f2, int32(iterations+additional), 120)).To(gomega.BeNil())
-	g.Expect(expect[int32](f3, int32(iterations+additional), 120)).To(gomega.BeNil())
+	g.Eventually(f1).Should(gomega.Equal(int32(iterations + additional)))
+	g.Eventually(f2).Should(gomega.Equal(int32(iterations + additional)))
+	g.Eventually(f3).Should(gomega.Equal(int32(iterations + additional)))
 }
 
 // createMutations creates a specified number of data mutations.
@@ -879,19 +879,16 @@ func runMultipleLifecycleTests(g *gomega.WithT, cache coherence.NamedMap[string,
 	log.Println("Truncate - 2", cache.Name())
 	err = cache.Truncate(ctx)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-	time.Sleep(time.Duration(5) * time.Second)
-
-	// function to return the truncate count from the listeners
-	f1 := func() int32 {
-		return listener1.truncateCount()
-	}
-	f2 := func() int32 {
-		return listener2.truncateCount()
-	}
+	//time.Sleep(time.Duration(5) * time.Second)
 
 	// each of the listeners should receive 2 events
-	g.Expect(expect[int32](f1, 2, 20)).To(gomega.BeNil())
-	g.Expect(expect[int32](f2, 2, 20)).To(gomega.BeNil())
+	g.Eventually(func() int32 {
+		return listener1.truncateCount()
+	}).Should(gomega.Equal(int32(2)))
+
+	g.Eventually(func() int32 {
+		return listener2.truncateCount()
+	}).Should(gomega.Equal(int32(2)))
 
 	// unregister the second listener
 	cache.RemoveLifecycleListener(listener2.listener)
@@ -903,20 +900,26 @@ func runMultipleLifecycleTests(g *gomega.WithT, cache coherence.NamedMap[string,
 	err = cache.Truncate(ctx)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
-	time.Sleep(time.Duration(5) * time.Second)
+	//time.Sleep(time.Duration(5) * time.Second)
 
 	// listener1 should receive the event, but listener2 should not
-	g.Expect(expect[int32](f2, 2, 20)).To(gomega.BeNil())
-	g.Expect(expect[int32](f1, 3, 20)).To(gomega.BeNil())
+	g.Eventually(func() int32 {
+		return listener1.truncateCount()
+	}).Should(gomega.Equal(int32(3)), "truncateCount to equal 3")
+
+	g.Eventually(func() int32 {
+		return listener2.truncateCount()
+	}).Should(gomega.Equal(int32(2)), "truncateCount to equal 2")
 
 	log.Println("Destroy", cache.Name())
 	// destroy the cache
 	err = cache.Destroy(ctx)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-	time.Sleep(time.Duration(5) * time.Second)
+	//time.Sleep(time.Duration(5) * time.Second)
 
-	f1 = func() int32 { return listener1.releaseCount() }
-	g.Expect(expect[int32](f1, 1, 20)).To(gomega.BeNil())
+	g.Eventually(func() int32 {
+		return listener1.releaseCount()
+	}).Should(gomega.Equal(int32(1)), "truncateCount to equal 1")
 }
 
 func runReleasedLifecycleTests(g *gomega.WithT, cache coherence.NamedMap[string, string]) {
@@ -932,20 +935,16 @@ func runReleasedLifecycleTests(g *gomega.WithT, cache coherence.NamedMap[string,
 	_, err := cache.Put(ctx, "A", "A")
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
-	// issue truncate
+	// issue release
 	cache.Release()
 
-	// function to return the release count from the listener
-	f1 := func() int32 {
+	g.Eventually(func() int32 {
 		return listener1.releaseCount()
-	}
-	f2 := func() int32 {
-		return listener2.releaseCount()
-	}
+	}).Should(gomega.Equal(int32(1)), "releaseCount to equal 1")
 
-	// each of the listeners should receive 1 event
-	g.Expect(expect[int32](f1, 1, timeout)).To(gomega.BeNil())
-	g.Expect(expect[int32](f2, 1, timeout)).To(gomega.BeNil())
+	g.Eventually(func() int32 {
+		return listener2.releaseCount()
+	}).Should(gomega.Equal(int32(1)), "releaseCount to equal 1")
 }
 
 type ValidateEvent[K comparable, V any] struct {

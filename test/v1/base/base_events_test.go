@@ -67,6 +67,9 @@ func DoTestMapEventsKeyListener(t *testing.T, g *gomega.WithT, cache string, lit
 	namedMap, err := coherence.GetNamedMap[int, string](session, cache)
 	g.Expect(err).Should(gomega.BeNil())
 
+	err = coherence.TestClearCache(ctx, session, cache)
+	g.Expect(err).Should(gomega.BeNil())
+
 	listener := NewTestMapListener[int, string]("test1")
 	err = namedMap.AddKeyListener(ctx, listener.listener, 10)
 	g.Expect(err).Should(gomega.BeNil())
@@ -77,6 +80,13 @@ func DoTestMapEventsKeyListener(t *testing.T, g *gomega.WithT, cache string, lit
 	// should have 1 map listener
 	validateKeyMapListenerSize[int, string](g, namedMap, 10, 1)
 
+	// put a value, should receive an update event
+	_, err = namedMap.Put(ctx, 10, "value-10")
+	g.Expect(err).Should(gomega.BeNil())
+	g.Eventually(func() int32 {
+		return listener.insertCount
+	}).Should(gomega.Equal(int32(1)), "insertCount to equal 1")
+
 	// add a new map listener on the same key
 	listener2 := NewTestMapListener[int, string]("test2")
 	if lite {
@@ -85,6 +95,17 @@ func DoTestMapEventsKeyListener(t *testing.T, g *gomega.WithT, cache string, lit
 		err = namedMap.AddKeyListener(ctx, listener2.listener, 10)
 	}
 	g.Expect(err).Should(gomega.BeNil())
+
+	// should have an event on both listeners
+	_, err = namedMap.Put(ctx, 10, "value-11")
+	g.Expect(err).Should(gomega.BeNil())
+	g.Eventually(func() int32 {
+		return listener.updateCount
+	}).Should(gomega.Equal(int32(1)), "updateCount to equal 1")
+
+	g.Eventually(func() int32 {
+		return listener2.updateCount
+	}).Should(gomega.Equal(int32(1)), "updateCount to equal 1")
 
 	// should have 1 entry for key 10
 	validateKeyListenerMapSize[int, string](g, namedMap, 1)
@@ -123,6 +144,9 @@ func DoTestMapEventsFilterListener(t *testing.T, g *gomega.WithT, cache string, 
 	namedCache, err := coherence.GetNamedCache[int, string](session, cache)
 	g.Expect(err).Should(gomega.BeNil())
 
+	err = coherence.TestClearCache(ctx, session, cache)
+	g.Expect(err).Should(gomega.BeNil())
+
 	listener := NewTestMapListener[int, string]("test1")
 	f := filters.Always()
 	f2 := filters.Never()
@@ -134,6 +158,13 @@ func DoTestMapEventsFilterListener(t *testing.T, g *gomega.WithT, cache string, 
 
 	// should have 1 map listener
 	validateFilterMapListenerSize[int, string](g, namedCache, f, 1)
+
+	// put a value, should receive an update event
+	_, err = namedCache.Put(ctx, 10, "value-10")
+	g.Expect(err).Should(gomega.BeNil())
+	g.Eventually(func() int32 {
+		return listener.insertCount
+	}).Should(gomega.Equal(int32(1)), "insertCount to equal 1")
 
 	// add a new map listener on the same filter
 	listener2 := NewTestMapListener[int, string]("test2")
