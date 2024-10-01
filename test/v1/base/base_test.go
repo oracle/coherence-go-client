@@ -58,13 +58,12 @@ func TestGetAndPutRequests(t *testing.T) {
 	_ = ensureCache(g, session, cache)
 
 	// create key and value
-	key := ensureSerializedInt32(g, 32)
 	value := ensureSerializedString(g, "value")
+	key := ensureSerializedInt32(g, 32)
 
 	// clear the cache
 	err = coherence.TestClearCache(ctx, session, cache)
 	g.Expect(err).Should(gomega.BeNil())
-
 	assertSize(g, session, cache, 0)
 
 	// test get with no value in the cache
@@ -86,6 +85,7 @@ func TestGetAndPutRequests(t *testing.T) {
 	currentValue, err = coherence.TestGet(ctx, session, cache, key)
 	g.Expect(err).Should(gomega.BeNil())
 	g.Expect(currentValue).ShouldNot(gomega.BeNil())
+
 	getValue, err = serializerString.Deserialize(*currentValue)
 	g.Expect(err).Should(gomega.BeNil())
 	g.Expect(*getValue).Should(gomega.Equal("value"))
@@ -340,6 +340,8 @@ func TestReplace(t *testing.T) {
 		g            = gomega.NewWithT(t)
 		ctx          = context.Background()
 		cache        = "test-replace"
+		key          = ensureSerializedInt32(g, 1)
+		value        = ensureSerializedString(g, "value")
 		err          error
 		currentValue *[]byte
 		getValue     *string
@@ -349,10 +351,6 @@ func TestReplace(t *testing.T) {
 	defer session.Close()
 
 	_ = ensureCache(g, session, cache)
-
-	// create key and value
-	key := ensureSerializedInt32(g, 1)
-	value := ensureSerializedString(g, "value")
 
 	// clear the cache
 	err = coherence.TestClearCache(ctx, session, cache)
