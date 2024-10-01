@@ -209,7 +209,7 @@ func TestPutWithExpiry(t *testing.T) {
 	g.Expect(err).Should(gomega.BeNil())
 
 	assertSize(g, session, cache, 0)
-	
+
 	currentValue, err = coherence.TestPut(ctx, session, cache, key, value, time.Duration(4)*time.Second)
 	g.Expect(err).Should(gomega.BeNil())
 	// result of put with no value will be "null"

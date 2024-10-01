@@ -145,6 +145,26 @@ func (m *streamManagerV1) newPutRequest(reqType pb1.NamedCacheRequestType, cache
 	return m.newWrapperProxyRequest(cache, reqType, anyReq)
 }
 
+func (m *streamManagerV1) newMapListenerRequest(cache string, subscribe bool, keyOrFilter *pb1.KeyOrFilter, filterID int64,
+	lite bool, synchronous bool, priming bool, trigger []byte) (*pb1.ProxyRequest, error) {
+	mapListenerRequest := &pb1.MapListenerRequest{
+		Subscribe:   subscribe,
+		KeyOrFilter: keyOrFilter,
+		FilterId:    filterID,
+		Lite:        lite,
+		Synchronous: synchronous,
+		Priming:     priming,
+		Trigger:     trigger,
+	}
+
+	anyReq, err := anypb.New(mapListenerRequest)
+	if err != nil {
+		return nil, err
+	}
+
+	return m.newWrapperProxyRequest(cache, pb1.NamedCacheRequestType_MapListener, anyReq)
+}
+
 func (m *streamManagerV1) newIndexRequest(cache string, add bool, binExtractor []byte, sorted *bool, binComparator []byte) (*pb1.ProxyRequest, error) {
 	indexRequest := &pb1.IndexRequest{
 		Add:        add,

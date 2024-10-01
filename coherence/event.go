@@ -662,7 +662,6 @@ func makeGeneralListenerGroup[K comparable, V any](manager *mapEventManager[K, V
 // for a key listener.
 func makeKeyListenerGroup[K comparable, V any](manager *mapEventManager[K, V], key K) (*listenerGroup[K, V], error) {
 	group := makeGeneralListenerGroup(manager)
-	group.request = manager.newSubscribeRequest("key")
 
 	serializedKey, err := manager.serializer.Serialize(key)
 	if err != nil {
@@ -748,7 +747,7 @@ func newMapEventManager[K comparable, V any](namedMap *NamedMap[K, V], bc baseCl
 		bc:                   bc,
 		namedMap:             namedMap,
 		session:              session,
-		serializer:           NewSerializer[any]("json"),
+		serializer:           NewSerializer[any](bc.format),
 		keyListeners:         map[K]*listenerGroup[K, V]{},
 		filterListeners:      map[filters.Filter]*listenerGroup[K, V]{},
 		filterIDToGroup:      map[int64]*listenerGroup[K, V]{},

@@ -8,6 +8,7 @@ package coherence
 
 import (
 	"context"
+	"github.com/oracle/coherence-go-client/coherence/filters"
 	pb1 "github.com/oracle/coherence-go-client/proto/v1"
 	"time"
 )
@@ -106,9 +107,49 @@ func TestInvoke(ctx context.Context, session *Session, cache string, agent []byt
 	return session.v1StreamManagerCache.invoke(ctx, cache, agent, keysOrFilter)
 }
 
+func TestMapListenerRequest(ctx context.Context, session *Session, cache string, subscribe bool, keyOrFilter *pb1.KeyOrFilter,
+	lite bool, synchronous bool, priming bool, filterID int64) error {
+	return session.v1StreamManagerCache.mapListenerRequest(ctx, cache, subscribe, keyOrFilter, lite, synchronous, priming, filterID)
+}
+
 // GetSessionCacheID returns the cache id for a cache name
 func GetSessionCacheID(session *Session, cache string) *int32 {
 	return session.getCacheID(cache)
+}
+
+// revive:disable:unexported-return
+func GetKeyListenerGroupMap[K comparable, V any](namedMap NamedMap[K, V]) map[K]*listenerGroupV1[K, V] {
+	return namedMap.getBaseClient().keyListenersV1
+}
+
+// revive:disable:unexported-return
+func GetKeyListenerGroupListeners[K comparable, V any](namedMap NamedMap[K, V], key K) []MapListener[K, V] {
+	mapListeners := make([]MapListener[K, V], 0)
+	listenerGroupMap := GetKeyListenerGroupMap[K, V](namedMap)
+	if listeners, ok := listenerGroupMap[key]; ok {
+		for k := range listeners.listeners {
+			mapListeners = append(mapListeners, k)
+		}
+	}
+
+	return mapListeners
+}
+
+// revive:disable:unexported-return
+func GetFilterListenerGroupMap[K comparable, V any](namedMap NamedMap[K, V]) map[filters.Filter]*listenerGroupV1[K, V] {
+	return namedMap.getBaseClient().filterListenersV1
+}
+
+func GetFilterListenerGroupListeners[K comparable, V any](namedMap NamedMap[K, V], f filters.Filter) []MapListener[K, V] {
+	mapListeners := make([]MapListener[K, V], 0)
+	listenerGroupMap := GetFilterListenerGroupMap[K, V](namedMap)
+	if listeners, ok := listenerGroupMap[f]; ok {
+		for k := range listeners.listeners {
+			mapListeners = append(mapListeners, k)
+		}
+	}
+
+	return mapListeners
 }
 
 func GetCacheServiceProtocol() V1ProxyProtocol {

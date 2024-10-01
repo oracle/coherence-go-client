@@ -258,6 +258,6 @@ type Entry[K comparable, V any] struct {
 }
 
 type EventSubmitter interface {
-	generateMapLifecycleEvent(eventType MapLifecycleEventType)
-	generateMapEvent(mapEvent *pb1.MapEventMessage)
+	generateMapLifecycleEvent(client interface{}, eventType MapLifecycleEventType)
+	generateMapEvent(client interface{}, mapEvent *pb1.MapEventMessage)
 }

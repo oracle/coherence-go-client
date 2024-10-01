@@ -63,6 +63,7 @@ type streamManagerV1 struct {
 	mutex         sync.RWMutex
 	eventStream   *eventStreamV1
 	proxyProtocol V1ProxyProtocol
+	serializer    Serializer[any]
 	requests      map[int64]namedCacheRequest
 }
 
@@ -76,6 +77,7 @@ func newStreamManagerV1(session *Session, proxyProtocol V1ProxyProtocol) (*strea
 		session:       session,
 		proxyProtocol: proxyProtocol,
 		requests:      make(map[int64]namedCacheRequest, 0),
+		serializer:    NewSerializer[any](session.sessOpts.Format),
 	}
 
 	_, err := manager.ensureStream()
@@ -222,11 +224,11 @@ func (m *streamManagerV1) processNamedCacheResponse(reqID int64, resp *responseM
 			m.session.debugGrpc("found client", client)
 			switch resp.namedCacheResponse.Type {
 			case pb1.ResponseType_Destroyed:
-				eventSubmitter.generateMapLifecycleEvent(Destroyed)
+				eventSubmitter.generateMapLifecycleEvent(client, Destroyed)
 				log.Printf("id=%v, destroyed, %v", reqID, resp)
 				// TODO: need to actually destroy the cache reference, where can we do this where it is safe?
 			case pb1.ResponseType_Truncated:
-				eventSubmitter.generateMapLifecycleEvent(Truncated)
+				eventSubmitter.generateMapLifecycleEvent(client, Truncated)
 				log.Printf("id=%v, truncated, %v", reqID, resp)
 			case pb1.ResponseType_MapEvent:
 				// convert to MapEventMessage
@@ -234,7 +236,7 @@ func (m *streamManagerV1) processNamedCacheResponse(reqID int64, resp *responseM
 				if err1 != nil {
 					log.Printf("unable to unwrap MapEvent: %v", err1)
 				} else {
-					eventSubmitter.generateMapEvent(mapEventMessage)
+					eventSubmitter.generateMapEvent(client, mapEventMessage)
 					log.Printf("id=%v, mapevent, %v", reqID, mapEventMessage)
 				}
 			}
@@ -494,6 +496,36 @@ func (m *streamManagerV1) get(ctx context.Context, cache string, key []byte) (*[
 	}
 	// no value present, return nil
 	return nil, nil
+}
+
+// mapListenerRequest issues a map listener request to add or remove a key or filter listener.
+func (m *streamManagerV1) mapListenerRequest(ctx context.Context, cache string, subscribe bool, keyOrFilter *pb1.KeyOrFilter,
+	lite bool, synchronous bool, priming bool, filterID int64) error {
+
+	req, err := m.newMapListenerRequest(cache, subscribe, keyOrFilter, filterID, lite, synchronous, priming, nil)
+	if err != nil {
+		return err
+	}
+
+	requestType, err := m.submitRequest(req, pb1.NamedCacheRequestType_MapListener)
+	if err != nil {
+		return err
+	}
+
+	newCtx, cancel := m.session.ensureContext(ctx)
+	if cancel != nil {
+		defer cancel()
+	}
+
+	// remove the entry from the channel
+	defer m.cleanupRequest(req.Id)
+
+	_, err1 := waitForResponse(newCtx, requestType.ch)
+	if err1 != nil {
+		return err1
+	}
+
+	return nil
 }
 
 func (m *streamManagerV1) replaceMapping(ctx context.Context, cache string, key []byte, prevValue []byte, newValue []byte) (bool, error) {
@@ -1121,6 +1153,8 @@ func waitForResponse(newCtx context.Context, ch chan responseMessage, ensureCach
 		case resp := <-ch:
 			if resp.err != nil {
 				err = fmt.Errorf("error: %v", *resp.err)
+				// force complete on error
+				resp.complete = true
 			}
 
 			if resp.namedCacheResponse != nil {
@@ -1179,6 +1213,38 @@ func waitForStreamingResponse(newCtx context.Context, ch chan responseMessage) <
 	}()
 
 	return chMessage
+}
+
+// addLifecycleListener adds the specified [MapLifecycleListener].
+func (bc *baseClient[K, V]) addLifecycleListener(listener MapLifecycleListener[K, V]) {
+	bc.mutex.Lock()
+	defer bc.mutex.Unlock()
+
+	for _, e := range bc.lifecycleListeners {
+		if *e == listener {
+			return
+		}
+	}
+	bc.lifecycleListeners = append(bc.lifecycleListeners, &listener)
+}
+
+// removeLifecycleListener removes the specified [MapLifecycleListener].
+func (bc *baseClient[K, V]) removeLifecycleListener(listener MapLifecycleListener[K, V]) {
+	bc.mutex.Lock()
+	defer bc.mutex.Unlock()
+
+	idx := -1
+	listeners := bc.lifecycleListeners
+	for i, c := range listeners {
+		if *c == listener {
+			idx = i
+			break
+		}
+	}
+	if idx != -1 {
+		result := append(listeners[:idx], listeners[idx+1:]...)
+		bc.lifecycleListeners = result
+	}
 }
 
 func unwrapBool(result *anypb.Any) (bool, error) {

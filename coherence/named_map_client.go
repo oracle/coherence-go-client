@@ -333,13 +333,20 @@ func (nm *NamedMapClient[K, V]) GetCacheName() string {
 // AddLifecycleListener adds a [MapLifecycleListener] that will receive events (truncated or released) that occur
 // against the [NamedMap].
 func (nm *NamedMapClient[K, V]) AddLifecycleListener(listener MapLifecycleListener[K, V]) {
-	registerLifecycleListener(nm.getBaseClient(), listener)
+	if nm.getBaseClient().isGrpcV1() {
+		nm.getBaseClient().addLifecycleListener(listener)
+	} else {
+		registerLifecycleListener(nm.getBaseClient(), listener)
+	}
 }
 
 // AddFilterListener adds a [MapListener] that will receive events (inserts, updates, deletes) that occur
 // against the [NamedMap] where entries satisfy the specified [filters.Filter], with the key, and optionally,
 // the old-value and new-value included.
 func (nm *NamedMapClient[K, V]) AddFilterListener(ctx context.Context, listener MapListener[K, V], filter filters.Filter) error {
+	if nm.getBaseClient().isGrpcV1() {
+		return addFilterListenerInternalV1[K, V](ctx, nm.getBaseClient(), listener, filter, false)
+	}
 	return nm.getBaseClient().eventManager.addFilterListener(ctx, listener, filter, false)
 }
 
@@ -347,6 +354,9 @@ func (nm *NamedMapClient[K, V]) AddFilterListener(ctx context.Context, listener 
 // against the [NamedMap] where entries satisfy the specified [filters.Filter], with the key,
 // the old-value and new-value included.
 func (nm *NamedMapClient[K, V]) AddFilterListenerLite(ctx context.Context, listener MapListener[K, V], filter filters.Filter) error {
+	if nm.getBaseClient().isGrpcV1() {
+		return addFilterListenerInternalV1[K, V](ctx, nm.getBaseClient(), listener, filter, true)
+	}
 	return nm.getBaseClient().eventManager.addFilterListener(ctx, listener, filter, true)
 }
 
@@ -354,6 +364,9 @@ func (nm *NamedMapClient[K, V]) AddFilterListenerLite(ctx context.Context, liste
 // against the map, with the key, old-value and new-value included.
 // This call is equivalent to calling [AddFilterListener] with [filters.Always] as the filter.
 func (nm *NamedMapClient[K, V]) AddListener(ctx context.Context, listener MapListener[K, V]) error {
+	if nm.getBaseClient().isGrpcV1() {
+		return addFilterListenerInternalV1[K, V](ctx, nm.getBaseClient(), listener, nil, false)
+	}
 	return nm.getBaseClient().eventManager.addFilterListener(ctx, listener, nil, false)
 }
 
@@ -361,18 +374,29 @@ func (nm *NamedMapClient[K, V]) AddListener(ctx context.Context, listener MapLis
 // against the map, with the key, and optionally, the old-value and new-value included.
 // This call is equivalent to calling [AddFilterListenerLite] with [filters.Always] as the filter.
 func (nm *NamedMapClient[K, V]) AddListenerLite(ctx context.Context, listener MapListener[K, V]) error {
+	if nm.getBaseClient().isGrpcV1() {
+		return addFilterListenerInternalV1[K, V](ctx, nm.getBaseClient(), listener, nil, true)
+	}
 	return nm.getBaseClient().eventManager.addFilterListener(ctx, listener, nil, true)
 }
 
 // AddKeyListener adds a [MapListener] that will receive events (inserts, updates, deletes) that occur
 // against the specified key within the [NamedMap], with the key, old-value and new-value included.
 func (nm *NamedMapClient[K, V]) AddKeyListener(ctx context.Context, listener MapListener[K, V], key K) error {
+	if nm.getBaseClient().isGrpcV1() {
+		return addKeyListenerInternalV1[K, V](ctx, nm.getBaseClient(), listener, key, false)
+	}
+
 	return nm.getBaseClient().eventManager.addKeyListener(ctx, listener, key, false)
 }
 
 // AddKeyListenerLite adds a [MapListener] that will receive events (inserts, updates, deletes) that occur
 // against the specified key within the [NamedMap], with the key, and optionally, the old-value and new-value included.
 func (nm *NamedMapClient[K, V]) AddKeyListenerLite(ctx context.Context, listener MapListener[K, V], key K) error {
+	if nm.getBaseClient().isGrpcV1() {
+		return addKeyListenerInternalV1[K, V](ctx, nm.getBaseClient(), listener, key, true)
+	}
+
 	return nm.getBaseClient().eventManager.addKeyListener(ctx, listener, key, true)
 }
 
@@ -438,7 +462,11 @@ func (nm *NamedMapClient[K, V]) Release() {
 
 	// remove near cache Lifecycle Listener
 	if nm.baseClient.nearCacheLifecycleListener != nil {
-		nm.RemoveLifecycleListener(nm.baseClient.nearCacheLifecycleListener.listener)
+		if nm.getBaseClient().isGrpcV1() {
+			nm.getBaseClient().removeLifecycleListener(nm.baseClient.nearCacheLifecycleListener.listener)
+		} else {
+			nm.RemoveLifecycleListener(nm.baseClient.nearCacheLifecycleListener.listener)
+		}
 	}
 
 	executeRelease[K, V](&nm.baseClient, nm.NamedMap)
@@ -721,22 +749,36 @@ func (nm *NamedMapClient[K, V]) Remove(ctx context.Context, key K) (*V, error) {
 
 // RemoveLifecycleListener removes the lifecycle listener that was previously registered to receive events.
 func (nm *NamedMapClient[K, V]) RemoveLifecycleListener(listener MapLifecycleListener[K, V]) {
-	unregisterLifecycleListener[K, V](nm.getBaseClient(), listener)
+	if nm.getBaseClient().isGrpcV1() {
+		nm.getBaseClient().removeLifecycleListener(listener)
+	} else {
+		unregisterLifecycleListener[K, V](nm.getBaseClient(), listener)
+	}
 }
 
 // RemoveFilterListener removes the listener that was previously registered to receive events
 // where entries satisfy the specified filters.Filter.
 func (nm *NamedMapClient[K, V]) RemoveFilterListener(ctx context.Context, listener MapListener[K, V], f filters.Filter) error {
+	if nm.getBaseClient().isGrpcV1() {
+		return removeFilterListenerInternalV1[K, V](ctx, nm.getBaseClient(), listener, f)
+	}
 	return nm.getBaseClient().eventManager.removeFilterListener(ctx, listener, f)
 }
 
 // RemoveKeyListener removes the listener that was previously registered to receive events against the specified key.
 func (nm *NamedMapClient[K, V]) RemoveKeyListener(ctx context.Context, listener MapListener[K, V], key K) error {
+	if nm.getBaseClient().isGrpcV1() {
+		return removeKeyListenerInternalV1[K, V](ctx, nm.getBaseClient(), listener, key)
+	}
+
 	return nm.getBaseClient().eventManager.removeKeyListener(ctx, listener, key)
 }
 
 // RemoveListener removes the listener that was previously registered to receive events.
 func (nm *NamedMapClient[K, V]) RemoveListener(ctx context.Context, listener MapListener[K, V]) error {
+	if nm.getBaseClient().isGrpcV1() {
+		return removeFilterListenerInternalV1[K, V](ctx, nm.getBaseClient(), listener, nil)
+	}
 	return nm.RemoveFilterListener(ctx, listener, nil)
 }
 
@@ -964,14 +1006,18 @@ func newNamedMapReconnectListener[K comparable, V any](nm NamedMapClient[K, V]) 
 
 func newBaseClient[K comparable, V any](session *Session, name string, format string, sOpts *SessionOptions, cOpts *CacheOptions) baseClient[K, V] {
 	bc := baseClient[K, V]{
-		session:         session,
-		name:            name,
-		sessionOpts:     sOpts,
-		format:          format,
-		keySerializer:   NewSerializer[K](format),
-		valueSerializer: NewSerializer[V](format),
-		mutex:           &sync.RWMutex{},
-		cacheOpts:       cOpts,
+		session:            session,
+		name:               name,
+		sessionOpts:        sOpts,
+		format:             format,
+		keySerializer:      NewSerializer[K](format),
+		valueSerializer:    NewSerializer[V](format),
+		mutex:              &sync.RWMutex{},
+		cacheOpts:          cOpts,
+		keyListenersV1:     map[K]*listenerGroupV1[K, V]{},
+		filterListenersV1:  map[filters.Filter]*listenerGroupV1[K, V]{},
+		filterIDToGroupV1:  map[int64]*listenerGroupV1[K, V]{},
+		lifecycleListeners: make([]*MapLifecycleListener[K, V], 0),
 	}
 
 	// if near cache options specified then setup internal local cache

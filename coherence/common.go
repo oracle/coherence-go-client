@@ -88,6 +88,12 @@ type baseClient[K comparable, V any] struct {
 	nearCache                  *localCacheImpl[K, V]
 	nearCacheListener          *namedCacheNearCacheListener[K, V]
 	nearCacheLifecycleListener *namedCacheNearLifecyleListener[K, V]
+
+	// gRPC v1 listeners registered
+	keyListenersV1     map[K]*listenerGroupV1[K, V]
+	filterListenersV1  map[filters.Filter]*listenerGroupV1[K, V]
+	filterIDToGroupV1  map[int64]*listenerGroupV1[K, V]
+	lifecycleListeners []*MapLifecycleListener[K, V]
 }
 
 // CacheOptions holds various cache options.
@@ -985,6 +991,19 @@ func ensureKeysOrFilterGrpcV1(binKeys [][]byte, binFilter []byte) *pb1.KeysOrFil
 	}
 
 	return keysOrFilter
+}
+
+func ensureKeyOrFilterGrpcV1(binKey []byte, binFilter []byte) *pb1.KeyOrFilter {
+	keyOrFilter := &pb1.KeyOrFilter{}
+	if len(binKey) != 0 {
+		keyOrFilterKey := &pb1.KeyOrFilter_Key{Key: binKey}
+		keyOrFilter.KeyOrFilter = keyOrFilterKey
+	} else {
+		keyOrFilterFilter := &pb1.KeyOrFilter_Filter{Filter: binFilter}
+		keyOrFilter.KeyOrFilter = keyOrFilterFilter
+	}
+
+	return keyOrFilter
 }
 
 // executeInvoke executes the Invoke operation against a baseClient.
@@ -1956,32 +1975,62 @@ func executeValuesNoFilter[K comparable, V any](ctx context.Context, bc *baseCli
 	return ch
 }
 
-func (c *baseClient[K, V]) isGrpcV1() bool {
-	return c.session.IsGrpcV1()
+func (bc *baseClient[K, V]) isGrpcV1() bool {
+	return bc.session.IsGrpcV1()
 }
 
-func (c *baseClient[K, V]) generateMapLifecycleEvent(eventType MapLifecycleEventType) {
-	// TODO: Replace with proper event
-	log.Printf("Cache=%s, eventType=%v", c.name, eventType)
+// generateMapLifecycleEvent emits the [MapLifeCycleEvent] for v1 clients.
+func (bc *baseClient[K, V]) generateMapLifecycleEvent(client interface{}, eventType MapLifecycleEventType) {
+	if namedMap, ok := client.(NamedMap[K, V]); ok {
+		listeners := bc.lifecycleListeners
+		event := newMapLifecycleEvent(namedMap, eventType)
+		for _, l := range listeners {
+			e := *l
+			e.getEmitter().emit(eventType, event)
+		}
+
+		if eventType == Destroyed || eventType == Released {
+			executeRelease[K, V](bc, namedMap)
+		}
+	}
 }
 
-func (c *baseClient[K, V]) generateMapEvent(mapEvent *pb1.MapEventMessage) {
-	// TODO: Replace with proper map event invocation
-	log.Printf("Cache=%s, eventType=%v", c.name, mapEvent)
+// generateMapEvent emits the [MapEvent] for v1 clients.
+func (bc *baseClient[K, V]) generateMapEvent(client interface{}, eventResponse *pb1.MapEventMessage) {
+	if namedMap, ok := client.(NamedMap[K, V]); ok {
+		receivedMapEvent := newMapEventV1(namedMap, eventResponse)
+		if eventResponse.Key != nil {
+			key, err := bc.keySerializer.Deserialize(eventResponse.Key)
+			if err != nil {
+				log.Printf("unable to deserialize key from eventResponse %v, ignoring eventResponse", eventResponse)
+			} else {
+				keyGroup, groupPresent := bc.keyListenersV1[*key]
+				if groupPresent {
+					keyGroup.notify(receivedMapEvent)
+				}
+			}
+		}
+		for _, id := range eventResponse.FilterIds {
+			filterGroup, groupPresent := bc.filterIDToGroupV1[id]
+			if groupPresent {
+				filterGroup.notify(receivedMapEvent)
+			}
+		}
+	}
 }
 
 // ensureClientConnection ensures the connection is established and
 // ensures a NewNamedCacheServiceClient is present.
-func (c *baseClient[K, V]) ensureClientConnection() error {
+func (bc *baseClient[K, V]) ensureClientConnection() error {
 	// ensure we have a valid connection
 	var (
-		session = c.session
+		session = bc.session
 		err     error
 	)
-	if c.destroyed {
+	if bc.destroyed {
 		return ErrDestroyed
 	}
-	if c.released {
+	if bc.released {
 		return ErrReleased
 	}
 
@@ -1990,13 +2039,13 @@ func (c *baseClient[K, V]) ensureClientConnection() error {
 		return err
 	}
 
-	if !c.isGrpcV1() {
+	if !bc.isGrpcV1() {
 		// ensure we have a NamedCacheServiceClient only if we are using v0
-		if c.client != nil {
+		if bc.client != nil {
 			return nil
 		}
 
-		c.client = pb.NewNamedCacheServiceClient(session.conn)
+		bc.client = pb.NewNamedCacheServiceClient(session.conn)
 	}
 
 	return nil

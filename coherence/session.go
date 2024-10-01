@@ -72,6 +72,7 @@ type Session struct {
 	debugGrpc             func(v ...any) // a function to output debug messages for gRPCV1 connections
 
 	requestID            int64 // request id for gRPC v1
+	filterID             int64 // filter id for gRPC v1
 	v1StreamManagerCache *streamManagerV1
 }
 
@@ -340,6 +341,10 @@ func WithTLSConfig(tlsConfig *tls.Config) func(sessionOptions *SessionOptions) {
 
 func (s *Session) NextRequestID() int64 {
 	return atomic.AddInt64(&s.requestID, 1)
+}
+
+func (s *Session) NextFilterID() int64 {
+	return atomic.AddInt64(&s.filterID, 1)
 }
 
 func (s *Session) getCacheID(cache string) *int32 {
