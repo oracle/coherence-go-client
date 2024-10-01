@@ -207,6 +207,9 @@ func TestFiltersAgainstMapAndCache(t *testing.T) {
 func TestPresentFilter(t *testing.T) {
 	g := gomega.NewWithT(t)
 
+	t.Setenv("COHERENCE_SESSION_DEBUG", "true")
+	t.Setenv("COHERENCE_GRPCV1_DEBUG", "true")
+
 	session, err := utils.GetSession()
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	defer session.Close()

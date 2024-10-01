@@ -873,7 +873,11 @@ func getStreamedValuesWithEntry[K comparable, V any, R any](bc *baseClient[K, V]
 			return
 		}
 
-		chResponse <- &StreamedValue[R]{Value: *value}
+		if value == nil {
+			chResponse <- &StreamedValue[R]{IsValueEmpty: true}
+		} else {
+			chResponse <- &StreamedValue[R]{Value: *value}
+		}
 	}
 }
 
@@ -1058,6 +1062,9 @@ func executeInvoke[K comparable, V any, R any](ctx context.Context, bc *baseClie
 
 		if v.Err != nil {
 			return zeroValue, v.Err
+		}
+		if v.IsValueEmpty {
+			return nil, nil
 		}
 		return &v.Value, nil
 	}

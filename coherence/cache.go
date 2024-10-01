@@ -238,6 +238,8 @@ type StreamedValue[V any] struct {
 	Err error
 	// Value contains the value of the entry.
 	Value V
+	// indicates if the value is empty
+	IsValueEmpty bool
 }
 
 // StreamedEntry is wrapper object that wraps an error and a Key and a Value .

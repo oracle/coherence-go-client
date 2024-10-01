@@ -887,6 +887,7 @@ func getTestSession(t *testing.T, g *gomega.WithT) *coherence.Session {
 	t.Setenv("COHERENCE_GRPCV1_DEBUG", "true")
 
 	timeout := time.Duration(300) * time.Second
+	// TODO: Change from 300 second timeout
 	session, err := utils.GetSession(coherence.WithRequestTimeout(timeout), coherence.WithReadyTimeout(timeout))
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
