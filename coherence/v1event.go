@@ -216,7 +216,7 @@ func (lg *listenerGroupV1[K, V]) removeListener(ctx context.Context, listener Ma
 
 	delete(lg.listeners, listener)
 
-	keyOrFilter := ensureKeyOrFilterGrpcV1(lg.key, nil)
+	keyOrFilter := ensureKeyOrFilterGrpcV1(lg.key, lg.fltr)
 
 	if len(lg.listeners) == 0 {
 		return lg.streamManager.mapListenerRequest(ctx, lg.baseClient.name, false, keyOrFilter, prevLiteStatus, false, false, lg.filterID)

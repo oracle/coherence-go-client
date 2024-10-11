@@ -71,6 +71,7 @@ type Session struct {
 	debug                 func(v ...any) // a function to output debug messages
 	debugGrpc             func(v ...any) // a function to output debug messages for gRPCV1 connections
 
+	forceGrpcV0          bool  // indicates if gRPC v0 sure be forced
 	requestID            int64 // request id for gRPC v1
 	filterID             int64 // filter id for gRPC v1
 	v1StreamManagerCache *streamManagerV1
@@ -177,6 +178,10 @@ func NewSession(ctx context.Context, options ...func(session *SessionOptions)) (
 
 	if getBoolValueFromEnvVarOrDefault(envResolverRandomize, true) {
 		randomizeAddresses = true
+	}
+
+	if getBoolValueFromEnvVarOrDefault(envForceGrpcV0, false) {
+		session.forceGrpcV0 = true
 	}
 
 	// ensure name resolver has been registered
@@ -494,13 +499,15 @@ func (s *Session) ensureConnection() error {
 	s.conn = conn
 	s.firstConnectAttempted = true
 
-	// attempt to connect to V1 gRPC endpoint
-	manager, err := newStreamManagerV1(s, cacheServiceProtocol)
-	if err == nil {
-		// save the stream manager for a successful V1 client connection
-		s.v1StreamManagerCache = manager
-	} else {
-		s.debug("error connecting to session via v1, falling back to v0", err)
+	// attempt to connect to V1 gRPC endpoint if not forced v0
+	if !s.forceGrpcV0 {
+		manager, err := newStreamManagerV1(s, cacheServiceProtocol)
+		if err == nil {
+			// save the stream manager for a successful V1 client connection
+			s.v1StreamManagerCache = manager
+		} else {
+			s.debug("error connecting to session via v1, falling back to v0", err)
+		}
 	}
 
 	// register for state change events - This uses an experimental gRPC API

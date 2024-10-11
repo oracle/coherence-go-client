@@ -42,6 +42,9 @@ const (
 	// envGrpcV1Debug enables gRPCV1 debug messages to be displayed.
 	envGrpcV1Debug = "COHERENCE_GRPCV1_DEBUG"
 
+	// envForceGrpcV0 forced gRPC v0 protocol to be used respective if the cluster supports v1+.
+	envForceGrpcV0 = "COHERENCE_FORCE_GRPCV0"
+
 	// envResolverDebug enables resolver debug messages to be displayed.
 	envResolverDebug = "COHERENCE_RESOLVER_DEBUG"
 
@@ -896,7 +899,11 @@ func getStreamedValuesWithValue[K comparable, V any, R any](bc *baseClient[K, V]
 			return
 		}
 
-		chResponse <- &StreamedValue[R]{Value: *value}
+		if value == nil {
+			chResponse <- &StreamedValue[R]{IsValueEmpty: true}
+		} else {
+			chResponse <- &StreamedValue[R]{Value: *value}
+		}
 	}
 }
 

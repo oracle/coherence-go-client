@@ -12,6 +12,7 @@ import (
 	"github.com/oracle/coherence-go-client/coherence"
 	"github.com/oracle/coherence-go-client/coherence/filters"
 	pb1 "github.com/oracle/coherence-go-client/proto/v1"
+	"github.com/oracle/coherence-go-client/test/utils"
 	"sync/atomic"
 	"testing"
 )
@@ -135,6 +136,115 @@ func DoTestMapEventsKeyListener(t *testing.T, g *gomega.WithT, cache string, lit
 	validateKeyMapListenerSize[int, string](g, namedMap, 11, 0)
 }
 
+func DoTestMapEventsListenerValue(t *testing.T, g *gomega.WithT, cache string, keyFilter bool, f filters.Filter, lite bool) {
+	ctx := context.Background()
+
+	session := getTestSession(t, g)
+	defer session.Close()
+
+	namedMap, err := coherence.GetNamedMap[int, string](session, cache)
+	g.Expect(err).Should(gomega.BeNil())
+
+	err = coherence.TestClearCache(ctx, session, cache)
+	g.Expect(err).Should(gomega.BeNil())
+
+	listener := NewTestMapListenerValues[int, string]("test1")
+	if keyFilter {
+		if lite {
+			err = namedMap.AddKeyListenerLite(ctx, listener.listener, 10)
+		} else {
+			err = namedMap.AddKeyListener(ctx, listener.listener, 10)
+		}
+	} else {
+		if lite {
+			err = namedMap.AddFilterListenerLite(ctx, listener.listener, f)
+		} else {
+			err = namedMap.AddFilterListener(ctx, listener.listener, f)
+		}
+	}
+	g.Expect(err).Should(gomega.BeNil())
+
+	// put a value, should receive an update event with the new value correct
+	_, err = namedMap.Put(ctx, 10, "value-10")
+	g.Expect(err).Should(gomega.BeNil())
+	if !lite {
+		g.Eventually(func() string {
+			return *listener.newValue
+		}).Should(gomega.Equal("value-10"))
+	} else {
+		// lite so may not get the value back
+		g.Eventually(func() bool {
+			return listener.newValue == nil || *listener.newValue == "value-10"
+		}).Should(gomega.BeTrue())
+	}
+
+	// put a new value for key 10
+	_, err = namedMap.Put(ctx, 10, "value-10-new")
+	g.Expect(err).Should(gomega.BeNil())
+	if !lite {
+		g.Eventually(func() string {
+			return *listener.newValue
+		}).Should(gomega.Equal("value-10-new"))
+	} else {
+		// lite so may not get the value back
+		g.Eventually(func() bool {
+			return listener.newValue == nil || *listener.newValue == "value-10-new"
+		}).Should(gomega.BeTrue())
+	}
+
+	if !lite {
+		g.Eventually(func() string {
+			return *listener.oldValue
+		}).Should(gomega.Equal("value-10"))
+	} else {
+		// lite so may not get the value back
+		g.Eventually(func() bool {
+			return listener.oldValue == nil || *listener.oldValue == "value-10"
+		}).Should(gomega.BeTrue())
+	}
+
+	// remove the entry for key 10
+	_, err = namedMap.Remove(ctx, 10)
+	g.Expect(err).Should(gomega.BeNil())
+	if !lite {
+		g.Eventually(func() string {
+			return *listener.oldValue
+		}).Should(gomega.Equal("value-10-new"))
+	} else {
+		// lite so may not get the value back
+		g.Eventually(func() bool {
+			return listener.newValue == nil || *listener.newValue == "value-10-new"
+		}).Should(gomega.BeTrue())
+	}
+
+	g.Eventually(func() *string {
+		return listener.newValue
+	}).Should(gomega.BeNil())
+
+	// remove the map listener, and we should not receive any events
+	atomic.StoreInt32(&listener.eventCount, 0)
+
+	if keyFilter {
+		err = namedMap.RemoveKeyListener(ctx, listener.listener, 10)
+	} else {
+		err = namedMap.RemoveFilterListener(ctx, listener.listener, f)
+	}
+	g.Expect(err).Should(gomega.BeNil())
+	utils.Sleep(5)
+
+	// put a value, should receive an update event with the new value correct
+	_, err = namedMap.Put(ctx, 10, "value-10")
+	g.Expect(err).Should(gomega.BeNil())
+
+	t.Log("Waiting for 10 seconds")
+
+	// wait some time to ensure if we receive event is not wrong
+	utils.Sleep(10)
+	g.Eventually(func() int32 {
+		return listener.eventCount
+	}).Should(gomega.Equal(int32(0)))
+}
+
 func DoTestMapEventsFilterListener(t *testing.T, g *gomega.WithT, cache string, lite bool) {
 	ctx := context.Background()
 
@@ -201,6 +311,14 @@ func DoTestMapEventsFilterListener(t *testing.T, g *gomega.WithT, cache string, 
 
 	validateFilterMapListenerSize[int, string](g, namedCache, f, 0)
 	validateFilterMapListenerSize[int, string](g, namedCache, f2, 0)
+}
+
+// TestMapEventsKeyListenerValue tests basic key listeners.
+func TestMapEventsListenerValue(t *testing.T) {
+	DoTestMapEventsListenerValue(t, gomega.NewWithT(t), "test-key-listeners-value-lite", true, nil, true)
+	DoTestMapEventsListenerValue(t, gomega.NewWithT(t), "test-key-listeners-value", true, nil, false)
+	DoTestMapEventsListenerValue(t, gomega.NewWithT(t), "test-filter-listeners-value-lite", false, filters.Always(), true)
+	DoTestMapEventsListenerValue(t, gomega.NewWithT(t), "test-filter-listeners-value", false, filters.Always(), false)
 }
 
 // TestMapEventsKeyListenerLite tests basic key listeners.
@@ -270,4 +388,43 @@ func NewTestMapListener[K comparable, V any](name string) *TestMapListener[K, V]
 	})
 
 	return &reconnectingListener
+}
+
+type TestMapListenerValues[K comparable, V any] struct {
+	name       string
+	newValue   *V
+	oldValue   *V
+	listener   coherence.MapListener[K, V]
+	eventCount int32
+}
+
+func NewTestMapListenerValues[K comparable, V any](name string) *TestMapListenerValues[K, V] {
+	testListener := TestMapListenerValues[K, V]{
+		name:     name,
+		listener: coherence.NewMapListener[K, V](),
+	}
+
+	testListener.listener.OnInserted(func(e coherence.MapEvent[K, V]) {
+		atomic.AddInt32(&testListener.eventCount, 1)
+		testListener.oldValue = nil
+		if newValue, err := e.NewValue(); err == nil {
+			testListener.newValue = newValue
+		}
+	}).OnDeleted(func(e coherence.MapEvent[K, V]) {
+		atomic.AddInt32(&testListener.eventCount, 1)
+		testListener.newValue = nil
+		if oldValue, err := e.OldValue(); err == nil {
+			testListener.oldValue = oldValue
+		}
+	}).OnUpdated(func(e coherence.MapEvent[K, V]) {
+		atomic.AddInt32(&testListener.eventCount, 1)
+		if newValue, err := e.NewValue(); err == nil {
+			testListener.newValue = newValue
+		}
+		if oldValue, err := e.OldValue(); err == nil {
+			testListener.oldValue = oldValue
+		}
+	})
+
+	return &testListener
 }

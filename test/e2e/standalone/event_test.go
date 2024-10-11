@@ -594,6 +594,7 @@ func TestLiteListeners(t *testing.T) {
 		},
 		updates: []*ValidateEvent[string, utils.Person]{},
 		deletes: []*ValidateEvent[string, utils.Person]{},
+		lite:    true,
 	}
 
 	expectedNonLite := ExpectedEvents[string, utils.Person]{
@@ -730,7 +731,8 @@ func checkEvents[K comparable, V any](
 	g *gomega.WithT,
 	expectedCacheName string,
 	expected []*ValidateEvent[K, V],
-	actual []coherence.MapEvent[K, V]) {
+	actual []coherence.MapEvent[K, V],
+	isLite bool) {
 
 	var last coherence.NamedMap[K, V]
 	// first, check we have the same NamedCache reference
@@ -757,8 +759,13 @@ func checkEvents[K comparable, V any](
 		g.Expect(err3).ShouldNot(gomega.HaveOccurred())
 
 		g.Expect(key).To(gomega.Equal(exp.key))
-		g.Expect(old).To(gomega.Equal(exp.old))
-		g.Expect(newValue).To(gomega.Equal(exp.new))
+
+		// lite may or may not return the values
+		if !isLite {
+			g.Expect(old).To(gomega.Equal(exp.old))
+			g.Expect(newValue).To(gomega.Equal(exp.new))
+		}
+
 		g.Expect(actualEvent.Type()).To(gomega.Equal(exp.eventType))
 		g.Expect(actualEvent.Source().Name()).To(gomega.Equal(expectedCacheName))
 	}
@@ -958,6 +965,7 @@ type ExpectedEvents[K comparable, V any] struct {
 	inserts []*ValidateEvent[K, V]
 	updates []*ValidateEvent[K, V]
 	deletes []*ValidateEvent[K, V]
+	lite    bool
 }
 
 func (ee *ExpectedEvents[K, V]) total() int32 {
@@ -983,12 +991,12 @@ func (ee *ExpectedEvents[K, V]) validate(g *gomega.WithT, cacheName string, list
 	g.Expect(listener.updateCount()).To(gomega.Equal(ee.updateCount()))
 	g.Expect(listener.deleteCount()).To(gomega.Equal(ee.deleteCount()))
 
-	checkEvents(g, cacheName, ee.inserts, listener.inserted)
-	checkEvents(g, cacheName, ee.updates, listener.updated)
-	checkEvents(g, cacheName, ee.deletes, listener.deleted)
+	checkEvents(g, cacheName, ee.inserts, listener.inserted, ee.lite)
+	checkEvents(g, cacheName, ee.updates, listener.updated, ee.lite)
+	checkEvents(g, cacheName, ee.deletes, listener.deleted, ee.lite)
 
 	orderExpected := append(ee.inserts, append(ee.updates, ee.deletes...)...)
-	checkEvents(g, cacheName, orderExpected, listener.order)
+	checkEvents(g, cacheName, orderExpected, listener.order, ee.lite)
 }
 
 type CountingLifecycleListener[K comparable, V any] struct {
