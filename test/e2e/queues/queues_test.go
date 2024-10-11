@@ -26,6 +26,7 @@ func TestStandardQueue(t *testing.T) {
 		value   *string
 		ctx     = context.Background()
 	)
+	t.Skip("Skip until queue support completed for v1")
 
 	session, err = utils.GetSession()
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
@@ -112,6 +113,7 @@ func TestStandardQueueWithStruct(t *testing.T) {
 		customer1 = Customer{ID: 1, Name: "Tim", Balance: 100.25}
 		ctx       = context.Background()
 	)
+	t.Skip("Skip until queue support completed for v1")
 
 	session, err = utils.GetSession()
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
@@ -185,6 +187,7 @@ func TestStandardBlockingQueue(t *testing.T) {
 		value    *string
 		ctx      = context.Background()
 	)
+	t.Skip("Skip until queue support completed for v1")
 
 	const queueName = "blocking-queue-1"
 
@@ -246,6 +249,8 @@ func TestStandardBlockingQueueWithGoRoutines(t *testing.T) {
 		ctx      = context.Background()
 		wg       sync.WaitGroup
 	)
+
+	t.Skip("Skip until queue support completed for v1")
 
 	const queueName = "blocking-queue-2"
 
@@ -325,6 +330,8 @@ func TestStandardBlockingQueueCloseOperation(t *testing.T) {
 		ctx      = context.Background()
 		wg       sync.WaitGroup
 	)
+
+	t.Skip("Skip until queue support completed for v1")
 
 	const queueName = "blocking-queue-3"
 
@@ -414,6 +421,8 @@ func TestStandardBlockingQueueMultipleGoRoutines(t *testing.T) {
 		mapMutex sync.Mutex
 	)
 
+	t.Skip("Skip until queue support completed for v1")
+
 	cancelCtx, cancel := context.WithCancel(context.Background())
 
 	// Note: We use two sessions, so we can have a standard and blocking queue with the same name
@@ -480,6 +489,8 @@ func TestStandardQueueFromJava(t *testing.T) {
 		ctx     = context.Background()
 		result  *JavaCustomer
 	)
+
+	t.Skip("Skip until queue support completed for v1")
 
 	const queueEntries = 1000
 

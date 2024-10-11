@@ -9,6 +9,8 @@ package com.oracle.coherence.go.queues;
 import com.oracle.coherence.go.testing.Customer;
 import com.tangosol.net.Coherence;
 import com.tangosol.net.NamedQueue;
+import com.tangosol.net.Session;
+import com.tangosol.coherence.config.scheme.SimpleDequeScheme;
 
 /**
  * Populate queues.
@@ -17,8 +19,10 @@ public class PopulateQueue {
     public PopulateQueue() {}
 
     public void offerData() {
-        Coherence coherence = Coherence.client().start().join();
-        NamedQueue<Customer> myQueue = coherence.getSession().getQueue("test-queue");
+        Coherence            coherence = Coherence.client().start().join();
+        Session              session   = coherence.getSession();
+
+        NamedQueue<Customer> myQueue   =SimpleDequeScheme.INSTANCE.realize("test-queue", session);
         for (int i = 1; i <= 1000; i++) {
             Customer customer = new Customer();
             customer.setId(i);

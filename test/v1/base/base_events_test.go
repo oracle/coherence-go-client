@@ -17,6 +17,10 @@ import (
 	"testing"
 )
 
+const (
+	value10 = "value-10"
+)
+
 // TestMapEvents tests basic map events functions for key listeners.
 func TestMapEventsKeyListenerBase(t *testing.T) {
 	var (
@@ -82,7 +86,7 @@ func DoTestMapEventsKeyListener(t *testing.T, g *gomega.WithT, cache string, lit
 	validateKeyMapListenerSize[int, string](g, namedMap, 10, 1)
 
 	// put a value, should receive an update event
-	_, err = namedMap.Put(ctx, 10, "value-10")
+	_, err = namedMap.Put(ctx, 10, value10)
 	g.Expect(err).Should(gomega.BeNil())
 	g.Eventually(func() int32 {
 		return listener.insertCount
@@ -165,16 +169,16 @@ func DoTestMapEventsListenerValue(t *testing.T, g *gomega.WithT, cache string, k
 	g.Expect(err).Should(gomega.BeNil())
 
 	// put a value, should receive an update event with the new value correct
-	_, err = namedMap.Put(ctx, 10, "value-10")
+	_, err = namedMap.Put(ctx, 10, value10)
 	g.Expect(err).Should(gomega.BeNil())
 	if !lite {
 		g.Eventually(func() string {
 			return *listener.newValue
-		}).Should(gomega.Equal("value-10"))
+		}).Should(gomega.Equal(value10))
 	} else {
 		// lite so may not get the value back
 		g.Eventually(func() bool {
-			return listener.newValue == nil || *listener.newValue == "value-10"
+			return listener.newValue == nil || *listener.newValue == value10
 		}).Should(gomega.BeTrue())
 	}
 
@@ -195,11 +199,11 @@ func DoTestMapEventsListenerValue(t *testing.T, g *gomega.WithT, cache string, k
 	if !lite {
 		g.Eventually(func() string {
 			return *listener.oldValue
-		}).Should(gomega.Equal("value-10"))
+		}).Should(gomega.Equal(value10))
 	} else {
 		// lite so may not get the value back
 		g.Eventually(func() bool {
-			return listener.oldValue == nil || *listener.oldValue == "value-10"
+			return listener.oldValue == nil || *listener.oldValue == value10
 		}).Should(gomega.BeTrue())
 	}
 
@@ -233,7 +237,7 @@ func DoTestMapEventsListenerValue(t *testing.T, g *gomega.WithT, cache string, k
 	utils.Sleep(5)
 
 	// put a value, should receive an update event with the new value correct
-	_, err = namedMap.Put(ctx, 10, "value-10")
+	_, err = namedMap.Put(ctx, 10, value10)
 	g.Expect(err).Should(gomega.BeNil())
 
 	t.Log("Waiting for 10 seconds")
@@ -270,7 +274,7 @@ func DoTestMapEventsFilterListener(t *testing.T, g *gomega.WithT, cache string, 
 	validateFilterMapListenerSize[int, string](g, namedCache, f, 1)
 
 	// put a value, should receive an update event
-	_, err = namedCache.Put(ctx, 10, "value-10")
+	_, err = namedCache.Put(ctx, 10, value10)
 	g.Expect(err).Should(gomega.BeNil())
 	g.Eventually(func() int32 {
 		return listener.insertCount

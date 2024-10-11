@@ -29,6 +29,8 @@ type V1ProxyProtocol string
 const (
 	protocolVersion                      = 1
 	cacheServiceProtocol V1ProxyProtocol = "CacheService"
+	errorFormat                          = "error: %v"
+	responseDebug                        = "received response"
 )
 
 // responseMessages is a response received by a waiting client.
@@ -226,7 +228,6 @@ func (m *streamManagerV1) processNamedCacheResponse(reqID int64, resp *responseM
 			case pb1.ResponseType_Destroyed:
 				eventSubmitter.generateMapLifecycleEvent(client, Destroyed)
 				m.session.debugGrpc(Destroyed)
-				// TODO: need to actually destroy the cache reference, where can we do this where it is safe?
 			case pb1.ResponseType_Truncated:
 				eventSubmitter.generateMapLifecycleEvent(client, Truncated)
 				m.session.debugGrpc("id=%v, truncated, %v", reqID, resp)
@@ -946,7 +947,7 @@ func (m *streamManagerV1) getStreamingResponseKeyAndValue(ctx context.Context, r
 				// received a streamed response of type pb1.BinaryKeyAndValue
 				var response = BinaryKeyAndValue{}
 				if resp.err != nil {
-					response.Err = fmt.Errorf("error: %v", resp.err)
+					response.Err = fmt.Errorf(errorFormat, resp.err)
 				}
 
 				if resp.message != nil {
@@ -970,7 +971,7 @@ func (m *streamManagerV1) getStreamingResponseKeyAndValue(ctx context.Context, r
 							response.Value = *value
 						}
 					}
-					m.session.debugGrpc("received response", resp.message)
+					m.session.debugGrpc(responseDebug, resp.message)
 					ch <- response
 				}
 
@@ -1015,7 +1016,7 @@ func (m *streamManagerV1) getStreamingResponseValue(ctx context.Context, request
 				// received a streamed response of type pb1.BinaryValue
 				var response = BinaryValue{}
 				if resp.err != nil {
-					response.Err = fmt.Errorf("error: %v", resp.err)
+					response.Err = fmt.Errorf(errorFormat, resp.err)
 				}
 
 				if resp.message != nil {
@@ -1037,7 +1038,7 @@ func (m *streamManagerV1) getStreamingResponseValue(ctx context.Context, request
 							response.Value = *value
 						}
 					}
-					m.session.debugGrpc("received response", resp.message)
+					m.session.debugGrpc(responseDebug, resp.message)
 					ch <- response
 				}
 
@@ -1082,7 +1083,7 @@ func (m *streamManagerV1) getStreamingResponseKey(ctx context.Context, requestTy
 				// received a streamed response of type pb1.BytesValue
 				var response = BinaryKey{}
 				if resp.err != nil {
-					response.Err = fmt.Errorf("error: %v", resp.err)
+					response.Err = fmt.Errorf(errorFormat, resp.err)
 				}
 
 				if resp.message != nil {
@@ -1104,7 +1105,7 @@ func (m *streamManagerV1) getStreamingResponseKey(ctx context.Context, requestTy
 							response.Key = *key
 						}
 					}
-					m.session.debugGrpc("received response", resp.message)
+					m.session.debugGrpc(responseDebug, resp.message)
 					ch <- response
 				}
 
@@ -1151,7 +1152,7 @@ func waitForResponse(newCtx context.Context, ch chan responseMessage, ensureCach
 		select {
 		case resp := <-ch:
 			if resp.err != nil {
-				err = fmt.Errorf("error: %v", *resp.err)
+				err = fmt.Errorf(errorFormat, *resp.err)
 				// force complete on error
 				resp.complete = true
 			}
