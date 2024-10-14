@@ -501,8 +501,8 @@ func (s *Session) ensureConnection() error {
 
 	// attempt to connect to V1 gRPC endpoint if not forced v0
 	if !s.forceGrpcV0 {
-		manager, err := newStreamManagerV1(s, cacheServiceProtocol)
-		if err == nil {
+		manager, err1 := newStreamManagerV1(s, cacheServiceProtocol)
+		if err1 == nil {
 			// save the stream manager for a successful V1 client connection
 			s.v1StreamManagerCache = manager
 		} else {
@@ -529,6 +529,10 @@ func (s *Session) ensureConnection() error {
 				return
 			}
 
+			if session.IsGrpcV1() {
+				firstConnect = !s.hasConnected
+			}
+
 			newState := session.conn.GetState()
 			session.debug("connection:", lastState, "=>", newState)
 
@@ -538,16 +542,51 @@ func (s *Session) ensureConnection() error {
 				return
 			}
 
-			if newState == connectivity.Ready {
+			if newState == connectivity.Ready || newState == connectivity.Idle {
 				if !firstConnect && !connected {
+					// Reconnect
 					disconnectTime = 0
+					session.closed = false
+					connected = true
+
+					if session.IsGrpcV1() {
+						session.mapMutex.Lock()
+						// save the cache names
+						cacheNames := make([]string, 0)
+						for c := range session.cacheIDMap {
+							cacheNames = append(cacheNames, c)
+						}
+
+						// re-create the stream
+						manager, err1 := newStreamManagerV1(s, cacheServiceProtocol)
+						if err1 == nil {
+							// save the stream manager for a successful V1 client connection
+							session.v1StreamManagerCache = manager
+							session.debugGrpc("reconnected stream manager for caches", cacheNames)
+							session.cacheIDMapMutex.Lock()
+
+							// re-ensure all the caches as the connected has gone and so has the gRPC Proxy
+							for _, c := range cacheNames {
+								cacheID, err2 := session.v1StreamManagerCache.ensureCache(context.Background(), c)
+								if err2 != nil {
+									// unrecoverable
+									session.Close()
+									return
+								}
+								session.debugGrpc("ensureCache cacheId=", cacheID, "for cache", c)
+							}
+
+							session.cacheIDMapMutex.Unlock()
+						}
+						session.mapMutex.Unlock()
+					}
+
 					log.Printf("session: %s re-connected to address %s", session.sessionID, session.sessOpts.Address)
 					session.dispatch(Reconnected, func() SessionLifecycleEvent {
 						return newSessionLifecycleEvent(session, Reconnected)
 					})
-					session.closed = false
-					connected = true
 				} else if firstConnect && !connected {
+					// Initial Connect
 					firstConnect = false
 					connected = true
 					session.hasConnected = true

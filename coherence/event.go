@@ -1058,38 +1058,65 @@ func reRegisterListeners[K comparable, V any](ctx context.Context, namedMap *Nam
 	keyListeners := make(map[K]saveListener[K, V], 0)
 	filterListeners := make(map[filters.Filter]saveListener[K, V], 0)
 
-	for k, lg := range bc.eventManager.keyListeners {
-		for l, lite := range lg.listeners {
-			keyListeners[k] = saveListener[K, V]{lite: lite, listener: l}
+	isGrpcV1 := bc.isGrpcV1()
+	if !isGrpcV1 {
+		for k, lg := range bc.eventManager.keyListeners {
+			for l, lite := range lg.listeners {
+				keyListeners[k] = saveListener[K, V]{lite: lite, listener: l}
+			}
+		}
+
+		for f, lg := range bc.eventManager.filterListeners {
+			for l, lite := range lg.listeners {
+				filterListeners[f] = saveListener[K, V]{lite: lite, listener: l}
+			}
+		}
+	} else {
+		// gRPC V1
+		for k, lg := range bc.keyListenersV1 {
+			for l, lite := range lg.listeners {
+				keyListeners[k] = saveListener[K, V]{lite: lite, listener: l}
+			}
+		}
+
+		for f, lg := range bc.filterListenersV1 {
+			for l, lite := range lg.listeners {
+				filterListeners[f] = saveListener[K, V]{lite: lite, listener: l}
+			}
 		}
 	}
 
-	for f, lg := range bc.eventManager.filterListeners {
-		for l, lite := range lg.listeners {
-			filterListeners[f] = saveListener[K, V]{lite: lite, listener: l}
+	if !isGrpcV1 {
+		// destroy the event manager and create a new one
+		bc.eventManager.close()
+		bc.eventManager, err = newMapEventManager[K, V](namedMap, *bc, bc.session)
+		if err != nil {
+			return err
 		}
-	}
-
-	// destroy the event manager and create a new one
-	bc.eventManager.close()
-	bc.eventManager, err = newMapEventManager[K, V](namedMap, *bc, bc.session)
-	if err != nil {
-		return err
 	}
 
 	// re-register key listeners
 	for k, save := range keyListeners {
 		debug(fmt.Sprintf("re-registering listener %v for key%v", save.listener, k))
-		if err = bc.eventManager.addKeyListener(ctx, save.listener, k, save.lite); err != nil {
-			return fmt.Errorf("unable to re-register listener %v for key%v - %v", k, save.listener, err)
+		if !isGrpcV1 {
+			if err = bc.eventManager.addKeyListener(ctx, save.listener, k, save.lite); err != nil {
+				return fmt.Errorf("unable to re-register listener %v for key%v - %v", k, save.listener, err)
+			}
+		} else {
+			// gRPC V1
+			return addKeyListenerInternalV1[K, V](ctx, bc, save.listener, k, save.lite)
 		}
 	}
 
 	// re-register filter listeners
 	for f, save := range filterListeners {
 		debug(fmt.Sprintf("re-registering listener %v for filter %v", save.listener, f))
-		if err = bc.eventManager.addFilterListener(ctx, save.listener, f, save.lite); err != nil {
-			return fmt.Errorf("unable to add filter listener %v for filter %v - %v", f, save.listener, err)
+		if !isGrpcV1 {
+			if err = bc.eventManager.addFilterListener(ctx, save.listener, f, save.lite); err != nil {
+				return fmt.Errorf("unable to add filter listener %v for filter %v - %v", f, save.listener, err)
+			}
+		} else {
+			return addFilterListenerInternalV1[K, V](ctx, bc, save.listener, f, save.lite)
 		}
 	}
 

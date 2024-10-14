@@ -86,6 +86,9 @@ func newStreamManagerV1(session *Session, proxyProtocol V1ProxyProtocol) (*strea
 	if err != nil {
 		return nil, err
 	}
+	session.firstConnectAttempted = true
+	session.hasConnected = true
+
 	return &manager, nil
 }
 
@@ -313,9 +316,7 @@ func (m *streamManagerV1) ensureCache(ctx context.Context, cache string) (*int32
 
 	// store the cache id in the session , no lock required as already locked
 	cacheID = &message.Value
-	//m.session.mapMutex.Lock()
 	m.session.cacheIDMap[cache] = *cacheID
-	//m.session.mapMutex.Unlock()
 
 	return cacheID, nil
 }

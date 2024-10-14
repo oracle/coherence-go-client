@@ -115,9 +115,13 @@ func TestMapAndLifecycleEventsAll3(t *testing.T) {
 }
 
 func TestMapAndLifecycleEventsAll4(t *testing.T) {
-	t.Skip("Skip until ")
+
 	g, session := initTest(t)
 	defer session.Close()
+
+	if !session.IsGrpcV1() {
+		t.Skip("Skip for gRPC v0")
+	}
 
 	namedCache := utils.GetNamedCache[string, string](g, session, "test-lifecycle-all-cache")
 	namedMap := utils.GetNamedMap[string, string](g, session, "test-lifecycle-all-map")
@@ -129,12 +133,17 @@ func TestMapAndLifecycleEventsAll4(t *testing.T) {
 // TestEventDisconnect tests to ensure that if we get a disconnect, then we can
 func TestEventDisconnect(t *testing.T) {
 	t.Setenv("COHERENCE_SESSION_DEBUG", "true")
-	t.Skip("Skipping test temporarily while sorting out reconnect issue")
-	//g, session := initTest(t)
+	t.Setenv("COHERENCE_GRPCV1_DEBUG", "true")
+	t.Skip("Skip until reconnect issues resolved")
+
 	g, session := initTest(t,
 		coherence.WithDisconnectTimeout(time.Duration(130)*time.Second),
 		coherence.WithReadyTimeout(time.Duration(130)*time.Second))
 	defer session.Close()
+
+	if !session.IsGrpcV1() {
+		t.Skip("Skip for gRPC v0")
+	}
 
 	namedCache := utils.GetNamedCache[string, string](g, session, "test-reconnect-cache")
 
@@ -148,7 +157,7 @@ func TestEventDisconnect(t *testing.T) {
 // as we have stopped the gRPC proxy before the test runs.
 func TestEventDisconnectWithReadyTimeoutDelay(t *testing.T) {
 	t.Setenv("COHERENCE_SESSION_DEBUG", "true")
-	t.Skip("Skipping test temporarily while sorting out reconnect issue")
+	t.Skip("Skip until reconnect issues resolved")
 
 	fmt.Println("Issue stop of $GRPC:GrpcProxy")
 	_, err := utils.IssuePostRequest("http://127.0.0.1:30000/management/coherence/cluster/services/$GRPC:GrpcProxy/members/1/stop")
@@ -156,11 +165,16 @@ func TestEventDisconnectWithReadyTimeoutDelay(t *testing.T) {
 		t.Error("Unable to issue post request to stop gRPC proxy")
 	}
 
+	utils.Sleep(5)
+
 	g, session := initTest(t, coherence.WithReadyTimeout(time.Duration(130)*time.Second))
 	defer session.Close()
 
-	namedCache := utils.GetNamedCache[string, string](g, session, "test-reconnect-cache")
+	if !session.IsGrpcV1() {
+		t.Skip("Skip for gRPC v0")
+	}
 
+	namedCache := utils.GetNamedCache[string, string](g, session, "test-reconnect-cache")
 	RunTestReconnect(g, namedCache, false)
 
 	namedMap := utils.GetNamedMap[string, string](g, session, "test-reconnect-map")
@@ -260,14 +274,11 @@ func TestMapEventMultipleListeners(t *testing.T) {
 
 	// run tests against NamedMap and NamedCache
 	for _, v := range testMaps {
-		defer func(cache coherence.NamedMap[string, string], ctx context.Context) {
-			err := cache.Destroy(ctx)
-			if err != nil && err != coherence.ErrDestroyed {
-				log.Printf("Error destroying map %s: %s", cache.Name(), err)
-			}
-		}(v, ctx)
-
 		RunTestMultipleListeners(g, v)
+		err := v.Destroy(ctx)
+		if err != nil && err != coherence.ErrDestroyed {
+			log.Printf("Error destroying map %s: %s", v.Name(), err)
+		}
 	}
 }
 
@@ -302,6 +313,8 @@ func RunTestReconnect(g *gomega.WithT, namedMap coherence.NamedMap[string, strin
 		log.Println("Issue stop of $GRPC:GrpcProxy")
 		_, err = utils.IssuePostRequest("http://127.0.0.1:30000/management/coherence/cluster/services/$GRPC:GrpcProxy/members/1/stop")
 		g.Expect(err).ShouldNot(gomega.HaveOccurred())
+		log.Println("Sleeping to allow proxy to stop and restart")
+		utils.Sleep(5)
 	}
 
 	// get the size to force reconnect

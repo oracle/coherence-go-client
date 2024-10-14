@@ -1716,7 +1716,7 @@ func executeSize[K comparable, V any](ctx context.Context, bc *baseClient[K, V])
 	if bc.session.IsGrpcV1() {
 		size, err1 := bc.session.v1StreamManagerCache.size(newCtx, bc.name)
 		if err1 != nil {
-			return 0, err
+			return 0, err1
 		}
 		return int(size), nil
 	}
