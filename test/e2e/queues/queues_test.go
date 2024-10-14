@@ -24,7 +24,6 @@ func TestStandardQueue(t *testing.T) {
 		err     error
 		session *coherence.Session
 		value   *string
-		ctx     = context.Background()
 	)
 	t.Skip("Skip until queue support completed for v1")
 
@@ -32,7 +31,7 @@ func TestStandardQueue(t *testing.T) {
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	defer session.Close()
 
-	namedQueue, err := coherence.GetNamedQueue[string](ctx, session, "my-queue")
+	namedQueue, err := coherence.GetNamedQueue[string](context.Background(), session, "my-queue")
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	defer namedQueue.Close()
 
@@ -111,7 +110,6 @@ func TestStandardQueueWithStruct(t *testing.T) {
 		session   *coherence.Session
 		value     *Customer
 		customer1 = Customer{ID: 1, Name: "Tim", Balance: 100.25}
-		ctx       = context.Background()
 	)
 	t.Skip("Skip until queue support completed for v1")
 
@@ -119,7 +117,7 @@ func TestStandardQueueWithStruct(t *testing.T) {
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	defer session.Close()
 
-	namedQueue, err := coherence.GetNamedQueue[Customer](ctx, session, "my-queue")
+	namedQueue, err := coherence.GetNamedQueue[Customer](context.Background(), session, "my-queue")
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	defer namedQueue.Close()
 
@@ -185,7 +183,6 @@ func TestStandardBlockingQueue(t *testing.T) {
 		session1 *coherence.Session
 		session2 *coherence.Session
 		value    *string
-		ctx      = context.Background()
 	)
 	t.Skip("Skip until queue support completed for v1")
 
@@ -200,11 +197,11 @@ func TestStandardBlockingQueue(t *testing.T) {
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	defer session2.Close()
 
-	receivingQueue, err := coherence.GetBlockingNamedQueue[string](ctx, session1, queueName)
+	receivingQueue, err := coherence.GetBlockingNamedQueue[string](context.Background(), session1, queueName)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	defer receivingQueue.Close()
 
-	publishingQueue, err := coherence.GetNamedQueue[string](ctx, session2, queueName)
+	publishingQueue, err := coherence.GetNamedQueue[string](context.Background(), session2, queueName)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 	validateQueueSize(g, publishingQueue, 0)
@@ -246,7 +243,6 @@ func TestStandardBlockingQueueWithGoRoutines(t *testing.T) {
 		err      error
 		session1 *coherence.Session
 		session2 *coherence.Session
-		ctx      = context.Background()
 		wg       sync.WaitGroup
 	)
 
@@ -263,11 +259,11 @@ func TestStandardBlockingQueueWithGoRoutines(t *testing.T) {
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	defer session2.Close()
 
-	receivingQueue, err := coherence.GetBlockingNamedQueue[string](ctx, session1, queueName)
+	receivingQueue, err := coherence.GetBlockingNamedQueue[string](context.Background(), session1, queueName)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	defer receivingQueue.Close()
 
-	publishingQueue, err := coherence.GetNamedQueue[string](ctx, session2, queueName)
+	publishingQueue, err := coherence.GetNamedQueue[string](context.Background(), session2, queueName)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 	validateQueueSize(g, publishingQueue, 0)
@@ -327,7 +323,6 @@ func TestStandardBlockingQueueCloseOperation(t *testing.T) {
 		err      error
 		session1 *coherence.Session
 		session2 *coherence.Session
-		ctx      = context.Background()
 		wg       sync.WaitGroup
 	)
 
@@ -344,11 +339,11 @@ func TestStandardBlockingQueueCloseOperation(t *testing.T) {
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	defer session2.Close()
 
-	receivingQueue, err := coherence.GetBlockingNamedQueue[string](ctx, session1, queueName)
+	receivingQueue, err := coherence.GetBlockingNamedQueue[string](context.Background(), session1, queueName)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	defer receivingQueue.Close()
 
-	publishingQueue, err := coherence.GetNamedQueue[string](ctx, session2, queueName)
+	publishingQueue, err := coherence.GetNamedQueue[string](context.Background(), session2, queueName)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 	validateQueueSize(g, publishingQueue, 0)
@@ -415,7 +410,6 @@ func TestStandardBlockingQueueMultipleGoRoutines(t *testing.T) {
 		err      error
 		session1 *coherence.Session
 		session2 *coherence.Session
-		ctx      = context.Background()
 		wg       sync.WaitGroup
 		results  = make(map[int]int, numGoRoutines)
 		mapMutex sync.Mutex
@@ -434,11 +428,11 @@ func TestStandardBlockingQueueMultipleGoRoutines(t *testing.T) {
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	defer session2.Close()
 
-	receivingQueue, err := coherence.GetBlockingNamedQueue[string](ctx, session1, queueName)
+	receivingQueue, err := coherence.GetBlockingNamedQueue[string](context.Background(), session1, queueName)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	defer receivingQueue.Close()
 
-	publishingQueue, err := coherence.GetNamedQueue[string](ctx, session2, queueName)
+	publishingQueue, err := coherence.GetNamedQueue[string](context.Background(), session2, queueName)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 	validateQueueSize(g, publishingQueue, 0)
@@ -486,7 +480,6 @@ func TestStandardQueueFromJava(t *testing.T) {
 		g       = gomega.NewWithT(t)
 		err     error
 		session *coherence.Session
-		ctx     = context.Background()
 		result  *JavaCustomer
 	)
 
@@ -498,7 +491,7 @@ func TestStandardQueueFromJava(t *testing.T) {
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	defer session.Close()
 
-	namedQueue, err := coherence.GetNamedQueue[JavaCustomer](ctx, session, "test-queue")
+	namedQueue, err := coherence.GetNamedQueue[JavaCustomer](context.Background(), session, "test-queue")
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	defer namedQueue.Close()
 
