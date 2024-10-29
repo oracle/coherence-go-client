@@ -160,13 +160,17 @@ func NewSession(ctx context.Context, options ...func(session *SessionOptions)) (
 		closed:                false,
 		firstConnectAttempted: false,
 		hasConnected:          false,
-		debug:                 func(_ ...any) {},
-		debugConnection:       func(_ ...any) {},
-		maps:                  make(map[string]interface{}, 0),
-		caches:                make(map[string]interface{}, 0),
-		queues:                make(map[string]interface{}, 0),
-		cacheIDMap:            make(map[string]int32, 0),
-		lifecycleListeners:    []*SessionLifecycleListener{},
+		debug: func(_ ...any) {
+			// empty by default
+		},
+		debugConnection: func(_ ...any) {
+			// empty by default
+		},
+		maps:               make(map[string]interface{}, 0),
+		caches:             make(map[string]interface{}, 0),
+		queues:             make(map[string]interface{}, 0),
+		cacheIDMap:         make(map[string]int32, 0),
+		lifecycleListeners: []*SessionLifecycleListener{},
 		sessOpts: &SessionOptions{
 			PlainText:          false,
 			IgnoreInvalidCerts: false,

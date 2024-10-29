@@ -234,6 +234,7 @@ func TestRemove(t *testing.T) {
 		err          error
 		currentValue *[]byte
 		getValue     *string
+		value1       = "value-1"
 	)
 
 	session := getTestSession(t, g)
@@ -243,7 +244,7 @@ func TestRemove(t *testing.T) {
 
 	// create key and value
 	key := ensureSerializedInt32(g, 1)
-	value := ensureSerializedString(g, "value-1")
+	value := ensureSerializedString(g, value1)
 
 	// clear the cache
 	err = coherence.TestClearCache(ctx, session, cache)
@@ -267,7 +268,7 @@ func TestRemove(t *testing.T) {
 	g.Expect(currentValue).ShouldNot(gomega.BeNil())
 	getValue, err = serializerString.Deserialize(*currentValue)
 	g.Expect(err).Should(gomega.BeNil())
-	g.Expect(*getValue).Should(gomega.Equal("value-1"))
+	g.Expect(*getValue).Should(gomega.Equal(value1))
 
 	assertSize(g, session, cache, 0)
 

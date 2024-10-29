@@ -18,6 +18,8 @@ import (
 	"time"
 )
 
+const skipReason = "Skip until queue support completed for v1"
+
 func TestStandardQueue(t *testing.T) {
 	var (
 		g       = gomega.NewWithT(t)
@@ -25,7 +27,7 @@ func TestStandardQueue(t *testing.T) {
 		session *coherence.Session
 		value   *string
 	)
-	t.Skip("Skip until queue support completed for v1")
+	t.Skip(skipReason)
 
 	session, err = utils.GetSession()
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
@@ -111,7 +113,7 @@ func TestStandardQueueWithStruct(t *testing.T) {
 		value     *Customer
 		customer1 = Customer{ID: 1, Name: "Tim", Balance: 100.25}
 	)
-	t.Skip("Skip until queue support completed for v1")
+	t.Skip(skipReason)
 
 	session, err = utils.GetSession()
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
@@ -184,7 +186,7 @@ func TestStandardBlockingQueue(t *testing.T) {
 		session2 *coherence.Session
 		value    *string
 	)
-	t.Skip("Skip until queue support completed for v1")
+	t.Skip(skipReason)
 
 	const queueName = "blocking-queue-1"
 
@@ -246,7 +248,7 @@ func TestStandardBlockingQueueWithGoRoutines(t *testing.T) {
 		wg       sync.WaitGroup
 	)
 
-	t.Skip("Skip until queue support completed for v1")
+	t.Skip(skipReason)
 
 	const queueName = "blocking-queue-2"
 
@@ -326,7 +328,7 @@ func TestStandardBlockingQueueCloseOperation(t *testing.T) {
 		wg       sync.WaitGroup
 	)
 
-	t.Skip("Skip until queue support completed for v1")
+	t.Skip(skipReason)
 
 	const queueName = "blocking-queue-3"
 
@@ -415,7 +417,7 @@ func TestStandardBlockingQueueMultipleGoRoutines(t *testing.T) {
 		mapMutex sync.Mutex
 	)
 
-	t.Skip("Skip until queue support completed for v1")
+	t.Skip(skipReason)
 
 	cancelCtx, cancel := context.WithCancel(context.Background())
 
@@ -483,7 +485,7 @@ func TestStandardQueueFromJava(t *testing.T) {
 		result  *JavaCustomer
 	)
 
-	t.Skip("Skip until queue support completed for v1")
+	t.Skip(skipReason)
 
 	const queueEntries = 1000
 

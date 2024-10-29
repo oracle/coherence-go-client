@@ -142,6 +142,7 @@ func DoTestMapEventsKeyListener(t *testing.T, g *gomega.WithT, cache string, lit
 
 func DoTestMapEventsListenerValue(t *testing.T, g *gomega.WithT, cache string, keyFilter bool, f filters.Filter, lite bool) {
 	ctx := context.Background()
+	const value10New = "value-10-new"
 
 	session := getTestSession(t, g)
 	defer session.Close()
@@ -183,16 +184,16 @@ func DoTestMapEventsListenerValue(t *testing.T, g *gomega.WithT, cache string, k
 	}
 
 	// put a new value for key 10
-	_, err = namedMap.Put(ctx, 10, "value-10-new")
+	_, err = namedMap.Put(ctx, 10, value10New)
 	g.Expect(err).Should(gomega.BeNil())
 	if !lite {
 		g.Eventually(func() string {
 			return *listener.newValue
-		}).Should(gomega.Equal("value-10-new"))
+		}).Should(gomega.Equal(value10New))
 	} else {
 		// lite so may not get the value back
 		g.Eventually(func() bool {
-			return listener.newValue == nil || *listener.newValue == "value-10-new"
+			return listener.newValue == nil || *listener.newValue == value10New
 		}).Should(gomega.BeTrue())
 	}
 
@@ -213,11 +214,11 @@ func DoTestMapEventsListenerValue(t *testing.T, g *gomega.WithT, cache string, k
 	if !lite {
 		g.Eventually(func() string {
 			return *listener.oldValue
-		}).Should(gomega.Equal("value-10-new"))
+		}).Should(gomega.Equal(value10New))
 	} else {
 		// lite so may not get the value back
 		g.Eventually(func() bool {
-			return listener.newValue == nil || *listener.newValue == "value-10-new"
+			return listener.newValue == nil || *listener.newValue == value10New
 		}).Should(gomega.BeTrue())
 	}
 
