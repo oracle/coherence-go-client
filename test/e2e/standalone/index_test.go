@@ -14,6 +14,7 @@ import (
 	"github.com/oracle/coherence-go-client/coherence/extractors"
 	"github.com/oracle/coherence-go-client/coherence/filters"
 	"github.com/oracle/coherence-go-client/test/utils"
+	"log"
 	"strings"
 	"testing"
 )
@@ -48,34 +49,44 @@ func RunTestIndex(t *testing.T, namedMap coherence.NamedMap[int, utils.Person]) 
 
 	addPerson(g, namedMap)
 
+	log.SetFlags(log.LstdFlags | log.Lmicroseconds)
+
+	log.Println("Add Index")
 	// add indexes without comparators
 	err = coherence.AddIndex(ctx, namedMap, extractors.Extract[int]("id"), true)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 	utils.Sleep(5)
 
+	log.Println("canFindIndex Index")
 	g.Expect(canFindIndex(g, namedMap)).To(gomega.BeTrue())
 
+	log.Println("Remove Index")
 	err = coherence.RemoveIndex(ctx, namedMap, extractors.Extract[int]("id"))
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 	utils.Sleep(5)
 
+	log.Println("canFindIndex Index")
 	g.Expect(canFindIndex(g, namedMap)).To(gomega.BeFalse())
 
+	log.Println("Add Index with Comparator")
 	// add index with comparator
 	err = coherence.AddIndexWithComparator(ctx, namedMap, extractors.Extract[int]("id"), extractors.Extract[int]("name"))
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 	utils.Sleep(10)
 
+	log.Println("canFindIndex Index")
 	g.Expect(canFindIndex(g, namedMap)).To(gomega.BeTrue())
 
+	log.Println("Remove Index")
 	err = coherence.RemoveIndex(ctx, namedMap, extractors.Extract[int]("id"))
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 	utils.Sleep(10)
 
+	log.Println("canFindIndex Index")
 	g.Expect(canFindIndex(g, namedMap)).To(gomega.BeFalse())
 }
 

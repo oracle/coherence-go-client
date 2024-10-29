@@ -69,7 +69,7 @@ type Session struct {
 	firstConnectAttempted bool           // indicates if the first connection has been attempted
 	hasConnected          bool           // indicates if the session has ever connected
 	debug                 func(v ...any) // a function to output debug messages
-	debugGrpc             func(v ...any) // a function to output debug messages for gRPCV1 connections
+	debugConnection       func(v ...any) // a function to output debug messages for gRPCV1 connections
 
 	forceGrpcV0          bool  // indicates if gRPC v0 sure be forced
 	requestID            int64 // request id for gRPC v1
@@ -161,7 +161,7 @@ func NewSession(ctx context.Context, options ...func(session *SessionOptions)) (
 		firstConnectAttempted: false,
 		hasConnected:          false,
 		debug:                 func(_ ...any) {},
-		debugGrpc:             func(_ ...any) {},
+		debugConnection:       func(_ ...any) {},
 		maps:                  make(map[string]interface{}, 0),
 		caches:                make(map[string]interface{}, 0),
 		queues:                make(map[string]interface{}, 0),
@@ -194,10 +194,10 @@ func NewSession(ctx context.Context, options ...func(session *SessionOptions)) (
 		}
 	}
 
-	if getBoolValueFromEnvVarOrDefault(envGrpcV1Debug, false) {
+	if getBoolValueFromEnvVarOrDefault(envMessageDebug, false) {
 		// enable session debugging
-		session.debugGrpc = func(v ...any) {
-			log.Println("DEBUG gRPCV1:", v)
+		session.debugConnection = func(v ...any) {
+			log.Println("DEBUG:", v)
 		}
 	}
 
@@ -548,38 +548,6 @@ func (s *Session) ensureConnection() error {
 					disconnectTime = 0
 					session.closed = false
 					connected = true
-
-					if session.IsGrpcV1() {
-						session.mapMutex.Lock()
-						// save the cache names
-						cacheNames := make([]string, 0)
-						for c := range session.cacheIDMap {
-							cacheNames = append(cacheNames, c)
-						}
-
-						// re-create the stream
-						manager, err1 := newStreamManagerV1(s, cacheServiceProtocol)
-						if err1 == nil {
-							// save the stream manager for a successful V1 client connection
-							session.v1StreamManagerCache = manager
-							session.debugGrpc("reconnected stream manager for caches", cacheNames)
-							session.cacheIDMapMutex.Lock()
-
-							// re-ensure all the caches as the connected has gone and so has the gRPC Proxy
-							for _, c := range cacheNames {
-								cacheID, err2 := session.v1StreamManagerCache.ensureCache(context.Background(), c)
-								if err2 != nil {
-									// unrecoverable
-									session.Close()
-									return
-								}
-								session.debugGrpc("ensureCache cacheId=", cacheID, "for cache", c)
-							}
-
-							session.cacheIDMapMutex.Unlock()
-						}
-						session.mapMutex.Unlock()
-					}
 
 					log.Printf("session: %s re-connected to address %s", session.sessionID, session.sessOpts.Address)
 					session.dispatch(Reconnected, func() SessionLifecycleEvent {

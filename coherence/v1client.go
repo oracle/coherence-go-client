@@ -135,7 +135,7 @@ func (m *streamManagerV1) ensureStream() (*eventStreamV1, error) {
 			}
 		}
 
-		m.session.debugGrpc(getInitDescription(response))
+		m.session.debugConnection(getInitDescription(response))
 
 		// goroutine to handle MapEventResponse instances returned
 		// from event stream
@@ -143,10 +143,13 @@ func (m *streamManagerV1) ensureStream() (*eventStreamV1, error) {
 			for {
 				response1, err1 := m.eventStream.grpcStream.Recv()
 				if err1 == io.EOF {
+					m.session.debugConnection("received EOF, closing")
+					cancel()
 					return
 				}
 				if err1 != nil {
 					statusLocal := status.Code(err1)
+					m.session.debugConnection("closing connection", statusLocal)
 					if statusLocal != codes.Canceled {
 						// only log if it's not a cancelled error as this is just the client closing
 						log.Printf("event stream recv failed: %s\n", err1)
@@ -158,7 +161,7 @@ func (m *streamManagerV1) ensureStream() (*eventStreamV1, error) {
 				id := response1.GetId()
 				//response1.GetResponse()
 				if h := response1.GetHeartbeat(); h != nil {
-					m.session.debugGrpc("received heartbeat", h)
+					m.session.debugConnection("received heartbeat", h)
 				} else {
 					var resp responseMessage
 
@@ -201,9 +204,9 @@ func (m *streamManagerV1) ensureStream() (*eventStreamV1, error) {
 func (m *streamManagerV1) processNamedCacheResponse(reqID int64, resp *responseMessage) {
 	if reqID == 0 {
 		// this is a map event or cache lifecycle event so dispatch it
-		m.session.debugGrpc("Event, CacheId=", resp.namedCacheResponse.CacheId, ", Type=", resp.namedCacheResponse.Type)
+		m.session.debugConnection("Event, CacheId:", resp.namedCacheResponse.CacheId, ", Type:", resp.namedCacheResponse.Type)
 
-		// for a map event we must get the cache name and then looking the base client so
+		// for a map event we must get the cache name and then looking the base client, so
 		// we can send the event to the right place
 		cacheID := resp.namedCacheResponse.CacheId
 		if cacheID == 0 {
@@ -230,16 +233,16 @@ func (m *streamManagerV1) processNamedCacheResponse(reqID int64, resp *responseM
 			switch resp.namedCacheResponse.Type {
 			case pb1.ResponseType_Destroyed:
 				eventSubmitter.generateMapLifecycleEvent(client, Destroyed)
-				m.session.debugGrpc(Destroyed)
+				m.session.debugConnection("id:", reqID, Destroyed, resp)
 			case pb1.ResponseType_Truncated:
 				eventSubmitter.generateMapLifecycleEvent(client, Truncated)
-				m.session.debugGrpc("id=%v, truncated, %v", reqID, resp)
+				m.session.debugConnection("id:", reqID, Truncated, resp)
 			case pb1.ResponseType_MapEvent:
 				mapEventMessage, err1 := unwrapMapEvent(resp.namedCacheResponse)
 				if err1 != nil {
 					log.Printf("unable to unwrap MapEvent: %v", err1)
 				} else {
-					m.session.debugGrpc("received mapEvent", mapEventMessage)
+					m.session.debugConnection("received mapEvent:", mapEventMessage)
 					eventSubmitter.generateMapEvent(client, mapEventMessage)
 				}
 			}
@@ -248,7 +251,7 @@ func (m *streamManagerV1) processNamedCacheResponse(reqID int64, resp *responseM
 		return
 	}
 
-	m.session.debugGrpc("id", reqID, "process namedCacheResponse", resp)
+	m.session.debugConnection("id:", reqID, "process namedCacheResponse:", resp)
 
 	// write the response to the channel for the originating request
 	m.mutex.Lock()
@@ -275,7 +278,7 @@ func (m *streamManagerV1) submitRequest(req *pb1.ProxyRequest, requestType pb1.N
 	// save the request in the map keyed by request id
 	m.requests[req.Id] = r
 
-	m.session.debugGrpc("id", req.Id, "submit request", r.requestType)
+	m.session.debugConnection("id:", req.Id, "submit request:", r.requestType, req)
 
 	return r, m.eventStream.grpcStream.Send(req)
 }
@@ -963,7 +966,7 @@ func (m *streamManagerV1) getStreamingResponseKeyAndValue(ctx context.Context, r
 							response.Cookie = *cookie
 						}
 					} else {
-						// otherwise this is s standard key and value
+						// otherwise this is a standard key and value
 						key, value, err1 := unwrapBinaryKeyAndValue(resp.namedCacheResponse.Message)
 						if err1 != nil {
 							response.Err = err1
@@ -972,14 +975,20 @@ func (m *streamManagerV1) getStreamingResponseKeyAndValue(ctx context.Context, r
 							response.Value = *value
 						}
 					}
-					m.session.debugGrpc(responseDebug, resp.message)
+					m.session.debugConnection(responseDebug, resp.message)
 					ch <- response
 				}
 
 				if resp.complete {
 					close(ch)
-					break
+					return
 				}
+			case <-newCtx.Done():
+				errDone := newCtx.Err()
+				if !errors.Is(errDone, context.Canceled) {
+					ch <- BinaryKeyAndValue{Err: newCtx.Err()}
+				}
+				return
 			}
 		}
 	}()
@@ -1039,14 +1048,20 @@ func (m *streamManagerV1) getStreamingResponseValue(ctx context.Context, request
 							response.Value = *value
 						}
 					}
-					m.session.debugGrpc(responseDebug, resp.message)
+					m.session.debugConnection(responseDebug, resp.message)
 					ch <- response
 				}
 
 				if resp.complete {
 					close(ch)
-					break
+					return
 				}
+			case <-newCtx.Done():
+				errDone := newCtx.Err()
+				if !errors.Is(errDone, context.Canceled) {
+					ch <- BinaryValue{Err: newCtx.Err()}
+				}
+				return
 			}
 		}
 	}()
@@ -1106,14 +1121,21 @@ func (m *streamManagerV1) getStreamingResponseKey(ctx context.Context, requestTy
 							response.Key = *key
 						}
 					}
-					m.session.debugGrpc(responseDebug, resp.message)
+					m.session.debugConnection(responseDebug, resp.message)
 					ch <- response
 				}
 
 				if resp.complete {
 					close(ch)
-					break
+					return
 				}
+			case <-newCtx.Done():
+				errDone := newCtx.Err()
+				if !errors.Is(errDone, context.Canceled) {
+					ch <- BinaryKey{Err: errDone}
+				}
+
+				return
 			}
 		}
 	}()
@@ -1173,7 +1195,11 @@ func waitForResponse(newCtx context.Context, ch chan responseMessage, ensureCach
 				return result, err
 			}
 		case <-newCtx.Done():
-			return result, newCtx.Err()
+			errDone := newCtx.Err()
+			if !errors.Is(errDone, context.Canceled) {
+				return result, newCtx.Err()
+			}
+			return result, nil
 		}
 	}
 }
@@ -1203,12 +1229,17 @@ func waitForStreamingResponse(newCtx context.Context, ch chan responseMessage) <
 				if resp.complete {
 					return
 				}
-			case <-newCtx.Done():
-				e := fmt.Sprintf("%v", newCtx.Err())
-				chMessage <- responseMessage{
-					err: &e,
+			case <-newCtx.Done(): // timeout or cancel
+				errDone := newCtx.Err()
+				if !errors.Is(errDone, context.Canceled) {
+					e := fmt.Sprintf("%v", newCtx.Err())
+					chMessage <- responseMessage{
+						err:      &e,
+						complete: true,
+					}
 				}
-				close(chMessage)
+
+				return
 			}
 		}
 	}()

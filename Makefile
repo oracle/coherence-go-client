@@ -8,13 +8,13 @@
 # ----------------------------------------------------------------------------------------------------------------------
 
 # This is the version of the coherence-go-client
-VERSION ?=1.2.3
+VERSION ?=1.3.0
 CURRDIR := $(shell pwd)
 USER_ID := $(shell echo "`id -u`:`id -g`")
 
-override BUILD_BIN           := $(CURRDIR)/bin
-override PROTO_DIR			 := $(CURRDIR)/etc/proto
-override PROTOV1_DIR		 := $(CURRDIR)/etc/proto-v1
+override BUILD_BIN       := $(CURRDIR)/bin
+override PROTO_DIR	 := $(CURRDIR)/etc/proto
+override PROTOV1_DIR	 := $(CURRDIR)/etc/proto-v1
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Set the location of various build tools

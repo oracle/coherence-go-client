@@ -94,6 +94,9 @@ func (r *nsLookupResolver) resolve() {
 
 	resolverDebug(fmt.Sprintf("resolver produced the following addresses: %v, randomize=%v", addresses, randomizeAddresses))
 	_ = r.cc.UpdateState(resolver.State{Addresses: addresses})
+	if len(addresses) > 0 {
+		resolverDebug(fmt.Sprintf("resolver chose address: %s", addresses[0]))
+	}
 }
 
 func (r *nsLookupResolver) start() {

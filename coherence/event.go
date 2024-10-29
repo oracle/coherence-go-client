@@ -719,7 +719,7 @@ func makeFilterListenerGroup[K comparable, V any](manager *mapEventManager[K, V]
 // gRPC event stream that is used to send MapListenerRequests and process
 // MapListenerResponses.
 type mapEventManager[K comparable, V any] struct {
-	bc                   baseClient[K, V]
+	bc                   *baseClient[K, V]
 	namedMap             *NamedMap[K, V]
 	session              *Session
 	serializer           Serializer[any]
@@ -743,7 +743,7 @@ type pendingListenerOp[K comparable, V any] struct {
 
 // newMapEventManager creates/initializes and returns a pointer to a new
 // mapEventManager.
-func newMapEventManager[K comparable, V any](namedMap *NamedMap[K, V], bc baseClient[K, V], session *Session) (*mapEventManager[K, V], error) {
+func newMapEventManager[K comparable, V any](namedMap *NamedMap[K, V], bc *baseClient[K, V], session *Session) (*mapEventManager[K, V], error) {
 	manager := mapEventManager[K, V]{
 		bc:                   bc,
 		namedMap:             namedMap,
@@ -1050,15 +1050,14 @@ type saveListener[K comparable, V any] struct {
 // reRegisterListeners re-registers listeners on reconnect session.
 func reRegisterListeners[K comparable, V any](ctx context.Context, namedMap *NamedMap[K, V], bc *baseClient[K, V]) error {
 	var (
-		err   error
-		debug = bc.session.debug
+		err             error
+		debug           = bc.session.debug
+		isGrpcV1        = bc.isGrpcV1()
+		keyListeners    = make(map[K]saveListener[K, V], 0)
+		filterListeners = make(map[filters.Filter]saveListener[K, V], 0)
 	)
 
 	// save the key and filter listeners as we need to close the eventManager
-	keyListeners := make(map[K]saveListener[K, V], 0)
-	filterListeners := make(map[filters.Filter]saveListener[K, V], 0)
-
-	isGrpcV1 := bc.isGrpcV1()
 	if !isGrpcV1 {
 		for k, lg := range bc.eventManager.keyListeners {
 			for l, lite := range lg.listeners {
@@ -1089,11 +1088,61 @@ func reRegisterListeners[K comparable, V any](ctx context.Context, namedMap *Nam
 	if !isGrpcV1 {
 		// destroy the event manager and create a new one
 		bc.eventManager.close()
-		bc.eventManager, err = newMapEventManager[K, V](namedMap, *bc, bc.session)
+		bc.eventManager, err = newMapEventManager[K, V](namedMap, bc, bc.session)
 		if err != nil {
 			return err
 		}
+	} else {
+		bc.session.debugConnection("re-registering listeners")
+		bc.session.mapMutex.Lock()
+		defer bc.session.mapMutex.Unlock()
+
+		// save the cache names
+		cacheNames := make([]string, 0)
+		for c := range bc.session.cacheIDMap {
+			cacheNames = append(cacheNames, c)
+		}
+
+		err2 := bc.session.ensureConnection()
+		if err2 != nil {
+			return err2
+		}
+
+		// re-create the new stream
+		manager, err1 := newStreamManagerV1(bc.session, cacheServiceProtocol)
+		if err1 == nil {
+			bc.session.debugConnection("Before kill old stream managed")
+			for k, v := range bc.filterIDToGroupV1 {
+				bc.session.debugConnection("filterID:", k, "Group:", v)
+			}
+			// save the stream manager for a successful V1 client connection
+			bc.session.v1StreamManagerCache = manager
+			bc.session.debugConnection("reconnected stream manager for caches", cacheNames, "manager", manager)
+			bc.session.cacheIDMapMutex.Lock()
+
+			// reset the filters for V1
+			bc.keyListenersV1 = make(map[K]*listenerGroupV1[K, V], 0)
+			bc.filterListenersV1 = make(map[filters.Filter]*listenerGroupV1[K, V], 0)
+			bc.filterIDToGroupV1 = make(map[int64]*listenerGroupV1[K, V], 0)
+
+			// re-ensure all the caches as the connected has gone and so has the gRPC Proxy
+			for _, c := range cacheNames {
+				cacheID, err3 := bc.session.v1StreamManagerCache.ensureCache(context.Background(), c)
+				if err3 != nil {
+					// unrecoverable
+					bc.session.Close()
+					bc.session.cacheIDMapMutex.Unlock()
+					return err3
+				}
+				bc.session.debugConnection("re-ensureCache cacheId=", cacheID, "for cache", c)
+			}
+		} else {
+			bc.session.cacheIDMapMutex.Unlock()
+			return fmt.Errorf("unable to re-stablish v1 stream: %v", err1)
+		}
 	}
+
+	bc.session.cacheIDMapMutex.Unlock()
 
 	// re-register key listeners
 	for k, save := range keyListeners {
@@ -1145,7 +1194,6 @@ func eventTypeFromID(id int32) MapEventType {
 	case 3:
 		return EntryDeleted
 	default:
-		fmt.Printf("Unknown event id %s", string(id))
-		return ""
+		return "Zero"
 	}
 }

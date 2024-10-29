@@ -20,12 +20,12 @@ var _ NamedCache[string, string] = &NamedCacheClient[string, string]{}
 // The type parameters are K = type of the key and V= type of the value.
 type NamedCacheClient[K comparable, V any] struct {
 	NamedCache[K, V]
-	baseClient[K, V]
+	*baseClient[K, V]
 	namedCacheReconnectListener[K, V]
 }
 
 func (nc *NamedCacheClient[K, V]) getBaseClient() *baseClient[K, V] { // nolint
-	return &nc.baseClient
+	return nc.baseClient
 }
 
 // GetCacheName returns the cache name of the [NamedCache].
@@ -106,13 +106,13 @@ func (nc *NamedCacheClient[K, V]) AddKeyListenerLite(ctx context.Context, listen
 // Clear removes all mappings from this [NamedCache]. This operation is observable and will
 // trigger any registered events.
 func (nc *NamedCacheClient[K, V]) Clear(ctx context.Context) error {
-	return executeClear[K, V](ctx, &nc.baseClient)
+	return executeClear[K, V](ctx, nc.baseClient)
 }
 
 // Truncate removes all mappings from this [NamedCache].
 // Note: the removal of entries caused by this truncate operation will not be observable.
 func (nc *NamedCacheClient[K, V]) Truncate(ctx context.Context) error {
-	return executeTruncate[K, V](ctx, &nc.baseClient)
+	return executeTruncate[K, V](ctx, nc.baseClient)
 }
 
 // Destroy releases and destroys this instance of [NamedCache].
@@ -122,7 +122,7 @@ func (nc *NamedCacheClient[K, V]) Truncate(ctx context.Context) error {
 // internal resources will be released.
 // Note: the removal of entries caused by this operation will not be observable.
 func (nc *NamedCacheClient[K, V]) Destroy(ctx context.Context) error {
-	bc := &nc.baseClient
+	bc := nc.baseClient
 	s := bc.session
 
 	// protect updates to maps
@@ -172,7 +172,7 @@ func (nc *NamedCacheClient[K, V]) Release() {
 		}
 	}
 
-	executeRelease[K, V](&nc.baseClient, nc.NamedCache)
+	executeRelease[K, V](nc.baseClient, nc.NamedCache)
 
 	// remove the NamedCache from the session.cache map
 	delete(s.caches, nc.Name())
@@ -202,7 +202,7 @@ func (nc *NamedCacheClient[K, V]) Release() {
 //	   log.Fatal(err)
 //	}
 func (nc *NamedCacheClient[K, V]) ContainsKey(ctx context.Context, key K) (bool, error) {
-	return executeContainsKey(ctx, &nc.baseClient, key)
+	return executeContainsKey(ctx, nc.baseClient, key)
 }
 
 // ContainsValue returns true if this [NamedCache] contains a mapping for the specified value.
@@ -219,7 +219,7 @@ func (nc *NamedCacheClient[K, V]) ContainsKey(ctx context.Context, key K) (bool,
 //	   log.Fatal(err)
 //	}
 func (nc *NamedCacheClient[K, V]) ContainsValue(ctx context.Context, value V) (bool, error) {
-	return executeContainsValue(ctx, &nc.baseClient, value)
+	return executeContainsValue(ctx, nc.baseClient, value)
 }
 
 // ContainsEntry returns true if this [NamedCache] contains a mapping for the specified key and value.
@@ -236,12 +236,12 @@ func (nc *NamedCacheClient[K, V]) ContainsValue(ctx context.Context, value V) (b
 //	   log.Fatal(err)
 //	}
 func (nc *NamedCacheClient[K, V]) ContainsEntry(ctx context.Context, key K, value V) (bool, error) {
-	return executeContainsEntry(ctx, &nc.baseClient, key, value)
+	return executeContainsEntry(ctx, nc.baseClient, key, value)
 }
 
 // IsEmpty returns true if this [NamedCache] contains no mappings.
 func (nc *NamedCacheClient[K, V]) IsEmpty(ctx context.Context) (bool, error) {
-	return executeIsEmpty(ctx, &nc.baseClient)
+	return executeIsEmpty(ctx, nc.baseClient)
 }
 
 // EntrySetFilter returns a channel from which entries satisfying the specified filter can be obtained.
@@ -264,7 +264,7 @@ func (nc *NamedCacheClient[K, V]) IsEmpty(ctx context.Context) (bool, error) {
 //	    }
 //	}
 func (nc *NamedCacheClient[K, V]) EntrySetFilter(ctx context.Context, fltr filters.Filter) <-chan *StreamedEntry[K, V] {
-	return executeEntrySetFilter(ctx, &nc.baseClient, fltr)
+	return executeEntrySetFilter(ctx, nc.baseClient, fltr)
 }
 
 // EntrySet returns a channel from which all entries can be obtained.
@@ -288,7 +288,7 @@ func (nc *NamedCacheClient[K, V]) EntrySetFilter(ctx context.Context, fltr filte
 //	    }
 //	}
 func (nc *NamedCacheClient[K, V]) EntrySet(ctx context.Context) <-chan *StreamedEntry[K, V] {
-	return executeEntrySet[K, V](ctx, &nc.baseClient)
+	return executeEntrySet[K, V](ctx, nc.baseClient)
 }
 
 // Get returns the value to which the specified key is mapped. V will be nil
@@ -309,7 +309,7 @@ func (nc *NamedCacheClient[K, V]) EntrySet(ctx context.Context) <-chan *Streamed
 //	    fmt.Println("No person found")
 //	}
 func (nc *NamedCacheClient[K, V]) Get(ctx context.Context, key K) (*V, error) {
-	return executeGet(ctx, &nc.baseClient, key)
+	return executeGet(ctx, nc.baseClient, key)
 }
 
 // GetAll returns a channel from which entries satisfying the specified filter can be obtained.
@@ -332,13 +332,13 @@ func (nc *NamedCacheClient[K, V]) Get(ctx context.Context, key K) (*V, error) {
 //	    }
 //	}
 func (nc *NamedCacheClient[K, V]) GetAll(ctx context.Context, keys []K) <-chan *StreamedEntry[K, V] {
-	return executeGetAll[K, V](ctx, &nc.baseClient, keys)
+	return executeGetAll[K, V](ctx, nc.baseClient, keys)
 }
 
 // GetOrDefault will return the value mapped to the specified key,
 // or if there is no mapping, it will return the specified default.
 func (nc *NamedCacheClient[K, V]) GetOrDefault(ctx context.Context, key K, def V) (*V, error) {
-	return executeGetOrDefault(ctx, &nc.baseClient, key, def)
+	return executeGetOrDefault(ctx, nc.baseClient, key, def)
 }
 
 // KeySetFilter returns a channel from which keys of the entries that satisfy the filter can be obtained.
@@ -361,7 +361,7 @@ func (nc *NamedCacheClient[K, V]) GetOrDefault(ctx context.Context, key K, def V
 //	    }
 //	}
 func (nc *NamedCacheClient[K, V]) KeySetFilter(ctx context.Context, fltr filters.Filter) <-chan *StreamedKey[K] {
-	return executeKeySetFilter(ctx, &nc.baseClient, fltr)
+	return executeKeySetFilter(ctx, nc.baseClient, fltr)
 }
 
 // KeySet returns a channel from which keys of all entries can be obtained.
@@ -385,7 +385,7 @@ func (nc *NamedCacheClient[K, V]) KeySetFilter(ctx context.Context, fltr filters
 //	    }
 //	}
 func (nc *NamedCacheClient[K, V]) KeySet(ctx context.Context) <-chan *StreamedKey[K] {
-	return executeKeySet[K, V](ctx, &nc.baseClient)
+	return executeKeySet[K, V](ctx, nc.baseClient)
 }
 
 // Name returns the name of the [NamedCache]].
@@ -413,7 +413,7 @@ func (nc *NamedCacheClient[K, V]) Name() string {
 //	    log.Fatal(err)
 //	}
 func (nc *NamedCacheClient[K, V]) PutAll(ctx context.Context, entries map[K]V) error {
-	return executePutAll(ctx, &nc.baseClient, entries, 0)
+	return executePutAll(ctx, nc.baseClient, entries, 0)
 }
 
 // PutAllWithExpiry copies all the mappings from the specified map to this [NamedCache] and sets the ttl for each entry.
@@ -436,19 +436,19 @@ func (nc *NamedCacheClient[K, V]) PutAll(ctx context.Context, entries map[K]V) e
 //	    log.Fatal(err)
 //	}
 func (nc *NamedCacheClient[K, V]) PutAllWithExpiry(ctx context.Context, entries map[K]V, ttl time.Duration) error {
-	return executePutAll(ctx, &nc.baseClient, entries, ttl)
+	return executePutAll(ctx, nc.baseClient, entries, ttl)
 }
 
 // PutIfAbsent adds the specified mapping if the key is not already associated with a value in the [NamedCache]
 // and returns nil, else returns the current value.
 func (nc *NamedCacheClient[K, V]) PutIfAbsent(ctx context.Context, key K, value V) (*V, error) {
-	return executePutIfAbsent(ctx, &nc.baseClient, key, value)
+	return executePutIfAbsent(ctx, nc.baseClient, key, value)
 }
 
 // Put associates the specified value with the specified key returning the previously
 // mapped value, if any. V will be nil if there was no previous value.
 func (nc *NamedCacheClient[K, V]) Put(ctx context.Context, key K, value V) (*V, error) {
-	return executePutWithExpiry(ctx, &nc.baseClient, key, value, nc.baseClient.cacheOpts.DefaultExpiry)
+	return executePutWithExpiry(ctx, nc.baseClient, key, value, nc.baseClient.cacheOpts.DefaultExpiry)
 }
 
 // PutWithExpiry associates the specified value with the specified key. If the [NamedCache]
@@ -458,7 +458,7 @@ func (nc *NamedCacheClient[K, V]) Put(ctx context.Context, key K, value V) (*V, 
 // for the cache entry.  If coherence.ExpiryNever < ttl < 1 millisecond,
 // ttl is set to 1 millisecond. V will be nil if there was no previous value.
 func (nc *NamedCacheClient[K, V]) PutWithExpiry(ctx context.Context, key K, value V, ttl time.Duration) (*V, error) {
-	return executePutWithExpiry(ctx, &nc.baseClient, key, value, ttl)
+	return executePutWithExpiry(ctx, nc.baseClient, key, value, ttl)
 }
 
 // Remove removes the mapping for a key from this [NamedCache] if it is present and
@@ -480,7 +480,7 @@ func (nc *NamedCacheClient[K, V]) PutWithExpiry(ctx context.Context, key K, valu
 //	    fmt.Println("Previous person was", *oldValue)
 //	}
 func (nc *NamedCacheClient[K, V]) Remove(ctx context.Context, key K) (*V, error) {
-	return executeRemove(ctx, &nc.baseClient, key)
+	return executeRemove(ctx, nc.baseClient, key)
 }
 
 // RemoveLifecycleListener removes the lifecycle listener that was previously registered to receive events.
@@ -520,19 +520,19 @@ func (nc *NamedCacheClient[K, V]) RemoveListener(ctx context.Context, listener M
 // RemoveMapping removes the entry for the specified key only if it is currently
 // mapped to the specified value. Returns true if the entry was removed.
 func (nc *NamedCacheClient[K, V]) RemoveMapping(ctx context.Context, key K, value V) (bool, error) {
-	return executeRemoveMapping(ctx, &nc.baseClient, key, value)
+	return executeRemoveMapping(ctx, nc.baseClient, key, value)
 }
 
 // Replace replaces the entry for the specified key only if it is
 // currently mapped to some value.
 func (nc *NamedCacheClient[K, V]) Replace(ctx context.Context, key K, value V) (*V, error) {
-	return executeReplace(ctx, &nc.baseClient, key, value)
+	return executeReplace(ctx, nc.baseClient, key, value)
 }
 
 // ReplaceMapping replaces the entry for the specified key only if it is
 // currently mapped to some value. Returns true if the value was replaced.
 func (nc *NamedCacheClient[K, V]) ReplaceMapping(ctx context.Context, key K, prevValue V, newValue V) (bool, error) {
-	return executeReplaceMapping(ctx, &nc.baseClient, key, prevValue, newValue)
+	return executeReplaceMapping(ctx, nc.baseClient, key, prevValue, newValue)
 }
 
 // GetSession returns the session.
@@ -542,7 +542,7 @@ func (nc *NamedCacheClient[K, V]) GetSession() *Session {
 
 // Size returns the number of mappings contained within this [NamedCache].
 func (nc *NamedCacheClient[K, V]) Size(ctx context.Context) (int, error) {
-	return executeSize(ctx, &nc.baseClient)
+	return executeSize(ctx, nc.baseClient)
 }
 
 // ValuesFilter returns a view of filtered values contained in this [NamedCache].
@@ -565,7 +565,7 @@ func (nc *NamedCacheClient[K, V]) Size(ctx context.Context) (int, error) {
 //	    }
 //	}
 func (nc *NamedCacheClient[K, V]) ValuesFilter(ctx context.Context, fltr filters.Filter) <-chan *StreamedValue[V] {
-	return executeValues(ctx, &nc.baseClient, fltr)
+	return executeValues(ctx, nc.baseClient, fltr)
 }
 
 // Values returns a view of all values contained in this [NamedCache].
@@ -589,7 +589,7 @@ func (nc *NamedCacheClient[K, V]) ValuesFilter(ctx context.Context, fltr filters
 //	    }
 //	}
 func (nc *NamedCacheClient[K, V]) Values(ctx context.Context) <-chan *StreamedValue[V] {
-	return executeValuesNoFilter[K, V](ctx, &nc.baseClient)
+	return executeValuesNoFilter[K, V](ctx, nc.baseClient)
 }
 
 // IsReady returns whether this [NamedCache] is ready to be used.
@@ -598,7 +598,7 @@ func (nc *NamedCacheClient[K, V]) Values(ctx context.Context) <-chan *StreamedVa
 // storage-enabled members.
 // If it is not supported by the gRPC proxy, an error will be returned.
 func (nc *NamedCacheClient[K, V]) IsReady(ctx context.Context) (bool, error) {
-	return executeIsReady[K, V](ctx, &nc.baseClient)
+	return executeIsReady[K, V](ctx, nc.baseClient)
 }
 
 // GetNearCacheStats returns the [CacheStats] for a near cache for a [NamedMap].
@@ -727,7 +727,7 @@ func newNamedCacheReconnectListener[K comparable, V any](nc NamedCacheClient[K, 
 	listener.listener.OnReconnected(func(_ SessionLifecycleEvent) {
 		// re-register listeners for the NamedCache
 		namedMap := convertNamedCacheClient[K, V](&nc)
-		if err := reRegisterListeners[K, V](context.Background(), &namedMap, &nc.baseClient); err != nil {
+		if err := reRegisterListeners[K, V](context.Background(), &namedMap, nc.baseClient); err != nil {
 			log.Println(err)
 		}
 	})

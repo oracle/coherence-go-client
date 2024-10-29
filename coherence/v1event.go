@@ -87,6 +87,7 @@ func makeFilterListenerGroupV1[K comparable, V any](streamManager *streamManager
 	group.postSubscribe = func() {
 		bc.filterListenersV1[filterLocal] = group
 		bc.filterIDToGroupV1[group.filterID] = group
+		bc.session.debugConnection("added filter ID:", group.filterID, "to group", group)
 	}
 	group.postUnsubscribe = func() {
 		delete(bc.filterListenersV1, filterLocal)
@@ -107,6 +108,7 @@ func addKeyListenerInternalV1[K comparable, V any](ctx context.Context, bc *base
 		if err != nil {
 			return err
 		}
+
 		bc.keyListenersV1[key] = groupInner
 		group = groupInner
 	}

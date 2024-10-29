@@ -39,8 +39,8 @@ const (
 	// envSessionDebug enables session debug messages to be displayed.
 	envSessionDebug = "COHERENCE_SESSION_DEBUG"
 
-	// envGrpcV1Debug enables gRPCV1 debug messages to be displayed.
-	envGrpcV1Debug = "COHERENCE_GRPCV1_DEBUG"
+	// envMessageDebug enables message debug messages to be displayed.
+	envMessageDebug = "COHERENCE_MESSAGE_DEBUG"
 
 	// envForceGrpcV0 forced gRPC v0 protocol to be used respective if the cluster supports v1+.
 	envForceGrpcV0 = "COHERENCE_FORCE_GRPCV0"
@@ -688,7 +688,7 @@ func executeGetAll[K comparable, V any](ctx context.Context, bc *baseClient[K, V
 				nearCache.Put(*key, *value)
 			}
 
-			ch <- &StreamedEntry[K, V]{Key: *key, Value: *value}
+			ch <- makeStreamedEntry[K, V](key, value, nil)
 		}
 	}()
 
@@ -710,6 +710,12 @@ func executeGetAllV1[K comparable, V any](ctx context.Context, bc *baseClient[K,
 	)
 
 	for v := range chGetAll {
+		if v.Err != nil {
+			ch <- &StreamedEntry[K, V]{Err: v.Err}
+			close(ch)
+			return
+		}
+
 		// deserialize key and value
 		if key, err = bc.keySerializer.Deserialize(v.Key); err != nil {
 			ch <- &StreamedEntry[K, V]{Err: err}
@@ -727,7 +733,7 @@ func executeGetAllV1[K comparable, V any](ctx context.Context, bc *baseClient[K,
 			nearCache.Put(*key, *value)
 		}
 
-		ch <- &StreamedEntry[K, V]{Key: *key, Value: *value}
+		ch <- makeStreamedEntry[K, V](key, value, nil)
 	}
 }
 
@@ -801,6 +807,12 @@ func getStreamedEntries[K comparable, V any](bc *baseClient[K, V], chResponse ch
 	)
 
 	for v := range ch {
+		if v.Err != nil {
+			chResponse <- &StreamedEntry[K, V]{Err: v.Err}
+			close(chResponse)
+			return
+		}
+
 		// deserialize key and value
 		if key, err = bc.keySerializer.Deserialize(v.Key); err != nil {
 			chResponse <- &StreamedEntry[K, V]{Err: err}
@@ -813,7 +825,7 @@ func getStreamedEntries[K comparable, V any](bc *baseClient[K, V], chResponse ch
 			return
 		}
 
-		chResponse <- &StreamedEntry[K, V]{Key: *key, Value: *value}
+		chResponse <- makeStreamedEntry[K, V](key, value, nil)
 	}
 }
 
@@ -824,6 +836,11 @@ func getStreamedKeys[K comparable, V any](bc *baseClient[K, V], chResponse chan 
 	)
 
 	for v := range ch {
+		if v.Err != nil {
+			chResponse <- &StreamedKey[K]{Err: v.Err}
+			close(chResponse)
+			return
+		}
 		// deserialize key
 		if key, err = bc.keySerializer.Deserialize(v.Key); err != nil {
 			chResponse <- &StreamedKey[K]{Err: err}
@@ -844,6 +861,11 @@ func getStreamedEntry[K comparable, V any, R any](bc *baseClient[K, V], chRespon
 	)
 
 	for v := range ch {
+		if v.Err != nil {
+			chResponse <- &StreamedEntry[K, R]{Err: v.Err}
+			return
+		}
+
 		// deserialize key and value
 		resultSerializer := NewSerializer[R](bc.format)
 		if value, err = resultSerializer.Deserialize(v.Value); err != nil {
@@ -857,8 +879,19 @@ func getStreamedEntry[K comparable, V any, R any](bc *baseClient[K, V], chRespon
 			return
 		}
 
-		chResponse <- &StreamedEntry[K, R]{Key: *key, Value: *value}
+		chResponse <- makeStreamedEntry[K, R](key, value, err)
 	}
+}
+
+func makeStreamedEntry[K comparable, V any](key *K, value *V, err error) *StreamedEntry[K, V] {
+	streamedEntry := StreamedEntry[K, V]{Err: err}
+	if key != nil {
+		streamedEntry.Key = *key
+	}
+	if value != nil {
+		streamedEntry.Value = *value
+	}
+	return &streamedEntry
 }
 
 func getStreamedValuesWithEntry[K comparable, V any, R any](bc *baseClient[K, V], chResponse chan *StreamedValue[R], ch <-chan BinaryKeyAndValue) {
@@ -868,6 +901,12 @@ func getStreamedValuesWithEntry[K comparable, V any, R any](bc *baseClient[K, V]
 	)
 
 	for v := range ch {
+		if v.Err != nil {
+			chResponse <- &StreamedValue[R]{Err: v.Err}
+			close(chResponse)
+			return
+		}
+
 		// deserialize the result only
 		resultSerializer := NewSerializer[R](bc.format)
 		if value, err = resultSerializer.Deserialize(v.Value); err != nil {
@@ -891,6 +930,12 @@ func getStreamedValuesWithValue[K comparable, V any, R any](bc *baseClient[K, V]
 	)
 
 	for v := range ch {
+		if v.Err != nil {
+			chResponse <- &StreamedValue[R]{Err: v.Err}
+			close(chResponse)
+			return
+		}
+
 		// deserialize the result only
 		resultSerializer := NewSerializer[R](bc.format)
 		if value, err = resultSerializer.Deserialize(v.Value); err != nil {
@@ -1178,7 +1223,7 @@ func executeInvokeAllFilterOrKeys[K comparable, V any, R any](ctx context.Contex
 				return
 			}
 
-			ch <- &StreamedEntry[K, R]{Key: *key, Value: *response}
+			ch <- makeStreamedEntry(key, response, nil)
 		}
 	}()
 
@@ -1871,7 +1916,7 @@ func executeEntrySetFilter[K comparable, V any](ctx context.Context, bc *baseCli
 				return
 			}
 
-			ch <- &StreamedEntry[K, V]{Key: *key, Value: *value}
+			ch <- makeStreamedEntry[K, V](key, value, nil)
 		}
 	}()
 
@@ -2027,6 +2072,10 @@ func (bc *baseClient[K, V]) generateMapEvent(client interface{}, eventResponse *
 			}
 		}
 		for _, id := range eventResponse.FilterIds {
+			bc.session.debugConnection("event for filterID:", id)
+			for k, v := range bc.filterIDToGroupV1 {
+				bc.session.debugConnection("filterID:", k, "Group:", v)
+			}
 			filterGroup, groupPresent := bc.filterIDToGroupV1[id]
 			if groupPresent {
 				filterGroup.notify(receivedMapEvent)

@@ -54,7 +54,6 @@ func TestBasicCrudOperationsVariousTypes(t *testing.T) {
 		session *coherence.Session
 	)
 	t.Setenv("COHERENCE_SESSION_DEBUG", "true")
-	t.Setenv("COHERENCE_GRPCV1_DEBUG", "true")
 
 	session, err = utils.GetSession()
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
@@ -166,25 +165,57 @@ func TestBasicCrudOperationsVariousTypesWithStructKey(t *testing.T) {
 	utils.RunKeyValueTest[AccountKey, Account](g, getNewNamedCache[AccountKey, Account](g, session, "key-cache"), account.GetKey(), account)
 }
 
-// getNewNamedMap returns a map for a session and asserts err is nil.
-func getNewNamedMap[K comparable, V any](g *gomega.WithT, session *coherence.Session, name string) coherence.NamedMap[K, V] {
-	namedMap, err := coherence.GetNamedMap[K, V](session, name)
+// TestInvocationTimeoutAndTruncate tests running an entry processor with a timeout and then truncate caching.
+func TestInvocationTimeout(t *testing.T) {
+	var (
+		g       = gomega.NewWithT(t)
+		err     error
+		session *coherence.Session
+	)
+
+	//t.Skip("Skip until issue sorted out")
+	session, err = utils.GetSession()
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-	return namedMap
+	defer session.Close()
+
+	RunTestInvocationTimeout(g, getNewNamedMap[int, utils.Person](g, session, "map-timeout-test"))
+	RunTestInvocationTimeout(g, getNewNamedCache[int, utils.Person](g, session, "cache-timeout-test"))
 }
 
-// getNewNamedCache returns a cache for a session and asserts err is nil.
-func getNewNamedCache[K comparable, V any](g *gomega.WithT, session *coherence.Session, name string) coherence.NamedCache[K, V] {
-	namedCache, err := coherence.GetNamedCache[K, V](session, name)
-	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-	return namedCache
+type LongRunningProcessor struct {
+	Type string `json:"@class,omitempty"`
+	Name string `json:"name"`
+}
+
+func (p *LongRunningProcessor) AndThen(next processors.Processor) processors.Processor {
+	return next
+}
+
+func (p *LongRunningProcessor) When(_ filters.Filter) processors.Processor {
+	return nil
+}
+
+func RunTestInvocationTimeout(g *gomega.WithT, namedMap coherence.NamedMap[int, utils.Person]) {
+	// populate the cache
+	populatePeople(g, namedMap)
+
+	processor := LongRunningProcessor{Type: "test.longEntryProcessor", Name: "LongRunningProcessor"}
+	ctxNew, cancel := context.WithTimeout(ctx, time.Duration(10)*time.Second)
+	defer cancel()
+
+	// run a processor to increment the age of people with key 1 and 2
+	ch := coherence.InvokeAllKeys[int, utils.Person, int](ctxNew, namedMap, []int{1}, &processor)
+
+	for se := range ch {
+		// we should get an error due to timeout
+		g.Expect(se.Err).Should(gomega.HaveOccurred())
+	}
 }
 
 // TestBasicOperationsAgainstMapAndCache runs all tests against NamedMap and NamedCache.
 func TestBasicOperationsAgainstMapAndCache(t *testing.T) {
 	g := gomega.NewWithT(t)
 	t.Setenv("COHERENCE_SESSION_DEBUG", "true")
-	t.Setenv("COHERENCE_GRPCV1_DEBUG", "true")
 
 	session, err := utils.GetSession()
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
@@ -249,6 +280,20 @@ func TestBasicOperationsAgainstMapAndCache(t *testing.T) {
 			tc.test(t, tc.nameMap)
 		})
 	}
+}
+
+// getNewNamedMap returns a map for a session and asserts err is nil.
+func getNewNamedMap[K comparable, V any](g *gomega.WithT, session *coherence.Session, name string) coherence.NamedMap[K, V] {
+	namedMap, err := coherence.GetNamedMap[K, V](session, name)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	return namedMap
+}
+
+// getNewNamedCache returns a cache for a session and asserts err is nil.
+func getNewNamedCache[K comparable, V any](g *gomega.WithT, session *coherence.Session, name string) coherence.NamedCache[K, V] {
+	namedCache, err := coherence.GetNamedCache[K, V](session, name)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	return namedCache
 }
 
 func TestCantSetDefaultExpiryForNamedMap(t *testing.T) {

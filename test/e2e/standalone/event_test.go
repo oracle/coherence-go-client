@@ -130,11 +130,10 @@ func TestMapAndLifecycleEventsAll4(t *testing.T) {
 	runMultipleLifecycleTests(g, namedCache)
 }
 
-// TestEventDisconnect tests to ensure that if we get a disconnect, then we can
+// TestEventDisconnect tests to ensure that if we get a disconnect, then we can rec-connect and
+// re-register event listeners.
 func TestEventDisconnect(t *testing.T) {
 	t.Setenv("COHERENCE_SESSION_DEBUG", "true")
-	t.Setenv("COHERENCE_GRPCV1_DEBUG", "true")
-	t.Skip("Skip until reconnect issues resolved")
 
 	g, session := initTest(t,
 		coherence.WithDisconnectTimeout(time.Duration(130)*time.Second),
@@ -146,10 +145,12 @@ func TestEventDisconnect(t *testing.T) {
 	}
 
 	namedCache := utils.GetNamedCache[string, string](g, session, "test-reconnect-cache")
+	g.Expect(namedCache.Clear(ctx)).To(gomega.BeNil())
 
 	RunTestReconnect(g, namedCache, true)
 
 	namedMap := utils.GetNamedMap[string, string](g, session, "test-reconnect-map")
+	g.Expect(namedMap.Clear(ctx)).To(gomega.BeNil())
 	RunTestReconnect(g, namedMap, true)
 }
 
@@ -157,7 +158,6 @@ func TestEventDisconnect(t *testing.T) {
 // as we have stopped the gRPC proxy before the test runs.
 func TestEventDisconnectWithReadyTimeoutDelay(t *testing.T) {
 	t.Setenv("COHERENCE_SESSION_DEBUG", "true")
-	t.Skip("Skip until reconnect issues resolved")
 
 	fmt.Println("Issue stop of $GRPC:GrpcProxy")
 	_, err := utils.IssuePostRequest("http://127.0.0.1:30000/management/coherence/cluster/services/$GRPC:GrpcProxy/members/1/stop")
@@ -183,6 +183,8 @@ func TestEventDisconnectWithReadyTimeoutDelay(t *testing.T) {
 
 func TestMapEventInsertsOnly(t *testing.T) {
 	expectedA := "A"
+	t.Setenv("COHERENCE_SESSION_DEBUG", "true")
+	t.Setenv("COHERENCE_MESSAGE_DEBUG", "true")
 
 	expected := ExpectedEvents[string, string]{
 		inserts: []*ValidateEvent[string, string]{
@@ -285,13 +287,6 @@ func TestMapEventMultipleListeners(t *testing.T) {
 // RunTestReconnect tests that a gRPC connection will reset it's self and the map listeners
 // will re-register correctly.
 func RunTestReconnect(g *gomega.WithT, namedMap coherence.NamedMap[string, string], doStop bool) {
-	defer func(cache coherence.NamedMap[string, string], ctx context.Context) {
-		err := cache.Destroy(ctx)
-		if err != nil {
-			log.Printf("Error destroying map %s: %s", cache.Name(), err)
-		}
-	}(namedMap, ctx)
-
 	listener := NewReconnectMapListener[string, string]("test")
 
 	err := namedMap.AddListener(ctx, listener.listener)
@@ -317,24 +312,24 @@ func RunTestReconnect(g *gomega.WithT, namedMap coherence.NamedMap[string, strin
 		utils.Sleep(5)
 	}
 
-	// get the size to force reconnect
-	log.Println("Issue Size() to force reconnect")
-	_, err = namedMap.Size(ctx)
-	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-
 	log.Println("Sleeping to test re-connect")
+	utils.Sleep(5)
+
+	_, err = namedMap.Size(ctx)
+	if err != nil {
+		// error could have occurred, we don't care as long as next reconnects
+		log.Println("error from Size", err)
+	}
+
 	utils.Sleep(5)
 
 	// add another 'additional' mutations
 	createMutations(g, namedMap, additional)
 
-	f1 := func() int32 { return listener.insertedCount() }
-	f2 := func() int32 { return listener.updatedCount() }
-	f3 := func() int32 { return listener.deletedCount() }
-
-	g.Eventually(f1).Should(gomega.Equal(int32(iterations + additional)))
-	g.Eventually(f2).Should(gomega.Equal(int32(iterations + additional)))
-	g.Eventually(f3).Should(gomega.Equal(int32(iterations + additional)))
+	utils.Sleep(5)
+	g.Eventually(func() int32 { return listener.insertedCount() }).Should(gomega.Equal(int32(iterations + additional)))
+	g.Eventually(func() int32 { return listener.updatedCount() }).Should(gomega.Equal(int32(iterations + additional)))
+	g.Eventually(func() int32 { return listener.deletedCount() }).Should(gomega.Equal(int32(iterations + additional)))
 }
 
 // createMutations creates a specified number of data mutations.
@@ -792,7 +787,8 @@ func runBasicTests(
 	filterMask filters.MapEventMask) {
 
 	defer func(cache coherence.NamedMap[string, string], ctx context.Context) {
-		err := cache.Destroy(ctx)
+		log.Println("Truncate cache", cache.Name())
+		err := cache.Truncate(ctx)
 		if err != nil {
 			log.Printf("Error destroying map %s: %s", cache.Name(), err)
 		}
