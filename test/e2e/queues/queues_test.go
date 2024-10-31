@@ -188,23 +188,10 @@ func TestStandardBlockingQueue(t *testing.T) {
 	)
 	t.Skip(skipReason)
 
-	const queueName = "blocking-queue-1"
-
-	// Note: We use two sessions, so we can have a standard and blocking queue with the same name
-	session1, err = utils.GetSession()
-	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	receivingQueue, publishingQueue, session1, session2 := getQueues(g, "blocking-queue-1")
 	defer session1.Close()
-
-	session2, err = utils.GetSession()
-	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	defer session2.Close()
-
-	receivingQueue, err := coherence.GetBlockingNamedQueue[string](context.Background(), session1, queueName)
-	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	defer receivingQueue.Close()
-
-	publishingQueue, err := coherence.GetNamedQueue[string](context.Background(), session2, queueName)
-	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 	validateQueueSize(g, publishingQueue, 0)
 
@@ -239,6 +226,23 @@ func TestStandardBlockingQueue(t *testing.T) {
 	validateQueueSize(g, publishingQueue, 0)
 }
 
+func getQueues(g *gomega.WithT, queueName string) (coherence.NamedBlockingQueue[string], coherence.NamedQueue[string],
+	*coherence.Session, *coherence.Session) {
+	session1, err := utils.GetSession()
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+
+	session2, err := utils.GetSession()
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+
+	receivingQueue, err := coherence.GetBlockingNamedQueue[string](context.Background(), session1, queueName)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+
+	publishingQueue, err := coherence.GetNamedQueue[string](context.Background(), session2, queueName)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+
+	return receivingQueue, publishingQueue, session1, session2
+}
+
 func TestStandardBlockingQueueWithGoRoutines(t *testing.T) {
 	var (
 		g        = gomega.NewWithT(t)
@@ -250,23 +254,10 @@ func TestStandardBlockingQueueWithGoRoutines(t *testing.T) {
 
 	t.Skip(skipReason)
 
-	const queueName = "blocking-queue-2"
-
-	// Note: We use two sessions, so we can have a standard and blocking queue with the same name
-	session1, err = utils.GetSession()
-	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	receivingQueue, publishingQueue, session1, session2 := getQueues(g, "blocking-queue-2")
 	defer session1.Close()
-
-	session2, err = utils.GetSession()
-	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	defer session2.Close()
-
-	receivingQueue, err := coherence.GetBlockingNamedQueue[string](context.Background(), session1, queueName)
-	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	defer receivingQueue.Close()
-
-	publishingQueue, err := coherence.GetNamedQueue[string](context.Background(), session2, queueName)
-	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 	validateQueueSize(g, publishingQueue, 0)
 
