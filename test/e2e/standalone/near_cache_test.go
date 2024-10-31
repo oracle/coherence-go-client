@@ -698,7 +698,7 @@ func RunTestNearCacheReplaces(t *testing.T, namedMap coherence.NamedMap[int, uti
 
 	hits := namedMap.GetNearCacheStats().GetCacheHits()
 
-	// sleep enough time for near cache to be update
+	// sleep enough time for near cache to be updated
 	utils.Sleep(5)
 
 	// execute get from near cache and it should be there
