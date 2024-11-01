@@ -33,6 +33,13 @@ jobs:
       with:
         fetch-depth: 0
 
+    - name: Work Around Restart Bug
+      shell: bash
+      run: |
+        export NEEDRESTART_MODE=l
+        echo "See https://github.com/actions/runner-images/issues/9959#issuecomment-2149915104"
+        sudo apt-get autopurge -y needrestart
+
     - name: Set up JDK
       uses: actions/setup-java@v4
       with:
@@ -58,12 +65,6 @@ jobs:
       uses: actions/setup-go@v5
       with:
         go-version: '${{ matrix.go-version }}'
-
-    - name: Work Around Restart Bug
-      shell: bash
-      run: |
-        echo "See https://github.com/actions/runner-images/issues/9959"
-        sudo apt-get autopurge -y needrestart
 
     - name: Get Docker Images
       shell: bash
