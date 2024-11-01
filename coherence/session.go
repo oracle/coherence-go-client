@@ -473,7 +473,7 @@ func (s *Session) ensureConnection() error {
 	tlsOpt, err := s.sessOpts.createTLSOption()
 	if err != nil {
 		errString := fmt.Sprintf("error while setting up channel credentials: %v", err)
-		return fmt.Errorf(errString)
+		return errors.New(errString)
 	}
 	s.dialOptions = append(s.dialOptions, tlsOpt)
 

@@ -99,7 +99,7 @@ func RunTest(m *testing.M, grpcPort, httpPort, restPort int, startup bool) {
 			err = WaitForHTTPBalancedServices(myContext.RestURL+"/balanced", 120)
 		}
 		if err != nil {
-			fmt.Printf("Unable to wait for balanced services: %s\n" + err.Error())
+			fmt.Printf("Unable to wait for balanced services: %v\n", err)
 			exitCode = 1
 		} else {
 			exitCode = m.Run()

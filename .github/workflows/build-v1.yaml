@@ -69,11 +69,6 @@ jobs:
       with:
         go-version: '${{ matrix.go-version }}'
 
-    - name: Copyright Check
-      shell: bash
-      run: |
-        make copyright
-
     - name: gRPC V1 Base Tests
       shell: bash
       run: |

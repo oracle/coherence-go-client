@@ -757,7 +757,7 @@ func TestAggregate(t *testing.T) {
 		ctx    = context.Background()
 		cache  = "aggregate"
 		err    error
-		count  = 10
+		count  int32 = 10
 		result *[]byte
 	)
 
@@ -768,8 +768,9 @@ func TestAggregate(t *testing.T) {
 
 	value := ensureSerializedInt32(g, int32(1))
 
-	for i := 0; i < count; i++ {
-		key := ensureSerializedInt32(g, int32(i))
+	var i int32
+	for i = 0; i < count; i++ {
+		key := ensureSerializedInt32(g, i)
 		_, err = coherence.TestPut(ctx, session, cache, key, value, 0)
 		g.Expect(err).Should(gomega.BeNil())
 	}
@@ -805,10 +806,11 @@ func TestAggregate(t *testing.T) {
 
 }
 
-func makeInt32Keys(g *gomega.WithT, count int) [][]byte {
+func makeInt32Keys(g *gomega.WithT, count int32) [][]byte {
 	keys := make([][]byte, count)
-	for i := 0; i < count; i++ {
-		keys[i] = ensureSerializedInt32(g, int32(i+1))
+	var i int32
+	for i = 0; i < count; i++ {
+		keys[i] = ensureSerializedInt32(g, i+1)
 	}
 	return keys
 }
@@ -846,9 +848,9 @@ func TestGoRoutines(t *testing.T) {
 func runInsertTest(g *gomega.WithT, session *coherence.Session, cache string) {
 	var (
 		err   error
-		ctx   = context.Background()
-		value = ensureSerializedString(g, "value")
-		count = 1_000
+		ctx         = context.Background()
+		value       = ensureSerializedString(g, "value")
+		count int32 = 1_000
 	)
 
 	_ = ensureCache(g, session, cache)
@@ -856,8 +858,9 @@ func runInsertTest(g *gomega.WithT, session *coherence.Session, cache string) {
 	err = coherence.TestClearCache(ctx, session, cache)
 	g.Expect(err).Should(gomega.BeNil())
 
-	for i := 0; i < count; i++ {
-		key := ensureSerializedInt32(g, int32(i))
+	var i int32
+	for i = 0; i < count; i++ {
+		key := ensureSerializedInt32(g, i)
 		_, err = coherence.TestPut(ctx, session, cache, key, value, 0)
 		g.Expect(err).Should(gomega.BeNil())
 	}
@@ -947,13 +950,14 @@ func ensureCache(g *gomega.WithT, session *coherence.Session, cache string) *int
 	return cacheID
 }
 
-func generateEntries(g *gomega.WithT, count int) []*pb1.BinaryKeyAndValue {
+func generateEntries(g *gomega.WithT, count int32) []*pb1.BinaryKeyAndValue {
 	entries := make([]*pb1.BinaryKeyAndValue, 0)
 
 	// populate the entries
-	for i := 1; i <= count; i++ {
+	var i int32
+	for i = 1; i <= count; i++ {
 		entries = append(entries, &pb1.BinaryKeyAndValue{
-			Key:   ensureSerializedInt32(g, int32(i)),
+			Key:   ensureSerializedInt32(g, i),
 			Value: ensureSerializedString(g, fmt.Sprintf("value-%v", i)),
 		})
 	}

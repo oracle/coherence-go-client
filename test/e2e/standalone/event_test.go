@@ -296,8 +296,10 @@ func RunTestReconnect(g *gomega.WithT, namedMap coherence.NamedMap[string, strin
 		_ = namedMap.RemoveListener(ctx, listener.listener)
 	}()
 
-	iterations := 100
-	additional := 10
+	var (
+		iterations int32 = 100
+		additional int32 = 10
+	)
 
 	createMutations(g, namedMap, iterations)
 
@@ -333,10 +335,11 @@ func RunTestReconnect(g *gomega.WithT, namedMap coherence.NamedMap[string, strin
 }
 
 // createMutations creates a specified number of data mutations.
-func createMutations(g *gomega.WithT, namedMap coherence.NamedMap[string, string], iters int) {
+func createMutations(g *gomega.WithT, namedMap coherence.NamedMap[string, string], iters int32) {
 	var err error
 	log.Println("createMutations, iters=", iters)
-	for i := 0; i < iters; i++ {
+	var i int32
+	for i = 0; i < iters; i++ {
 		key := fmt.Sprintf("key-%d", i)
 		value := fmt.Sprintf("value-%d", i)
 		_, err = namedMap.Put(ctx, key, value)
@@ -978,6 +981,7 @@ type ExpectedEvents[K comparable, V any] struct {
 }
 
 func (ee *ExpectedEvents[K, V]) total() int32 {
+	// nolint:gosec
 	return int32(len(ee.inserts) + len(ee.updates) + len(ee.deletes))
 }
 
