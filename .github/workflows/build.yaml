@@ -72,16 +72,6 @@ jobs:
         docker pull gcr.io/distroless/java17
         docker pull gcr.io/distroless/java:11
 
-    - name: Copyright Check
-      shell: bash
-      run: |
-        make copyright
-
-    - name: Golangci
-      shell: bash
-      run: |
-        make golangci
-
     - name: E2E Local Tests
       shell: bash
       run: |

@@ -1,0 +1,40 @@
+# Copyright 2024 Oracle Corporation and/or its affiliates.
+# Licensed under the Universal Permissive License v 1.0 as shown at
+# https://oss.oracle.com/licenses/upl.
+
+# ---------------------------------------------------------------------------
+# Coherence Go Client GitHub Actions CI build - Checks
+# ---------------------------------------------------------------------------
+name: CI - Checks
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - '*'
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      matrix:
+        go-version:
+          - 1.23.x
+
+#   Checkout the source, we need a depth of zero to fetch all of the history otherwise
+#   the copyright check cannot work out the date of the files from Git.
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Copyright Check
+      shell: bash
+      run: |
+        make copyright
+
+    - name: Golangci
+      shell: bash
+      run: |
+        make golangci
