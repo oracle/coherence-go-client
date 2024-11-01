@@ -265,35 +265,7 @@ func TestStandardBlockingQueueWithGoRoutines(t *testing.T) {
 	wg.Add(1)
 
 	// start a go routine to wait for a specific number of entries
-	go func(receive coherence.NamedBlockingQueue[string], count int) {
-		var (
-			err1          error
-			value1        *string
-			start         = time.Now()
-			maxWaitTime   = 30
-			receivedCount = 0
-		)
-
-		defer wg.Done()
-		for {
-			value1, err1 = receive.Poll(time.Duration(2) * time.Second)
-			if err1 == coherence.ErrQueueTimedOut {
-				log.Println("timeout")
-				if time.Since(start) > time.Duration(maxWaitTime)*time.Second {
-					g.Fail(fmt.Sprintf("timeed out after %d seconds", maxWaitTime))
-				}
-				continue
-			}
-			g.Expect(err1).ShouldNot(gomega.HaveOccurred())
-			g.Expect(*value1).To(gomega.Not(gomega.BeNil()))
-			receivedCount++
-			log.Println("received", receivedCount)
-
-			if receivedCount == count {
-				break
-			}
-		}
-	}(receivingQueue, count)
+	go testGoRoutines(g, &wg, receivingQueue, count)
 
 	// sleep for 10 seconds to allow for the Poll() to try a few times
 	time.Sleep(time.Duration(10) * time.Second)
@@ -344,37 +316,7 @@ func TestStandardBlockingQueueCloseOperation(t *testing.T) {
 	count := 100
 	wg.Add(1)
 
-	// start a go routine to wait for a specific number of entries
-	go func(receive coherence.NamedBlockingQueue[string], count int) {
-		var (
-			err1          error
-			value1        *string
-			start         = time.Now()
-			maxWaitTime   = 30
-			receivedCount = 0
-		)
-
-		defer wg.Done()
-		for {
-			value1, err1 = receive.Poll(time.Duration(2) * time.Second)
-			if err1 == coherence.ErrQueueTimedOut {
-				log.Println("timeout")
-				if time.Since(start) > time.Duration(maxWaitTime)*time.Second {
-					g.Fail(fmt.Sprintf("timeed out after %d seconds", maxWaitTime))
-				}
-				continue
-			}
-			g.Expect(err1).ShouldNot(gomega.HaveOccurred())
-			g.Expect(*value1).To(gomega.Not(gomega.BeNil()))
-			receivedCount++
-			log.Println("received", receivedCount)
-
-			if receivedCount == count {
-				log.Println("exiting go routine")
-				break
-			}
-		}
-	}(receivingQueue, count)
+	go testGoRoutines(g, &wg, receivingQueue, count)
 
 	// sleep for 10 seconds to allow for the Poll() to try a few times
 	time.Sleep(time.Duration(5) * time.Second)
@@ -390,6 +332,37 @@ func TestStandardBlockingQueueCloseOperation(t *testing.T) {
 
 	// we should be able to wait for the wg successfully
 	wg.Wait()
+}
+
+func testGoRoutines(g *gomega.WithT, wg *sync.WaitGroup, receive coherence.NamedBlockingQueue[string], count int) {
+	var (
+		err1          error
+		value1        *string
+		start         = time.Now()
+		maxWaitTime   = 30
+		receivedCount = 0
+	)
+
+	defer wg.Done()
+	for {
+		value1, err1 = receive.Poll(time.Duration(2) * time.Second)
+		if err1 == coherence.ErrQueueTimedOut {
+			log.Println("timeout")
+			if time.Since(start) > time.Duration(maxWaitTime)*time.Second {
+				g.Fail(fmt.Sprintf("timeed out after %d seconds", maxWaitTime))
+			}
+			continue
+		}
+		g.Expect(err1).ShouldNot(gomega.HaveOccurred())
+		g.Expect(*value1).To(gomega.Not(gomega.BeNil()))
+		receivedCount++
+		log.Println("received", receivedCount)
+
+		if receivedCount == count {
+			log.Println("exiting go routine")
+			break
+		}
+	}
 }
 
 func TestStandardBlockingQueueMultipleGoRoutines(t *testing.T) {
