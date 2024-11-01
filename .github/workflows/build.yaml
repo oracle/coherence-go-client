@@ -33,38 +33,10 @@ jobs:
       with:
         fetch-depth: 0
 
-      #   This step will free up disc space on the runner by removing
-      #   lots of things that we do not need.
-    - name: disc
-      shell: bash
-      run: |
-        echo "Listing 100 largest packages"
-        dpkg-query -Wf '${Installed-Size}\t${Package}\n' | sort -n | tail -n 100
-        df -h
-        echo "Removing large packages"
-        sudo apt-get remove -y '^dotnet-.*' || true
-        sudo apt-get remove -y '^llvm-.*' || true
-        sudo apt-get remove -y 'monodoc-http' || true
-        sudo apt-get remove -y 'php.*' || true
-        sudo apt-get remove -y azure-cli google-cloud-sdk hhvm google-chrome-stable firefox powershell mono-devel || true
-        sudo apt-get autoremove -y || true
-        sudo apt-get clean
-        df -h
-        echo "Removing large directories"
-        rm -rf /usr/share/dotnet/
-        sudo rm -rf /usr/local/lib/android
-        df -h
-
-    - name: Get Docker Images
-      shell: bash
-      run: |
-        docker pull gcr.io/distroless/java:11
-        uname -a
-
     - name: Set up JDK
       uses: actions/setup-java@v4
       with:
-        java-version: '11'
+        java-version: '17'
         distribution: 'zulu'
 
     - name: Cache Go Modules
@@ -86,6 +58,12 @@ jobs:
       uses: actions/setup-go@v5
       with:
         go-version: '${{ matrix.go-version }}'
+
+    - name: Work Around Restart Bug
+      shell: bash
+      run: |
+        echo "See https://github.com/actions/runner-images/issues/9959"
+        sudo apt-get autopurge -y needrestart
 
     - name: Get Docker Images
       shell: bash
