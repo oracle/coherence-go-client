@@ -42,7 +42,10 @@ SECURE=tlsConfig COHERENCE_IGNORE_INVALID_CERTS_OPTION=true \
   COHERENCE_VERSION=22.06.7 PROFILES=,secure make clean certs generate-proto build-test-images test-e2e-standalone
 
 echo "Coherence CE 24.09"
-COHERENCE_BASE_IMAGE=gcr.io/distroless/java17 PROFILES=,jakarta,-javax COHERENCE_VERSION=24.09 make clean generate-proto build-test-images test-e2e-standalone
+COHERENCE_BASE_IMAGE=gcr.io/distroless/java17 PROFILES=,jakarta,-javax COHERENCE_VERSION=24.09 make clean generate-proto generate-proto-v1 build-test-images test-e2e-standalone
+
+echo "Coherence CE 24.09 with scope"
+COHERENCE_BASE_IMAGE=gcr.io/distroless/java17 COHERENCE_VERSION=24.09 PROFILES=,jakarta,-javax,scope make clean generate-proto generate-proto-v1 build-test-images test-e2e-standalone-scope
 
 echo "Coherence CE 24.09 with queues"
 COHERENCE_BASE_IMAGE=gcr.io/distroless/java17 PROFILES=,jakarta,-javax,queues COHERENCE_VERSION=24.09 make clean generate-proto generate-proto-v1 build-test-images test-e2e-standalone-queues

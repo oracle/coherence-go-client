@@ -510,7 +510,7 @@ func (s *Session) ensureConnection() error {
 			// save the stream manager for a successful V1 client connection
 			s.v1StreamManagerCache = manager
 		} else {
-			s.debug("error connecting to session via v1, falling back to v0", err)
+			s.debug("error connecting to session via v1, falling back to v0", err1)
 		}
 	}
 

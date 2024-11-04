@@ -95,7 +95,7 @@ jobs:
     - uses: actions/upload-artifact@v4
       if: failure()
       with:
-        name: test-output-${{ matrix.go-version }}-${{ matrix.coherenceVersion }}
+        name: test-output-scope-${{ matrix.go-version }}-${{ matrix.coherenceVersion }}
         path: build/_output/test-logs
 
     - name: E2E Local Tests SSL gRPC v1
@@ -114,5 +114,5 @@ jobs:
     - uses: actions/upload-artifact@v4
       if: failure()
       with:
-        name: test-output-${{ matrix.go-version }}-${{ matrix.coherenceVersion }}
+        name: test-output-SSL-${{ matrix.go-version }}-${{ matrix.coherenceVersion }}
         path: build/_output/test-logs

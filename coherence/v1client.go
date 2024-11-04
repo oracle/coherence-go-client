@@ -103,6 +103,7 @@ func (m *streamManagerV1) ensureStream() (*eventStreamV1, error) {
 		grpcStream, err := proxyClient.SubChannel(ctx)
 
 		if err != nil {
+			m.session.debugConnection("error getting SubChannel", err)
 			cancel()
 			return nil, err
 		}
@@ -112,9 +113,11 @@ func (m *streamManagerV1) ensureStream() (*eventStreamV1, error) {
 
 		// generate and send init request
 		initRequest := m.newInitRequest()
+		m.session.debugConnection("initRequest", initRequest)
 
 		err = m.eventStream.grpcStream.Send(initRequest)
 		if err != nil {
+			m.session.debugConnection("error sending initRequest", err)
 			cancel()
 			return nil, err
 		}
@@ -122,6 +125,7 @@ func (m *streamManagerV1) ensureStream() (*eventStreamV1, error) {
 		// we must receive a proxy response
 		proxyResponse, err := m.eventStream.grpcStream.Recv()
 		if err != nil || proxyResponse == nil {
+			m.session.debugConnection("error receiving init response", err)
 			cancel()
 			return nil, err
 		}
@@ -159,7 +163,6 @@ func (m *streamManagerV1) ensureStream() (*eventStreamV1, error) {
 				}
 
 				id := response1.GetId()
-				//response1.GetResponse()
 				if h := response1.GetHeartbeat(); h != nil {
 					m.session.debugConnection("received heartbeat", h)
 				} else {
@@ -216,8 +219,7 @@ func (m *streamManagerV1) processNamedCacheResponse(reqID int64, resp *responseM
 
 		cacheName := m.session.getCacheNameFromCacheID(cacheID)
 		if cacheName == nil {
-			log.Printf("unable to find cache name from cache id %v it may have been released", cacheID)
-			// cache may have already been release
+			log.Printf("unable to find cache name from cache id %v it may have been released or destroyed", cacheID)
 			return
 		}
 
@@ -253,7 +255,7 @@ func (m *streamManagerV1) processNamedCacheResponse(reqID int64, resp *responseM
 
 	m.session.debugConnection("id:", reqID, "process namedCacheResponse:", resp)
 
-	// write the response to the channel for the originating request
+	// received a named cache response, so write the response to the channel for the originating request
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
