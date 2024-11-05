@@ -20,7 +20,6 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	"io"
-	"log"
 	"os"
 	"sync"
 	"time"
@@ -2064,7 +2063,7 @@ func (bc *baseClient[K, V]) generateMapEvent(client interface{}, eventResponse *
 		if eventResponse.Key != nil {
 			key, err := bc.keySerializer.Deserialize(eventResponse.Key)
 			if err != nil {
-				log.Printf("unable to deserialize key from eventResponse %v, ignoring eventResponse", eventResponse)
+				logMessage(WARNING, "unable to deserialize key from eventResponse %v, ignoring eventResponse", eventResponse)
 			} else {
 				keyGroup, groupPresent := bc.keyListenersV1[*key]
 				if groupPresent {
@@ -2073,10 +2072,6 @@ func (bc *baseClient[K, V]) generateMapEvent(client interface{}, eventResponse *
 			}
 		}
 		for _, id := range eventResponse.FilterIds {
-			bc.session.debugConnection("event for filterID:", id)
-			for k, v := range bc.filterIDToGroupV1 {
-				bc.session.debugConnection("filterID:", k, "Group:", v)
-			}
 			filterGroup, groupPresent := bc.filterIDToGroupV1[id]
 			if groupPresent {
 				filterGroup.notify(receivedMapEvent)

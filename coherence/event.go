@@ -15,7 +15,6 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"io"
-	"log"
 	"reflect"
 	"strings"
 	"sync"
@@ -953,7 +952,7 @@ func (m *mapEventManager[K, V]) ensureStream() (*eventStream, error) {
 		request.Type = proto.MapListenerRequest_INIT
 		err = grpcStream.Send(&request)
 		if err != nil {
-			log.Printf("event stream send failed: %s\n", err)
+			logMessage(ERROR, "event stream send failed: %s", err)
 			cancel()
 			return nil, err
 		}
@@ -969,7 +968,7 @@ func (m *mapEventManager[K, V]) ensureStream() (*eventStream, error) {
 					statusLocal := status.Code(err)
 					if statusLocal != codes.Canceled {
 						// only log if it's not a cancelled error as this is just the client closing
-						log.Printf("event stream recv failed: %s\n", err)
+						logMessage(ERROR, "event stream recv failed: %s", err)
 					}
 					cancel()
 					return
@@ -989,7 +988,7 @@ func (m *mapEventManager[K, V]) ensureStream() (*eventStream, error) {
 
 						key, err := receivedMapEvent.Key()
 						if err != nil {
-							fmt.Printf("Unable to deserialize event key: %s", err)
+							logMessage(WARNING, "Unable to deserialize event key: %s", err)
 							cancel()
 							return
 						}
@@ -1093,7 +1092,7 @@ type saveListener[K comparable, V any] struct {
 func reRegisterListeners[K comparable, V any](ctx context.Context, namedMap *NamedMap[K, V], bc *baseClient[K, V]) error {
 	var (
 		err             error
-		debug           = bc.session.debug
+		debug           = bc.session.debugConnection
 		isGrpcV1        = bc.isGrpcV1()
 		keyListeners    = make(map[K]saveListener[K, V], 0)
 		filterListeners = make(map[filters.Filter]saveListener[K, V], 0)
@@ -1153,13 +1152,8 @@ func reRegisterListeners[K comparable, V any](ctx context.Context, namedMap *Nam
 		// re-create the new stream
 		manager, err1 := newStreamManagerV1(bc.session, cacheServiceProtocol)
 		if err1 == nil {
-			bc.session.debugConnection("Before kill old stream managed")
-			for k, v := range bc.filterIDToGroupV1 {
-				bc.session.debugConnection("filterID:", k, "Group:", v)
-			}
 			// save the stream manager for a successful V1 client connection
 			bc.session.v1StreamManagerCache = manager
-			bc.session.debugConnection("reconnected stream manager for caches", cacheNames, "manager", manager)
 			bc.session.cacheIDMapMutex.Lock()
 
 			// reset the filters for V1
@@ -1176,7 +1170,7 @@ func reRegisterListeners[K comparable, V any](ctx context.Context, namedMap *Nam
 					bc.session.cacheIDMapMutex.Unlock()
 					return err3
 				}
-				bc.session.debugConnection("re-ensureCache cacheId=", cacheID, "for cache", c)
+				bc.session.debugConnection("re-ensureCache cacheId=%v for cache=%v", cacheID, c)
 			}
 		} else {
 			return fmt.Errorf("unable to re-stablish v1 stream: %v", err1)
@@ -1187,7 +1181,7 @@ func reRegisterListeners[K comparable, V any](ctx context.Context, namedMap *Nam
 
 	// re-register key listeners
 	for k, save := range keyListeners {
-		debug(fmt.Sprintf("re-registering listener %v for key%v", save.listener, k))
+		debug("re-registering listener %v for key: %v", save.listener, k)
 		if !isGrpcV1 {
 			if err = bc.eventManager.addKeyListener(ctx, save.listener, k, save.lite); err != nil {
 				return fmt.Errorf("unable to re-register listener %v for key%v - %v", k, save.listener, err)
@@ -1200,7 +1194,7 @@ func reRegisterListeners[K comparable, V any](ctx context.Context, namedMap *Nam
 
 	// re-register filter listeners
 	for f, save := range filterListeners {
-		debug(fmt.Sprintf("re-registering listener %v for filter %v", save.listener, f))
+		debug("re-registering listener %v for filter %v", save.listener, f)
 		if !isGrpcV1 {
 			if err = bc.eventManager.addFilterListener(ctx, save.listener, f, save.lite); err != nil {
 				return fmt.Errorf("unable to add filter listener %v for filter %v - %v", f, save.listener, err)

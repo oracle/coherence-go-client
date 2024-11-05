@@ -26,11 +26,22 @@ import (
 
 type V1ProxyProtocol string
 
+type logLevel string
+
+var (
+	INFO    logLevel = "INFO:"
+	WARNING logLevel = "WARN:"
+	ERROR   logLevel = "ERROR:"
+	DEBUG   logLevel = "DEBUG:"
+	RCV              = "RCV"
+	SND              = "SND"
+)
+
 const (
 	protocolVersion                      = 1
 	cacheServiceProtocol V1ProxyProtocol = "CacheService"
 	errorFormat                          = "error: %v"
-	responseDebug                        = "received response"
+	responseDebug                        = "received response: %v"
 )
 
 // responseMessages is a response received by a waiting client.
@@ -106,7 +117,7 @@ func (m *streamManagerV1) ensureStream() (*eventStreamV1, error) {
 		grpcStream, err := proxyClient.SubChannel(ctx)
 
 		if err != nil {
-			m.session.debugConnection("error getting SubChannel", err)
+			m.session.debugConnection("error getting SubChannel: %v", err)
 			cancel()
 			return nil, err
 		}
@@ -116,11 +127,11 @@ func (m *streamManagerV1) ensureStream() (*eventStreamV1, error) {
 
 		// generate and send init request
 		initRequest := m.newInitRequest()
-		m.session.debugConnection("initRequest", initRequest)
+		m.session.debugConnection("initRequest: %v", initRequest)
 
 		err = m.eventStream.grpcStream.Send(initRequest)
 		if err != nil {
-			m.session.debugConnection("error sending initRequest", err)
+			m.session.debugConnection("error sending initRequest: %v", err)
 			cancel()
 			return nil, err
 		}
@@ -128,7 +139,7 @@ func (m *streamManagerV1) ensureStream() (*eventStreamV1, error) {
 		// we must receive a proxy response
 		proxyResponse, err := m.eventStream.grpcStream.Recv()
 		if err != nil || proxyResponse == nil {
-			m.session.debugConnection("error receiving init response", err)
+			m.session.debugConnection("error receiving init response: %v", err)
 			cancel()
 			return nil, err
 		}
@@ -158,10 +169,10 @@ func (m *streamManagerV1) ensureStream() (*eventStreamV1, error) {
 				}
 				if err1 != nil {
 					statusLocal := status.Code(err1)
-					m.session.debugConnection("closing connection", statusLocal)
+					m.session.debugConnection("closing connection: %v", statusLocal)
 					if statusLocal != codes.Canceled {
 						// only log if it's not a cancelled error as this is just the client closing
-						log.Printf("WARN: event stream recv failed: %s\n", err1)
+						logMessage(WARNING, "event stream recv failed: %s", err1)
 					}
 					cancel()
 					return
@@ -169,7 +180,7 @@ func (m *streamManagerV1) ensureStream() (*eventStreamV1, error) {
 
 				id := response1.GetId()
 				if h := response1.GetHeartbeat(); h != nil {
-					m.session.debugConnection("received heartbeat", h)
+					m.session.debugConnection("received heartbeat: %v", h)
 				} else {
 					var resp responseMessage
 
@@ -188,7 +199,7 @@ func (m *streamManagerV1) ensureStream() (*eventStreamV1, error) {
 						var message proto.Message //nolint:gosimple
 						message = &pb1.NamedCacheResponse{}
 						if err1 = resp.message.UnmarshalTo(message); err1 != nil {
-							log.Println("WARN:", getUnmarshallError("namedCacheResponse", err1))
+							logMessage(WARNING, "%v", getUnmarshallError("namedCacheResponse", err1))
 						} else {
 							// determine the type of message
 							switch responseMsg := message.(type) {
@@ -209,6 +220,14 @@ func (m *streamManagerV1) ensureStream() (*eventStreamV1, error) {
 	return m.eventStream, nil
 }
 
+func logMessage(level logLevel, format string, args ...any) {
+	log.Println(getLogMessage(level, format, args...))
+}
+
+func getLogMessage(level logLevel, format string, args ...any) string {
+	return fmt.Sprintf("%v ", level) + fmt.Sprintf(format, args...)
+}
+
 func (m *streamManagerV1) setServerInfo(r *pb1.InitResponse) {
 	m.serverVersion = r.GetVersion()
 	m.serverProtocolVersion = r.GetProtocolVersion()
@@ -222,19 +241,19 @@ func (m *streamManagerV1) String() string {
 func (m *streamManagerV1) processNamedCacheResponse(reqID int64, resp *responseMessage) {
 	if reqID == 0 {
 		// this is a map event or cache lifecycle event so dispatch it
-		m.session.debugConnection("Event, CacheId:", resp.namedCacheResponse.CacheId, ", Type:", resp.namedCacheResponse.Type)
+		m.session.debugConnection("Event, CacheId: %v, Type %v", resp.namedCacheResponse.CacheId, resp.namedCacheResponse.Type)
 
 		// for a map event we must get the cache name and then looking the base client, so
 		// we can send the event to the right place
 		cacheID := resp.namedCacheResponse.CacheId
 		if cacheID == 0 {
-			log.Printf("WARN: received an event %v with cacheID = 0", resp.namedCacheResponse.Type)
+			logMessage(WARNING, "received an event %v with cacheID = 0", resp.namedCacheResponse.Type)
 			return
 		}
 
 		cacheName := m.session.getCacheNameFromCacheID(cacheID)
 		if cacheName == nil {
-			log.Printf("WARN: unable to find cache name from cache id %v it may have been released or destroyed", cacheID)
+			logMessage(WARNING, "unable to find cache name from cache id %v it may have been released or destroyed", cacheID)
 			return
 		}
 
@@ -250,16 +269,16 @@ func (m *streamManagerV1) processNamedCacheResponse(reqID int64, resp *responseM
 			switch resp.namedCacheResponse.Type {
 			case pb1.ResponseType_Destroyed:
 				eventSubmitter.generateMapLifecycleEvent(client, Destroyed)
-				m.session.debugConnection("id:", reqID, Destroyed, resp)
+				m.session.debugConnection("id: %v %v %v", reqID, Destroyed, resp)
 			case pb1.ResponseType_Truncated:
 				eventSubmitter.generateMapLifecycleEvent(client, Truncated)
-				m.session.debugConnection("id:", reqID, Truncated, resp)
+				m.session.debugConnection("id: %v %v %v", reqID, Truncated, resp)
 			case pb1.ResponseType_MapEvent:
 				mapEventMessage, err1 := unwrapMapEvent(resp.namedCacheResponse)
 				if err1 != nil {
-					log.Printf("WARN: unable to unwrap MapEvent: %v", err1)
+					logMessage(WARNING, "unable to unwrap MapEvent: %v", err1)
 				} else {
-					m.session.debugConnection("received mapEvent:", mapEventMessage)
+					m.session.debugConnection("received mapEvent: %v", mapEventMessage)
 					eventSubmitter.generateMapEvent(client, mapEventMessage)
 				}
 			}
@@ -268,7 +287,7 @@ func (m *streamManagerV1) processNamedCacheResponse(reqID int64, resp *responseM
 		return
 	}
 
-	m.session.debugConnection("id:", reqID, "process namedCacheResponse:", resp)
+	m.session.debugConnection("id: %v namedCacheResponse: %v", reqID, resp)
 
 	// received a named cache response, so write the response to the channel for the originating request
 	m.mutex.Lock()
@@ -278,7 +297,7 @@ func (m *streamManagerV1) processNamedCacheResponse(reqID int64, resp *responseM
 		// request exists
 		e.ch <- *resp
 	} else {
-		log.Printf("WARN: found request %v (%v) in response but no request exists", *resp, reqID)
+		logMessage(WARNING, "found request %v (%v) in response but no request exists", *resp, reqID)
 	}
 }
 
@@ -295,7 +314,7 @@ func (m *streamManagerV1) submitRequest(req *pb1.ProxyRequest, requestType pb1.N
 	// save the request in the map keyed by request id
 	m.requests[req.Id] = r
 
-	m.session.debugConnection("id:", req.Id, "submit request:", r.requestType, req)
+	m.session.debugConnection("id: %v submit request: %v %v", req.Id, r.requestType, req)
 
 	return r, m.eventStream.grpcStream.Send(req)
 }

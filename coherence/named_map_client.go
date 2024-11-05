@@ -928,7 +928,7 @@ func getNamedMap[K comparable, V any](session *Session, name string, sOpts *Sess
 			return nil, getExistingNearCacheError("NamedMap", name)
 		}
 
-		session.debug("using existing NamedMap", existing)
+		session.debug("using existing NamedMap: %v", existing)
 		return existing, nil
 	}
 
@@ -978,7 +978,7 @@ func getNamedMap[K comparable, V any](session *Session, name string, sOpts *Sess
 		newMap.AddLifecycleListener(newMap.baseClient.nearCacheLifecycleListener.listener)
 	}
 
-	session.debug("newNamedMap", newMap, "session:", session)
+	session.debug("newNamedMap: %v", newMap)
 	return newMap, nil
 }
 

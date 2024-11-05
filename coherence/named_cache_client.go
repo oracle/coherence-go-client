@@ -10,7 +10,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/oracle/coherence-go-client/coherence/filters"
-	"log"
 	"time"
 )
 
@@ -159,7 +158,7 @@ func (nc *NamedCacheClient[K, V]) Release() {
 	if nc.baseClient.nearCacheListener != nil {
 		err := nc.RemoveListener(context.Background(), nc.baseClient.nearCacheListener.listener)
 		if err != nil {
-			log.Printf("unable to remove listener to near cache: %v", err)
+			logMessage(WARNING, "unable to remove listener from near cache: %v", err)
 		}
 	}
 
@@ -661,7 +660,7 @@ func getNamedCache[K comparable, V any](session *Session, name string, sOpts *Se
 			return nil, getExistingNearCacheError("NamedCache", name)
 		}
 
-		session.debug("using existing NamedCache", existing)
+		session.debug("using existing NamedCache %v", existing)
 		return existing, nil
 	}
 
@@ -711,7 +710,7 @@ func getNamedCache[K comparable, V any](session *Session, name string, sOpts *Se
 	}
 	session.AddSessionLifecycleListener(newCache.namedCacheReconnectListener.listener)
 
-	session.debug("getNamedCache", namedCache, "session:", session)
+	session.debug("getNamedCache: %v session: %v", namedCache, session)
 	return newCache, nil
 }
 
@@ -730,7 +729,7 @@ func newNamedCacheReconnectListener[K comparable, V any](nc NamedCacheClient[K, 
 		// re-register listeners for the NamedCache
 		namedMap := convertNamedCacheClient[K, V](&nc)
 		if err := reRegisterListeners[K, V](context.Background(), &namedMap, nc.baseClient); err != nil {
-			log.Println(err)
+			logMessage(WARNING, "error re-registering listeners: %v", err)
 		}
 	})
 
@@ -758,7 +757,7 @@ func newNearNamedCacheMapLister[K comparable, V any](nc NamedCacheClient[K, V], 
 	listener.listener.OnAny(func(e MapEvent[K, V]) {
 		err := processNearCacheEvent(nc.baseClient.nearCache, e)
 		if err != nil {
-			log.Println("Error processing near cache MapEvent", e)
+			logMessage(WARNING, "error processing near cache MapEvent: %v", e)
 		}
 	})
 
