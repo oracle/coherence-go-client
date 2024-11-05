@@ -63,12 +63,13 @@ func TestPutAllWithExpiry(t *testing.T) {
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	namedCache := utils.GetNamedCache[int, utils.Person](g, session, "put-all-with-expiry")
 
-	// only run for v1 client
+	err = namedCache.PutAllWithExpiry(ctx, peopleData, time.Duration(4)*time.Second)
 	if !namedCache.GetSession().IsGrpcV1() {
+		// PutAllWithExpiry is not supported for v0 and should return error
+		g.Expect(err).Should(gomega.HaveOccurred())
 		return
 	}
 
-	err = namedCache.PutAllWithExpiry(ctx, peopleData, time.Duration(4)*time.Second)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 	size, err = namedCache.Size(ctx)

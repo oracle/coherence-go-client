@@ -206,8 +206,8 @@ golangci: $(TOOLS_BIN)/golangci-lint ## Go code review
 .PHONY: generate-proto
 generate-proto: $(TOOLS_BIN)/protoc ## Generate Proto Files
 	mkdir -p $(PROTO_DIR) || true
-	curl -o $(PROTO_DIR)/services.proto https://raw.githubusercontent.com/oracle/coherence/22.06.9/prj/coherence-grpc/src/main/proto/services.proto
-	curl -o $(PROTO_DIR)/messages.proto https://raw.githubusercontent.com/oracle/coherence/22.06.9/prj/coherence-grpc/src/main/proto/messages.proto
+	curl -o $(PROTO_DIR)/services.proto https://raw.githubusercontent.com/oracle/coherence/22.06.10/prj/coherence-grpc/src/main/proto/services.proto
+	curl -o $(PROTO_DIR)/messages.proto https://raw.githubusercontent.com/oracle/coherence/22.06.10/prj/coherence-grpc/src/main/proto/messages.proto
 	echo "" >> $(PROTO_DIR)/services.proto
 	echo "" >> $(PROTO_DIR)/messages.proto
 	echo 'option go_package = "github.com/oracle/coherence-go-client/proto";' >> $(PROTO_DIR)/services.proto
@@ -220,20 +220,23 @@ generate-proto: $(TOOLS_BIN)/protoc ## Generate Proto Files
 .PHONY: generate-proto-v1
 generate-proto-v1: $(TOOLS_BIN)/protoc ## Generate Proto Files v1
 	mkdir -p $(PROTOV1_DIR) || true
-	curl -o $(PROTOV1_DIR)/proxy_service_messages_v1.proto https://raw.githubusercontent.com/oracle/coherence/main/prj/coherence-grpc/src/main/proto/proxy_service_messages_v1.proto
-	curl -o $(PROTOV1_DIR)/proxy_service_v1.proto https://raw.githubusercontent.com/oracle/coherence/main/prj/coherence-grpc/src/main/proto/proxy_service_v1.proto
-	curl -o $(PROTOV1_DIR)/common_messages_v1.proto https://raw.githubusercontent.com/oracle/coherence/main/prj/coherence-grpc/src/main/proto/common_messages_v1.proto
-	curl -o $(PROTOV1_DIR)/cache_service_messages_v1.proto https://raw.githubusercontent.com/oracle/coherence/main/prj/coherence-grpc/src/main/proto/cache_service_messages_v1.proto
+	curl -o $(PROTOV1_DIR)/proxy_service_messages_v1.proto https://raw.githubusercontent.com/oracle/coherence/24.09/prj/coherence-grpc/src/main/proto/proxy_service_messages_v1.proto
+	curl -o $(PROTOV1_DIR)/proxy_service_v1.proto https://raw.githubusercontent.com/oracle/coherence/24.09/prj/coherence-grpc/src/main/proto/proxy_service_v1.proto
+	curl -o $(PROTOV1_DIR)/common_messages_v1.proto https://raw.githubusercontent.com/oracle/coherence/24.09/prj/coherence-grpc/src/main/proto/common_messages_v1.proto
+	curl -o $(PROTOV1_DIR)/cache_service_messages_v1.proto https://raw.githubusercontent.com/oracle/coherence/24.09/prj/coherence-grpc/src/main/proto/cache_service_messages_v1.proto
+	curl -o $(PROTOV1_DIR)/queue_service_messages_v1.proto https://raw.githubusercontent.com/oracle/coherence/24.09/prj/coherence-grpc/src/main/proto/queue_service_messages_v1.proto
 	echo "" >> $(PROTOV1_DIR)/proxy_service_messages_v1.proto
 	echo "" >> $(PROTOV1_DIR)/proxy_service_v1.proto
 	echo "" >> $(PROTOV1_DIR)/common_messages_v1.proto
 	echo "" >> $(PROTOV1_DIR)/cache_service_messages_v1.proto
+	echo "" >> $(PROTOV1_DIR)/queue_service_messages_v1.proto
 	echo 'option go_package = "github.com/oracle/coherence-go-client/proto/v1";' >> $(PROTOV1_DIR)/proxy_service_messages_v1.proto
 	echo 'option go_package = "github.com/oracle/coherence-go-client/proto/v1";' >> $(PROTOV1_DIR)/proxy_service_v1.proto
 	echo 'option go_package = "github.com/oracle/coherence-go-client/proto/v1";' >> $(PROTOV1_DIR)/common_messages_v1.proto
 	echo 'option go_package = "github.com/oracle/coherence-go-client/proto/v1";' >> $(PROTOV1_DIR)/cache_service_messages_v1.proto
+	echo 'option go_package = "github.com/oracle/coherence-go-client/proto/v1";' >> $(PROTOV1_DIR)/queue_service_messages_v1.proto
 	mkdir ./proto/v1 || true
-	$(TOOLS_BIN)/protoc --proto_path=./etc/proto-v1 --go_out=./proto/v1 --go_opt=paths=source_relative --go-grpc_out=./proto/v1 --go-grpc_opt=paths=source_relative etc/proto-v1/proxy_service_messages_v1.proto etc/proto-v1/proxy_service_v1.proto etc/proto-v1/common_messages_v1.proto etc/proto-v1/cache_service_messages_v1.proto
+	$(TOOLS_BIN)/protoc --proto_path=./etc/proto-v1 --go_out=./proto/v1 --go_opt=paths=source_relative --go-grpc_out=./proto/v1 --go-grpc_opt=paths=source_relative etc/proto-v1/proxy_service_messages_v1.proto etc/proto-v1/proxy_service_v1.proto etc/proto-v1/common_messages_v1.proto etc/proto-v1/cache_service_messages_v1.proto etc/proto-v1/queue_service_messages_v1.proto
 
 
 # ----------------------------------------------------------------------------------------------------------------------

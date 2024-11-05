@@ -435,6 +435,8 @@ func (nc *NamedCacheClient[K, V]) PutAll(ctx context.Context, entries map[K]V) e
 //	if err = namedCache.PutAll(ctx, peopleData, time.Duration(5) * time.Second); err != nil {
 //	    log.Fatal(err)
 //	}
+//
+// Note: If PutAllWithExpiry is not supported by the Coherence server, an error will be thrown
 func (nc *NamedCacheClient[K, V]) PutAllWithExpiry(ctx context.Context, entries map[K]V, ttl time.Duration) error {
 	return executePutAll(ctx, nc.baseClient, entries, ttl)
 }

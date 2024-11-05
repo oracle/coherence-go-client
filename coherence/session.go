@@ -70,11 +70,9 @@ type Session struct {
 	hasConnected          bool           // indicates if the session has ever connected
 	debug                 func(v ...any) // a function to output debug messages
 	debugConnection       func(v ...any) // a function to output debug messages for gRPCV1 connections
-
-	forceGrpcV0          bool  // indicates if gRPC v0 sure be forced
-	requestID            int64 // request id for gRPC v1
-	filterID             int64 // filter id for gRPC v1
-	v1StreamManagerCache *streamManagerV1
+	requestID             int64          // request id for gRPC v1
+	filterID              int64          // filter id for gRPC v1
+	v1StreamManagerCache  *streamManagerV1
 }
 
 // SessionOptions holds the session attributes like host, port, tls attributes etc.
@@ -182,10 +180,6 @@ func NewSession(ctx context.Context, options ...func(session *SessionOptions)) (
 
 	if getBoolValueFromEnvVarOrDefault(envResolverRandomize, true) {
 		randomizeAddresses = true
-	}
-
-	if getBoolValueFromEnvVarOrDefault(envForceGrpcV0, false) {
-		session.forceGrpcV0 = true
 	}
 
 	// ensure name resolver has been registered
@@ -461,7 +455,7 @@ func (s *Session) ensureConnection() error {
 			if s.GetReadyTimeout() != 0 {
 				return waitForReady(s)
 			}
-			s.debug(fmt.Sprintf("session: %s attempting connection to address %s", s.sessionID, s.sessOpts.Address))
+			log.Printf("INFO: Session: [%s] attempting connection to address %s", s.sessionID, s.sessOpts.Address)
 			s.conn.Connect()
 			return nil
 		}
@@ -496,23 +490,27 @@ func (s *Session) ensureConnection() error {
 	conn, err := grpc.DialContext(newCtx, s.sessOpts.Address, s.dialOptions...)
 
 	if err != nil {
-		log.Printf("could not connect. Reason: %v", err)
+		log.Printf("WARN: Session: [%s] could not connect. Reason: %v", s.sessionID, err)
 		return err
 	}
 
 	s.conn = conn
 	s.firstConnectAttempted = true
 
-	// attempt to connect to V1 gRPC endpoint if not forced v0
-	if !s.forceGrpcV0 {
-		manager, err1 := newStreamManagerV1(s, cacheServiceProtocol)
-		if err1 == nil {
-			// save the stream manager for a successful V1 client connection
-			s.v1StreamManagerCache = manager
-		} else {
-			s.debug("error connecting to session via v1, falling back to v0", err1)
-		}
+	var apiMessage = ""
+
+	s.debug(fmt.Sprintf("session: %s connecting to %v", s.sessionID, s.sessOpts.Address))
+	// attempt to connect to V1 gRPC endpoint first and fallback if not available
+	manager, err1 := newStreamManagerV1(s, cacheServiceProtocol)
+	if err1 == nil {
+		// save the stream manager for a successful V1 client connection
+		s.v1StreamManagerCache = manager
+		apiMessage = fmt.Sprintf(", %v", manager)
+	} else {
+		s.debug("error connecting to session via v1, falling back to v0", err1)
 	}
+
+	log.Printf("INFO: Session [%s] connected to [%s]%s", s.sessionID, s.sessOpts.Address, apiMessage)
 
 	// register for state change events - This uses an experimental gRPC API
 	// so may not be reliable or may change in the future.
@@ -541,7 +539,7 @@ func (s *Session) ensureConnection() error {
 			session.debug("connection:", lastState, "=>", newState)
 
 			if newState == connectivity.Shutdown {
-				log.Printf("closed session %v", session.sessionID)
+				log.Printf("INFO: Session [%s] closed", session.sessionID)
 				session.Close()
 				return
 			}
@@ -553,7 +551,7 @@ func (s *Session) ensureConnection() error {
 					session.closed = false
 					connected = true
 
-					log.Printf("session: %s re-connected to address %s", session.sessionID, session.sessOpts.Address)
+					log.Printf("INFO: Session [%s] re-connected to address %s", session.sessionID, session.sessOpts.Address)
 					session.dispatch(Reconnected, func() SessionLifecycleEvent {
 						return newSessionLifecycleEvent(session, Reconnected)
 					})
@@ -562,7 +560,7 @@ func (s *Session) ensureConnection() error {
 					firstConnect = false
 					connected = true
 					session.hasConnected = true
-					log.Printf("session: %s connected to address %s", session.sessionID, session.sessOpts.Address)
+					log.Printf("INFO: Session [%s] connected to address %s", session.sessionID, session.sessOpts.Address)
 					session.dispatch(Connected, func() SessionLifecycleEvent {
 						return newSessionLifecycleEvent(session, Connected)
 					})
@@ -570,7 +568,7 @@ func (s *Session) ensureConnection() error {
 			} else {
 				if connected {
 					disconnectTime = -1
-					log.Printf("session: %s disconnected from address %s", session.sessionID, session.sessOpts.Address)
+					log.Printf("WARN: Session [%s] disconnected from address %s", session.sessionID, session.sessOpts.Address)
 					session.dispatch(Disconnected, func() SessionLifecycleEvent {
 						return newSessionLifecycleEvent(session, Disconnected)
 					})
@@ -583,7 +581,7 @@ func (s *Session) ensureConnection() error {
 					} else {
 						waited := time.Now().UnixMilli() - disconnectTime
 						if waited >= session.GetDisconnectTimeout().Milliseconds() {
-							log.Printf("session: %s unable to reconnect within disconnect timeout of [%s]. Closing session.",
+							log.Printf("ERROR: Session [%s] unable to reconnect within disconnect timeout of [%s], closing session.",
 								session.sessionID, session.GetDisconnectTimeout().String())
 							session.Close()
 							return
@@ -634,7 +632,8 @@ func waitForReady(s *Session) error {
 			return nil
 		}
 		if !messageLogged {
-			log.Printf("State is %v, waiting until ready timeout of %v for valid connection", state, readyTimeout)
+			log.Printf("INFO: Session [%s] State is %v, waiting until ready timeout of %v for valid connection",
+				s.sessionID, state, readyTimeout)
 			messageLogged = true
 		}
 	}

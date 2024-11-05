@@ -249,7 +249,7 @@ func (lg *listenerGroupV1[K, V]) notify(event MapEvent[K, V]) {
 	}
 }
 
-// newMapEvent creates and returns a pointer to a new [M apEvent].
+// newMapEvent creates and returns a pointer to a new [MapEvent].
 func newMapEventV1[K comparable, V any](source NamedMap[K, V], response *pb1.MapEventMessage) *mapEvent[K, V] {
 	return &mapEvent[K, V]{
 		source:        source,
@@ -257,5 +257,9 @@ func newMapEventV1[K comparable, V any](source NamedMap[K, V], response *pb1.Map
 		keyBytes:      &response.Key,
 		oldValueBytes: &response.OldValue,
 		newValueBytes: &response.NewValue,
+		isgRPCv1:      true,
+		isExpired:     response.Expired,
+		isSynthetic:   response.Synthetic,
+		isPriming:     response.Priming,
 	}
 }

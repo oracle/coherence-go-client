@@ -8,6 +8,7 @@ package coherence
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/oracle/coherence-go-client/coherence/filters"
 	"github.com/oracle/coherence-go-client/proto"
@@ -80,6 +81,8 @@ var (
 
 	_ SessionLifecycleListener             = &sessionLifecycleListener{}
 	_ MapLifecycleListener[string, string] = &mapLifecycleListener[string, string]{}
+
+	ErrNotSupported = errors.New("this attribute is not support for gRPC v0 clients")
 )
 
 type eventStream struct {
@@ -198,6 +201,9 @@ type MapEvent[K comparable, V any] interface {
 	OldValue() (*V, error)
 	NewValue() (*V, error)
 	Type() MapEventType
+	IsExpired() (bool, error)
+	IsPriming() (bool, error)
+	IsSynthetic() (bool, error)
 }
 
 // mapEvent struct containing data members to satisfy the [MapEvent] contract.
@@ -225,9 +231,21 @@ type mapEvent[K comparable, V any] struct {
 
 	// newValue the deserialized new value, if any, associated with this key
 	newValue *V
+
+	// isgRPCv1 indicates if this event is from gRPCv1, if not then the isExpired will return error
+	isgRPCv1 bool
+
+	// isExpired indicates if the event is an expiry event, only valid for gRPC v1
+	isExpired bool
+
+	// isPriming indicates if the event is a priming event, only valid for gRPC v1
+	isPriming bool
+
+	// isSynthetic indicates if the event is a priming event, only valid for gRPC v1
+	isSynthetic bool
 }
 
-// newMapEvent creates and returns a pointer to a new [M apEvent].
+// newMapEvent creates and returns a pointer to a new [MapEvent].
 func newMapEvent[K comparable, V any](source NamedMap[K, V], response *proto.MapEventResponse) *mapEvent[K, V] {
 	return &mapEvent[K, V]{
 		source:        source,
@@ -268,6 +286,30 @@ func (e *mapEvent[K, V]) OldValue() (*V, error) {
 		e.oldValue = valDeser
 	}
 	return e.oldValue, nil
+}
+
+// IsExpired returns true if the event was generated from an expiry event. Only valid for gRPC v1 connections.
+func (e *mapEvent[K, V]) IsExpired() (bool, error) {
+	if e.isgRPCv1 {
+		return e.isExpired, nil
+	}
+	return false, ErrNotSupported
+}
+
+// IsPriming returns true if the event is a priming event. Only valid for gRPC v1 connections.
+func (e *mapEvent[K, V]) IsPriming() (bool, error) {
+	if e.isgRPCv1 {
+		return e.isPriming, nil
+	}
+	return false, ErrNotSupported
+}
+
+// IsSynthetic returns true if the event is a synthetic event. Only valid for gRPC v1 connections.
+func (e *mapEvent[K, V]) IsSynthetic() (bool, error) {
+	if e.isgRPCv1 {
+		return e.isSynthetic, nil
+	}
+	return false, ErrNotSupported
 }
 
 // NewValue returns the new value, if any, of the entry for which this event
@@ -1137,7 +1179,6 @@ func reRegisterListeners[K comparable, V any](ctx context.Context, namedMap *Nam
 				bc.session.debugConnection("re-ensureCache cacheId=", cacheID, "for cache", c)
 			}
 		} else {
-			bc.session.cacheIDMapMutex.Unlock()
 			return fmt.Errorf("unable to re-stablish v1 stream: %v", err1)
 		}
 	}

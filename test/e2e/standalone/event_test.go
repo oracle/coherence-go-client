@@ -130,6 +130,13 @@ func TestMapAndLifecycleEventsAll4(t *testing.T) {
 	runMultipleLifecycleTests(g, namedCache)
 }
 
+func TestExpiringEvents(t *testing.T) {
+	g, session := initTest(t)
+	defer session.Close()
+
+	runTestExpiringEvents(g, utils.GetNamedCache[string, string](g, session, "test-expiring-events-cache"))
+}
+
 // TestEventDisconnect tests to ensure that if we get a disconnect, then we can rec-connect and
 // re-register event listeners.
 func TestEventDisconnect(t *testing.T) {
@@ -941,6 +948,40 @@ func runMultipleLifecycleTests(g *gomega.WithT, cache coherence.NamedMap[string,
 	}).Should(gomega.Equal(int32(1)), "truncateCount to equal 1")
 }
 
+func runTestExpiringEvents(g *gomega.WithT, cache coherence.NamedCache[string, string]) {
+	listener1 := NewExpiringMapListener[string, string]("listener1")
+
+	err := cache.AddListener(ctx, listener1.listener)
+	g.Expect(err).To(gomega.Not(gomega.HaveOccurred()))
+
+	defer func() {
+		_ = cache.RemoveListener(ctx, listener1.listener)
+	}()
+
+	// put some values that will expire in 5 seconds and we shoudl receive the events
+	_, err = cache.PutWithExpiry(ctx, "A", "A", time.Duration(5)*time.Second)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	_, err = cache.PutWithExpiry(ctx, "B", "B", time.Duration(5)*time.Second)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+
+	utils.Sleep(10)
+
+	expectedEvents := 0 // default for gRPC v0
+	if cache.GetSession().IsGrpcV1() {
+		expectedEvents = 2
+	}
+
+	//nolint:gosec
+	g.Eventually(func() int32 {
+		return listener1.getExpireCount()
+	}).Should(gomega.Equal(int32(expectedEvents)))
+
+	//nolint:gosec
+	g.Eventually(func() int32 {
+		return listener1.getSyntheticCount()
+	}).Should(gomega.Equal(int32(expectedEvents)))
+}
+
 func runReleasedLifecycleTests(g *gomega.WithT, cache coherence.NamedMap[string, string]) {
 	listener1 := NewCountingLifecycleListener[string, string]("listener1")
 	listener2 := NewCountingLifecycleListener[string, string]("listener2")
@@ -1205,4 +1246,42 @@ func expect[T comparable](f func() T, expectedValue T, timeout int) error {
 		}
 	}
 	return fmt.Errorf("expected value of %v was not reached after %d seconds. Last value was %v", expectedValue, timeout, lastValue)
+}
+
+type ExpiringMapListener[K comparable, V any] struct {
+	listener       coherence.MapListener[K, V]
+	name           string
+	expireCount    int32
+	syntheticCount int32
+	deleteCount    int32
+}
+
+func (el *ExpiringMapListener[K, V]) getExpireCount() int32 {
+	return el.expireCount
+}
+
+func (el *ExpiringMapListener[K, V]) getSyntheticCount() int32 {
+	return el.syntheticCount
+}
+
+func NewExpiringMapListener[K comparable, V any](name string) *ExpiringMapListener[K, V] {
+	expiringListener := ExpiringMapListener[K, V]{
+		name:     name,
+		listener: coherence.NewMapListener[K, V](),
+	}
+
+	expiringListener.listener.OnDeleted(func(e coherence.MapEvent[K, V]) {
+		atomic.AddInt32(&expiringListener.deleteCount, 1)
+		expiring, err := e.IsExpired()
+		if err == nil && expiring {
+			// only record if the error is nil, which means its gRPC v1 and its expiry
+			atomic.AddInt32(&expiringListener.expireCount, 1)
+		}
+		synthetic, err := e.IsSynthetic()
+		if err == nil && synthetic {
+			// only record if the error is nil, which means its gRPC v1 and its synthetic
+			atomic.AddInt32(&expiringListener.syntheticCount, 1)
+		}
+	})
+	return &expiringListener
 }

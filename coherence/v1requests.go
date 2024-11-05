@@ -18,7 +18,6 @@ var (
 )
 
 func (m *streamManagerV1) newInitRequest() *pb1.ProxyRequest {
-	heartBeatDuration := (time.Duration(250) * time.Millisecond).Milliseconds()
 	req := pb1.InitRequest{
 		ClientUuid:               m.session.sessionID[:],
 		Scope:                    m.session.sessOpts.Scope,
@@ -26,7 +25,6 @@ func (m *streamManagerV1) newInitRequest() *pb1.ProxyRequest {
 		ProtocolVersion:          protocolVersion,
 		SupportedProtocolVersion: protocolVersion,
 		Protocol:                 string(m.proxyProtocol),
-		Heartbeat:                &heartBeatDuration,
 	}
 
 	pr := pb1.ProxyRequest{

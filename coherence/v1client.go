@@ -61,12 +61,15 @@ type namedCacheRequest struct {
 
 // streamManagerV1 holds the data for a gRPC V1 connection.
 type streamManagerV1 struct {
-	session       *Session
-	mutex         sync.RWMutex
-	eventStream   *eventStreamV1
-	proxyProtocol V1ProxyProtocol
-	serializer    Serializer[any]
-	requests      map[int64]namedCacheRequest
+	session               *Session
+	mutex                 sync.RWMutex
+	eventStream           *eventStreamV1
+	proxyProtocol         V1ProxyProtocol
+	serializer            Serializer[any]
+	requests              map[int64]namedCacheRequest
+	serverVersion         string
+	serverProtocolVersion int32
+	serverProxyMemberID   int32
 }
 
 type eventStreamV1 struct {
@@ -139,6 +142,8 @@ func (m *streamManagerV1) ensureStream() (*eventStreamV1, error) {
 			}
 		}
 
+		// save the server information received
+		m.setServerInfo(response)
 		m.session.debugConnection(getInitDescription(response))
 
 		// goroutine to handle MapEventResponse instances returned
@@ -156,7 +161,7 @@ func (m *streamManagerV1) ensureStream() (*eventStreamV1, error) {
 					m.session.debugConnection("closing connection", statusLocal)
 					if statusLocal != codes.Canceled {
 						// only log if it's not a cancelled error as this is just the client closing
-						log.Printf("event stream recv failed: %s\n", err1)
+						log.Printf("WARN: event stream recv failed: %s\n", err1)
 					}
 					cancel()
 					return
@@ -183,7 +188,7 @@ func (m *streamManagerV1) ensureStream() (*eventStreamV1, error) {
 						var message proto.Message //nolint:gosimple
 						message = &pb1.NamedCacheResponse{}
 						if err1 = resp.message.UnmarshalTo(message); err1 != nil {
-							log.Println(getUnmarshallError("namedCacheResponse", err1))
+							log.Println("WARN:", getUnmarshallError("namedCacheResponse", err1))
 						} else {
 							// determine the type of message
 							switch responseMsg := message.(type) {
@@ -204,6 +209,16 @@ func (m *streamManagerV1) ensureStream() (*eventStreamV1, error) {
 	return m.eventStream, nil
 }
 
+func (m *streamManagerV1) setServerInfo(r *pb1.InitResponse) {
+	m.serverVersion = r.GetVersion()
+	m.serverProtocolVersion = r.GetProtocolVersion()
+	m.serverProxyMemberID = r.GetProxyMemberId()
+}
+
+func (m *streamManagerV1) String() string {
+	return fmt.Sprintf("version: %s, protocolVersion: %d, proxyMemberId: %d", m.serverVersion, m.serverProtocolVersion, m.serverProxyMemberID)
+}
+
 func (m *streamManagerV1) processNamedCacheResponse(reqID int64, resp *responseMessage) {
 	if reqID == 0 {
 		// this is a map event or cache lifecycle event so dispatch it
@@ -213,13 +228,13 @@ func (m *streamManagerV1) processNamedCacheResponse(reqID int64, resp *responseM
 		// we can send the event to the right place
 		cacheID := resp.namedCacheResponse.CacheId
 		if cacheID == 0 {
-			log.Printf("received an event %v with cacheID = 0", resp.namedCacheResponse.Type)
+			log.Printf("WARN: received an event %v with cacheID = 0", resp.namedCacheResponse.Type)
 			return
 		}
 
 		cacheName := m.session.getCacheNameFromCacheID(cacheID)
 		if cacheName == nil {
-			log.Printf("unable to find cache name from cache id %v it may have been released or destroyed", cacheID)
+			log.Printf("WARN: unable to find cache name from cache id %v it may have been released or destroyed", cacheID)
 			return
 		}
 
@@ -242,7 +257,7 @@ func (m *streamManagerV1) processNamedCacheResponse(reqID int64, resp *responseM
 			case pb1.ResponseType_MapEvent:
 				mapEventMessage, err1 := unwrapMapEvent(resp.namedCacheResponse)
 				if err1 != nil {
-					log.Printf("unable to unwrap MapEvent: %v", err1)
+					log.Printf("WARN: unable to unwrap MapEvent: %v", err1)
 				} else {
 					m.session.debugConnection("received mapEvent:", mapEventMessage)
 					eventSubmitter.generateMapEvent(client, mapEventMessage)
@@ -263,7 +278,7 @@ func (m *streamManagerV1) processNamedCacheResponse(reqID int64, resp *responseM
 		// request exists
 		e.ch <- *resp
 	} else {
-		log.Printf("found request %v (%v) in response but no request exists", *resp, reqID)
+		log.Printf("WARN: found request %v (%v) in response but no request exists", *resp, reqID)
 	}
 }
 
@@ -315,7 +330,7 @@ func (m *streamManagerV1) ensureCache(ctx context.Context, cache string) (*int32
 
 	var message = &wrapperspb.Int32Value{}
 	if err = result.UnmarshalTo(message); err != nil {
-		err = getUnmarshallError("getResponse", err)
+		err = getUnmarshallError("ensureCache response", err)
 		return nil, err
 	}
 

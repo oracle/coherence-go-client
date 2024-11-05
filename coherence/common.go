@@ -42,9 +42,6 @@ const (
 	// envMessageDebug enables message debug messages to be displayed.
 	envMessageDebug = "COHERENCE_MESSAGE_DEBUG"
 
-	// envForceGrpcV0 forced gRPC v0 protocol to be used respective if the cluster supports v1+.
-	envForceGrpcV0 = "COHERENCE_FORCE_GRPCV0"
-
 	// envResolverDebug enables resolver debug messages to be displayed.
 	envResolverDebug = "COHERENCE_RESOLVER_DEBUG"
 
@@ -1354,6 +1351,10 @@ func executePutAll[K comparable, V any](ctx context.Context, bc *baseClient[K, V
 	)
 	if err != nil {
 		return err
+	}
+
+	if !bc.session.IsGrpcV1() && ttl > 0 {
+		return errors.New("this Coherence cluster version does not support PutAllWithExpiry")
 	}
 
 	newCtx, cancel := bc.session.ensureContext(ctx)
