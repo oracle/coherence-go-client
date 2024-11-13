@@ -119,7 +119,7 @@ func TestMapAndLifecycleEventsAll4(t *testing.T) {
 	g, session := initTest(t)
 	defer session.Close()
 
-	if !session.IsGrpcV1OrAbove() {
+	if session.GetProtocolVersion() == 0 {
 		t.Skip("Skip for gRPC v0")
 	}
 
@@ -147,7 +147,7 @@ func TestEventDisconnect(t *testing.T) {
 		coherence.WithReadyTimeout(time.Duration(130)*time.Second))
 	defer session.Close()
 
-	if !session.IsGrpcV1OrAbove() {
+	if session.GetProtocolVersion() == 0 {
 		t.Skip("Skip for gRPC v0")
 	}
 
@@ -177,7 +177,7 @@ func TestEventDisconnectWithReadyTimeoutDelay(t *testing.T) {
 	g, session := initTest(t, coherence.WithReadyTimeout(time.Duration(130)*time.Second))
 	defer session.Close()
 
-	if !session.IsGrpcV1OrAbove() {
+	if session.GetProtocolVersion() == 0 {
 		t.Skip("Skip for gRPC v0")
 	}
 
@@ -967,7 +967,7 @@ func runTestExpiringEvents(g *gomega.WithT, cache coherence.NamedCache[string, s
 	utils.Sleep(10)
 
 	expectedEvents := 0 // default for gRPC v0
-	if cache.GetSession().IsGrpcV1OrAbove() {
+	if cache.GetSession().GetProtocolVersion() > 0 {
 		expectedEvents = 2
 	}
 

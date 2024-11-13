@@ -416,7 +416,7 @@ func (s *Session) Close() {
 
 		s.mapMutex.Unlock()
 
-		if s.IsGrpcV1OrAbove() {
+		if s.GetProtocolVersion() > 0 {
 			_ = s.v1StreamManagerCache.eventStream.grpcStream.CloseSend()
 		}
 		s.dispatch(Closed, func() SessionLifecycleEvent {
@@ -508,7 +508,7 @@ func (s *Session) ensureConnection() error {
 	s.conn = conn
 	s.firstConnectAttempted = true
 
-	var apiMessage = "serverProtocolVersion: 0"
+	var apiMessage = " serverProtocolVersion: 0"
 
 	// attempt to connect to V1 gRPC endpoint first and fallback if not available
 	manager, err1 := newStreamManagerV1(s, cacheServiceProtocol)
@@ -541,7 +541,7 @@ func (s *Session) ensureConnection() error {
 				return
 			}
 
-			if session.IsGrpcV1OrAbove() {
+			if session.GetProtocolVersion() > 0 {
 				firstConnect = !s.hasConnected
 			}
 
@@ -611,9 +611,12 @@ func (s *Session) ensureConnection() error {
 	return nil
 }
 
-// IsGrpcV1OrAbove indicates if we are connected to a v1 gRPC client or above.
-func (s *Session) IsGrpcV1OrAbove() bool {
-	return s.v1StreamManagerCache != nil
+// GetProtocolVersion returns the protocol version used by the server.
+func (s *Session) GetProtocolVersion() int32 {
+	if s.v1StreamManagerCache == nil {
+		return 0
+	}
+	return s.v1StreamManagerCache.serverProtocolVersion
 }
 
 // waitForReady waits until the connection is ready up to the ready session timeout and will

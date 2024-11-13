@@ -143,7 +143,7 @@ func executeClear[K comparable, V any](ctx context.Context, bc *baseClient[K, V]
 		defer cancel()
 	}
 
-	if bc.session.IsGrpcV1OrAbove() {
+	if bc.session.GetProtocolVersion() > 0 {
 		err = bc.session.v1StreamManagerCache.clearCache(newCtx, bc.name)
 	} else {
 		clearRequest := pb.ClearRequest{Cache: bc.name, Scope: bc.sessionOpts.Scope}
@@ -203,7 +203,7 @@ func executeAddIndex[K comparable, V, T, E any](ctx context.Context, bc *baseCli
 		return err
 	}
 
-	if bc.session.IsGrpcV1OrAbove() {
+	if bc.session.GetProtocolVersion() > 0 {
 		return bc.session.v1StreamManagerCache.addIndex(newCtx, bc.name, binExtractor, &sorted, binComparator)
 	}
 
@@ -235,7 +235,7 @@ func executeRemoveIndex[K comparable, V, T, E any](ctx context.Context, bc *base
 		return err
 	}
 
-	if bc.session.IsGrpcV1OrAbove() {
+	if bc.session.GetProtocolVersion() > 0 {
 		return bc.session.v1StreamManagerCache.removeIndex(newCtx, bc.name, binExtractor)
 	}
 
@@ -261,7 +261,7 @@ func executeTruncate[K comparable, V any](ctx context.Context, bc *baseClient[K,
 		defer cancel()
 	}
 
-	if bc.session.IsGrpcV1OrAbove() {
+	if bc.session.GetProtocolVersion() > 0 {
 		err = bc.session.v1StreamManagerCache.truncateCache(newCtx, bc.name)
 		if err != nil {
 			return err
@@ -292,7 +292,7 @@ func executeDestroy[K comparable, V any](ctx context.Context, bc *baseClient[K, 
 		defer cancel()
 	}
 
-	if bc.session.IsGrpcV1OrAbove() {
+	if bc.session.GetProtocolVersion() > 0 {
 		err = bc.session.v1StreamManagerCache.destroyCache(newCtx, bc.name)
 		if err != nil {
 			return err
@@ -321,7 +321,7 @@ func executeDestroy[K comparable, V any](ctx context.Context, bc *baseClient[K, 
 
 // executeRelease releases a NamedCache or NamedMap.
 func executeRelease[K comparable, V any](bc *baseClient[K, V], nm NamedMap[K, V]) {
-	if !bc.session.IsGrpcV1OrAbove() {
+	if bc.session.GetProtocolVersion() == 0 {
 		bc.eventManager.dispatch(Released, func() MapLifecycleEvent[K, V] {
 			return newMapLifecycleEvent(nm, Released)
 		})
@@ -367,7 +367,7 @@ func executeContainsKey[K comparable, V any](ctx context.Context, bc *baseClient
 		return false, err
 	}
 
-	if bc.session.IsGrpcV1OrAbove() {
+	if bc.session.GetProtocolVersion() > 0 {
 		return bc.session.v1StreamManagerCache.containsKey(newCtx, bc.name, binKey)
 	}
 
@@ -402,7 +402,7 @@ func executeContainsValue[K comparable, V any](ctx context.Context, bc *baseClie
 		return false, err
 	}
 
-	if bc.session.IsGrpcV1OrAbove() {
+	if bc.session.GetProtocolVersion() > 0 {
 		return bc.session.v1StreamManagerCache.containsValue(newCtx, bc.name, binValue)
 	}
 	containsValueRequest := pb.ContainsValueRequest{Cache: bc.name, Value: binValue, Format: bc.format, Scope: bc.sessionOpts.Scope}
@@ -442,7 +442,7 @@ func executeContainsEntry[K comparable, V any](ctx context.Context, bc *baseClie
 		return false, err
 	}
 
-	if bc.session.IsGrpcV1OrAbove() {
+	if bc.session.GetProtocolVersion() > 0 {
 		return bc.session.v1StreamManagerCache.containsEntry(newCtx, bc.name, binKey, binValue)
 	}
 
@@ -471,7 +471,7 @@ func executeIsEmpty[K comparable, V any](ctx context.Context, bc *baseClient[K, 
 		defer cancel()
 	}
 
-	if bc.session.IsGrpcV1OrAbove() {
+	if bc.session.GetProtocolVersion() > 0 {
 		isEmpty, err = bc.session.v1StreamManagerCache.isEmpty(newCtx, bc.name)
 		if err != nil {
 			return false, err
@@ -534,7 +534,7 @@ func executeGet[K comparable, V any](ctx context.Context, bc *baseClient[K, V], 
 		}(time.Now())
 	}
 
-	if bc.session.IsGrpcV1OrAbove() {
+	if bc.session.GetProtocolVersion() > 0 {
 		resultBytes, err = bc.session.v1StreamManagerCache.get(newCtx, bc.name, binKey)
 		if err != nil {
 			return zeroValue, err
@@ -633,7 +633,7 @@ func executeGetAll[K comparable, V any](ctx context.Context, bc *baseClient[K, V
 			return
 		}
 
-		if bc.session.IsGrpcV1OrAbove() {
+		if bc.session.GetProtocolVersion() > 0 {
 			executeGetAllV1(ctx, bc, binKeys, ch)
 			close(ch)
 			return
@@ -1013,7 +1013,7 @@ func executeAggregate[K comparable, V, R any](ctx context.Context, bc *baseClien
 	}
 	// else keys and filter are empty
 
-	if bc.session.IsGrpcV1OrAbove() {
+	if bc.session.GetProtocolVersion() > 0 {
 		res, err1 := bc.session.v1StreamManagerCache.aggregate(newCtx, bc.name, binAggregator, ensureKeysOrFilterGrpcV1(binKeys, binFilter))
 		if err1 != nil {
 			return zeroValue, err1
@@ -1090,7 +1090,7 @@ func executeInvoke[K comparable, V any, R any](ctx context.Context, bc *baseClie
 		return zeroValue, err
 	}
 
-	if bc.session.IsGrpcV1OrAbove() {
+	if bc.session.GetProtocolVersion() > 0 {
 		binKeys := make([][]byte, 1)
 		binKeys[0] = binKey
 
@@ -1171,7 +1171,7 @@ func executeInvokeAllFilterOrKeys[K comparable, V any, R any](ctx context.Contex
 			defer cancel()
 		}
 
-		if bc.session.IsGrpcV1OrAbove() {
+		if bc.session.GetProtocolVersion() > 0 {
 			executeInvokeAllFilterOrKeysV1(ctx, bc, binProcessor, binKeys, binFilter, ch)
 			close(ch)
 			return
@@ -1234,7 +1234,7 @@ func executeKeySet[K comparable, V any](ctx context.Context, bc *baseClient[K, V
 		iter keyPageIterator[K, V]
 	)
 
-	if bc.isGrpcV1OrAbove() {
+	if bc.getProtocolVersion() > 0 {
 		iter = newKeyPageIteratorV1[K, V](ctx, bc)
 	} else {
 		iter = newKeyPageIterator[K, V](ctx, bc)
@@ -1293,7 +1293,7 @@ func executeKeySetFilter[K comparable, V any](ctx context.Context, bc *baseClien
 			defer cancel()
 		}
 
-		if bc.session.IsGrpcV1OrAbove() {
+		if bc.session.GetProtocolVersion() > 0 {
 			executeKeySetFilterV1(ctx, bc, binFilter, ch)
 			close(ch)
 			return
@@ -1352,7 +1352,7 @@ func executePutAll[K comparable, V any](ctx context.Context, bc *baseClient[K, V
 		return err
 	}
 
-	if !bc.session.IsGrpcV1OrAbove() && ttl > 0 {
+	if bc.session.GetProtocolVersion() == 0 && ttl > 0 {
 		return errors.New("this Coherence cluster version does not support PutAllWithExpiry")
 	}
 
@@ -1377,7 +1377,7 @@ func executePutAll[K comparable, V any](ctx context.Context, bc *baseClient[K, V
 		counterPutAll++
 	}
 
-	if bc.session.IsGrpcV1OrAbove() {
+	if bc.session.GetProtocolVersion() > 0 {
 		v1Entries := make([]*pb1.BinaryKeyAndValue, counterPutAll)
 		for k, v := range e {
 			v1Entries[k] = &pb1.BinaryKeyAndValue{Key: v.Key, Value: v.Value}
@@ -1438,7 +1438,7 @@ func executePutIfAbsent[K comparable, V any](ctx context.Context, bc *baseClient
 		return zeroValue, err
 	}
 
-	if bc.session.IsGrpcV1OrAbove() {
+	if bc.session.GetProtocolVersion() > 0 {
 		bytesResult, err = bc.session.v1StreamManagerCache.putIfAbsent(newCtx, bc.name, binKey, binValue)
 		if err != nil {
 			return zeroValue, err
@@ -1493,7 +1493,7 @@ func executePutWithExpiry[K comparable, V any](ctx context.Context, bc *baseClie
 		return zeroValue, err
 	}
 
-	if bc.session.IsGrpcV1OrAbove() {
+	if bc.session.GetProtocolVersion() > 0 {
 		bytesResult, err = bc.session.v1StreamManagerCache.put(newCtx, bc.name, binKey, binValue, ttl)
 		if err != nil {
 			return zeroValue, err
@@ -1565,7 +1565,7 @@ func executeRemove[K comparable, V any](ctx context.Context, bc *baseClient[K, V
 		return zeroValue, err
 	}
 
-	if bc.session.IsGrpcV1OrAbove() {
+	if bc.session.GetProtocolVersion() > 0 {
 		bytesResult, err = bc.session.v1StreamManagerCache.remove(newCtx, bc.name, binKey)
 		if err != nil {
 			return zeroValue, err
@@ -1617,7 +1617,7 @@ func executeRemoveMapping[K comparable, V any](ctx context.Context, bc *baseClie
 		return false, err
 	}
 
-	if bc.session.IsGrpcV1OrAbove() {
+	if bc.session.GetProtocolVersion() > 0 {
 		removed, err = bc.session.v1StreamManagerCache.removeMapping(newCtx, bc.name, binKey, binValue)
 		if err != nil {
 			return removed, err
@@ -1668,7 +1668,7 @@ func executeReplace[K comparable, V any](ctx context.Context, bc *baseClient[K, 
 		return zeroValue, err
 	}
 
-	if bc.session.IsGrpcV1OrAbove() {
+	if bc.session.GetProtocolVersion() > 0 {
 		bytesResult, err = bc.session.v1StreamManagerCache.replace(newCtx, bc.name, binKey, binValue)
 		if err != nil {
 			return zeroValue, err
@@ -1722,7 +1722,7 @@ func executeReplaceMapping[K comparable, V any](ctx context.Context, bc *baseCli
 		return false, err
 	}
 
-	if bc.session.IsGrpcV1OrAbove() {
+	if bc.session.GetProtocolVersion() > 0 {
 		replaced, err = bc.session.v1StreamManagerCache.replaceMapping(newCtx, bc.name, binKey, binPrevValue, binNewValue)
 		if err != nil {
 			return replaced, err
@@ -1758,7 +1758,7 @@ func executeSize[K comparable, V any](ctx context.Context, bc *baseClient[K, V])
 		defer cancel()
 	}
 
-	if bc.session.IsGrpcV1OrAbove() {
+	if bc.session.GetProtocolVersion() > 0 {
 		size, err1 := bc.session.v1StreamManagerCache.size(newCtx, bc.name)
 		if err1 != nil {
 			return 0, err1
@@ -1788,7 +1788,7 @@ func executeIsReady[K comparable, V any](ctx context.Context, bc *baseClient[K, 
 		defer cancel()
 	}
 
-	if bc.session.IsGrpcV1OrAbove() {
+	if bc.session.GetProtocolVersion() > 0 {
 		return bc.session.v1StreamManagerCache.isReady(newCtx, bc.name)
 	}
 
@@ -1815,7 +1815,7 @@ func executeEntrySet[K comparable, V any](ctx context.Context, bc *baseClient[K,
 		return ch
 	}
 
-	if bc.isGrpcV1OrAbove() {
+	if bc.getProtocolVersion() > 0 {
 		iter = newEntryPageIteratorV1[K, V](ctx, bc)
 	} else {
 		iter = newEntryPageIterator[K, V](ctx, bc)
@@ -1868,7 +1868,7 @@ func executeEntrySetFilter[K comparable, V any](ctx context.Context, bc *baseCli
 			defer cancel()
 		}
 
-		if bc.session.IsGrpcV1OrAbove() {
+		if bc.session.GetProtocolVersion() > 0 {
 			executeInvokeEntrySetFilterV1(ctx, bc, binFilter, ch)
 			close(ch)
 			return
@@ -1952,7 +1952,7 @@ func executeValues[K comparable, V any](ctx context.Context, bc *baseClient[K, V
 			defer cancel()
 		}
 
-		if bc.session.IsGrpcV1OrAbove() {
+		if bc.session.GetProtocolVersion() > 0 {
 			executeValuesFilterV1(ctx, bc, binFilter, ch)
 			close(ch)
 			return
@@ -2011,7 +2011,7 @@ func executeValuesNoFilter[K comparable, V any](ctx context.Context, bc *baseCli
 		return ch
 	}
 
-	if bc.isGrpcV1OrAbove() {
+	if bc.getProtocolVersion() > 0 {
 		iter = newValuePageIteratorV1[K, V](ctx, bc)
 	} else {
 		iter = newValuePageIterator[K, V](ctx, bc)
@@ -2036,8 +2036,8 @@ func executeValuesNoFilter[K comparable, V any](ctx context.Context, bc *baseCli
 	return ch
 }
 
-func (bc *baseClient[K, V]) isGrpcV1OrAbove() bool {
-	return bc.session.IsGrpcV1OrAbove()
+func (bc *baseClient[K, V]) getProtocolVersion() int32 {
+	return bc.session.GetProtocolVersion()
 }
 
 // generateMapLifecycleEvent emits the [MapLifeCycleEvent] for v1 clients.
@@ -2100,7 +2100,7 @@ func (bc *baseClient[K, V]) ensureClientConnection() error {
 		return err
 	}
 
-	if !bc.isGrpcV1OrAbove() {
+	if bc.getProtocolVersion() == 0 {
 		// ensure we have a NamedCacheServiceClient only if we are using v0
 		if bc.client != nil {
 			return nil

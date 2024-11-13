@@ -1091,15 +1091,15 @@ type saveListener[K comparable, V any] struct {
 // reRegisterListeners re-registers listeners on reconnect session.
 func reRegisterListeners[K comparable, V any](ctx context.Context, namedMap *NamedMap[K, V], bc *baseClient[K, V]) error {
 	var (
-		err             error
-		debug           = bc.session.debugConnection
-		isGrpcV1        = bc.isGrpcV1OrAbove()
-		keyListeners    = make(map[K]saveListener[K, V], 0)
-		filterListeners = make(map[filters.Filter]saveListener[K, V], 0)
+		err                   error
+		debug                 = bc.session.debugConnection
+		serverProtocolVersion = bc.getProtocolVersion()
+		keyListeners          = make(map[K]saveListener[K, V], 0)
+		filterListeners       = make(map[filters.Filter]saveListener[K, V], 0)
 	)
 
 	// save the key and filter listeners as we need to close the eventManager
-	if !isGrpcV1 {
+	if serverProtocolVersion == 0 {
 		for k, lg := range bc.eventManager.keyListeners {
 			for l, lite := range lg.listeners {
 				keyListeners[k] = saveListener[K, V]{lite: lite, listener: l}
@@ -1112,7 +1112,7 @@ func reRegisterListeners[K comparable, V any](ctx context.Context, namedMap *Nam
 			}
 		}
 	} else {
-		// gRPC V1
+		// gRPC V1+
 		for k, lg := range bc.keyListenersV1 {
 			for l, lite := range lg.listeners {
 				keyListeners[k] = saveListener[K, V]{lite: lite, listener: l}
@@ -1126,7 +1126,7 @@ func reRegisterListeners[K comparable, V any](ctx context.Context, namedMap *Nam
 		}
 	}
 
-	if !isGrpcV1 {
+	if serverProtocolVersion == 0 {
 		// destroy the event manager and create a new one
 		bc.eventManager.close()
 		bc.eventManager, err = newMapEventManager[K, V](namedMap, bc, bc.session)
@@ -1182,7 +1182,7 @@ func reRegisterListeners[K comparable, V any](ctx context.Context, namedMap *Nam
 	// re-register key listeners
 	for k, save := range keyListeners {
 		debug("re-registering listener %v for key: %v", save.listener, k)
-		if !isGrpcV1 {
+		if serverProtocolVersion == 0 {
 			if err = bc.eventManager.addKeyListener(ctx, save.listener, k, save.lite); err != nil {
 				return fmt.Errorf("unable to re-register listener %v for key%v - %v", k, save.listener, err)
 			}
@@ -1195,7 +1195,7 @@ func reRegisterListeners[K comparable, V any](ctx context.Context, namedMap *Nam
 	// re-register filter listeners
 	for f, save := range filterListeners {
 		debug("re-registering listener %v for filter %v", save.listener, f)
-		if !isGrpcV1 {
+		if serverProtocolVersion == 0 {
 			if err = bc.eventManager.addFilterListener(ctx, save.listener, f, save.lite); err != nil {
 				return fmt.Errorf("unable to add filter listener %v for filter %v - %v", f, save.listener, err)
 			}
