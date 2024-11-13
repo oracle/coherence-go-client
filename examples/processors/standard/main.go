@@ -95,19 +95,19 @@ func main() {
 		if se.Err != nil {
 			panic(se.Err)
 		}
-		fmt.Println("Updated person with key", se.Value)
+		fmt.Println("Updated person with key", se.Key, "and value", se.Value)
 	}
 
 	fmt.Println("Retiring all people over 67, just an example ;)")
 	// invoke an entry process over all people older than 67 and set them as retired
 	age := extractors.Extract[int]("age")
-	ch2 := coherence.InvokeAllFilter[int, Person, int](ctx, namedMap, filters.Greater(age, 67),
+	ch2 := coherence.InvokeAllFilter[int, Person, bool](ctx, namedMap, filters.Greater(age, 67),
 		processors.Update("retired", true))
 	for se := range ch2 {
 		if se.Err != nil {
 			panic(se.Err)
 		}
-		fmt.Println("Retired person with key", se.Value)
+		fmt.Println("Retired person with key", se.Key, "and value", se.Value)
 	}
 
 	fmt.Println("Displaying all people")

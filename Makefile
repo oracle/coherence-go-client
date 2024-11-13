@@ -8,12 +8,13 @@
 # ----------------------------------------------------------------------------------------------------------------------
 
 # This is the version of the coherence-go-client
-VERSION ?=1.2.3
+VERSION ?=1.3.0
 CURRDIR := $(shell pwd)
 USER_ID := $(shell echo "`id -u`:`id -g`")
 
-override BUILD_BIN           := $(CURRDIR)/bin
-override PROTO_DIR			 := $(CURRDIR)/etc/proto
+override BUILD_BIN       := $(CURRDIR)/bin
+override PROTO_DIR	 := $(CURRDIR)/etc/proto
+override PROTOV1_DIR	 := $(CURRDIR)/etc/proto-v1
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Set the location of various build tools
@@ -196,8 +197,8 @@ copyright: getcopyright ## Check copyright headers
 # ----------------------------------------------------------------------------------------------------------------------
 .PHONY: golangci
 golangci: $(TOOLS_BIN)/golangci-lint ## Go code review
-	$(TOOLS_BIN)/golangci-lint run -v --timeout=5m  ./...
-	cd examples && $(TOOLS_BIN)/golangci-lint run -v --timeout=5m  ./...
+	GOGC=50 $(TOOLS_BIN)/golangci-lint run -v --timeout=5m --max-same-issues=0 ./...
+	cd examples && GOGC=50 $(TOOLS_BIN)/golangci-lint run -v --timeout=5m --max-same-issues=0 ./...
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Download and build proto files
@@ -205,13 +206,37 @@ golangci: $(TOOLS_BIN)/golangci-lint ## Go code review
 .PHONY: generate-proto
 generate-proto: $(TOOLS_BIN)/protoc ## Generate Proto Files
 	mkdir -p $(PROTO_DIR) || true
-	curl -o $(PROTO_DIR)/services.proto https://raw.githubusercontent.com/oracle/coherence/22.06.9/prj/coherence-grpc/src/main/proto/services.proto
-	curl -o $(PROTO_DIR)/messages.proto https://raw.githubusercontent.com/oracle/coherence/22.06.9/prj/coherence-grpc/src/main/proto/messages.proto
+	curl -o $(PROTO_DIR)/services.proto https://raw.githubusercontent.com/oracle/coherence/22.06.10/prj/coherence-grpc/src/main/proto/services.proto
+	curl -o $(PROTO_DIR)/messages.proto https://raw.githubusercontent.com/oracle/coherence/22.06.10/prj/coherence-grpc/src/main/proto/messages.proto
 	echo "" >> $(PROTO_DIR)/services.proto
 	echo "" >> $(PROTO_DIR)/messages.proto
 	echo 'option go_package = "github.com/oracle/coherence-go-client/proto";' >> $(PROTO_DIR)/services.proto
 	echo 'option go_package = "github.com/oracle/coherence-go-client/proto";' >> $(PROTO_DIR)/messages.proto
 	$(TOOLS_BIN)/protoc --proto_path=./etc/proto --go_out=./proto --go_opt=paths=source_relative --go-grpc_out=./proto --go-grpc_opt=paths=source_relative etc/proto/messages.proto etc/proto/services.proto
+
+# ----------------------------------------------------------------------------------------------------------------------
+# Download and build proto files - v1
+# ----------------------------------------------------------------------------------------------------------------------
+.PHONY: generate-proto-v1
+generate-proto-v1: $(TOOLS_BIN)/protoc ## Generate Proto Files v1
+	mkdir -p $(PROTOV1_DIR) || true
+	curl -o $(PROTOV1_DIR)/proxy_service_messages_v1.proto https://raw.githubusercontent.com/oracle/coherence/24.09/prj/coherence-grpc/src/main/proto/proxy_service_messages_v1.proto
+	curl -o $(PROTOV1_DIR)/proxy_service_v1.proto https://raw.githubusercontent.com/oracle/coherence/24.09/prj/coherence-grpc/src/main/proto/proxy_service_v1.proto
+	curl -o $(PROTOV1_DIR)/common_messages_v1.proto https://raw.githubusercontent.com/oracle/coherence/24.09/prj/coherence-grpc/src/main/proto/common_messages_v1.proto
+	curl -o $(PROTOV1_DIR)/cache_service_messages_v1.proto https://raw.githubusercontent.com/oracle/coherence/24.09/prj/coherence-grpc/src/main/proto/cache_service_messages_v1.proto
+	curl -o $(PROTOV1_DIR)/queue_service_messages_v1.proto https://raw.githubusercontent.com/oracle/coherence/24.09/prj/coherence-grpc/src/main/proto/queue_service_messages_v1.proto
+	echo "" >> $(PROTOV1_DIR)/proxy_service_messages_v1.proto
+	echo "" >> $(PROTOV1_DIR)/proxy_service_v1.proto
+	echo "" >> $(PROTOV1_DIR)/common_messages_v1.proto
+	echo "" >> $(PROTOV1_DIR)/cache_service_messages_v1.proto
+	echo "" >> $(PROTOV1_DIR)/queue_service_messages_v1.proto
+	echo 'option go_package = "github.com/oracle/coherence-go-client/proto/v1";' >> $(PROTOV1_DIR)/proxy_service_messages_v1.proto
+	echo 'option go_package = "github.com/oracle/coherence-go-client/proto/v1";' >> $(PROTOV1_DIR)/proxy_service_v1.proto
+	echo 'option go_package = "github.com/oracle/coherence-go-client/proto/v1";' >> $(PROTOV1_DIR)/common_messages_v1.proto
+	echo 'option go_package = "github.com/oracle/coherence-go-client/proto/v1";' >> $(PROTOV1_DIR)/cache_service_messages_v1.proto
+	echo 'option go_package = "github.com/oracle/coherence-go-client/proto/v1";' >> $(PROTOV1_DIR)/queue_service_messages_v1.proto
+	mkdir ./proto/v1 || true
+	$(TOOLS_BIN)/protoc --proto_path=./etc/proto-v1 --go_out=./proto/v1 --go_opt=paths=source_relative --go-grpc_out=./proto/v1 --go-grpc_opt=paths=source_relative etc/proto-v1/proxy_service_messages_v1.proto etc/proto-v1/proxy_service_v1.proto etc/proto-v1/common_messages_v1.proto etc/proto-v1/cache_service_messages_v1.proto etc/proto-v1/queue_service_messages_v1.proto
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -231,7 +256,7 @@ show-docs:   ## Show the Documentation
 
 .PHONY: trivy-scan
 trivy-scan: gettrivy ## Scan the CLI using trivy
-	$(TOOLS_BIN)/trivy fs --exit-code 1 --skip-dirs "./java" .
+	$(TOOLS_BIN)/trivy fs --cache-dir ${TRIVY_CACHE} --exit-code 1 --skip-dirs "./java" .
 
 
 # ======================================================================================================================
@@ -274,16 +299,29 @@ test-e2e-standalone-scope: test-clean test gotestsum $(BUILD_PROPS) ## Run e2e t
 	@cat $(COVERAGE_DIR)/cover-functional-scope.html | grep 'github.com/oracle/coherence-go-client/coherence' | grep option | sed 's/^.*github/github/' | sed 's,</option.*,,'
 
 # ----------------------------------------------------------------------------------------------------------------------
-# Executes the Go end to end tests for standalone Coherence with Queues set
+# Executes the Go end to end tests for standalone Coherence with Queues
 # ----------------------------------------------------------------------------------------------------------------------
 .PHONY: test-e2e-standalone-queues
-test-e2e-standalone-queues: test-clean test gotestsum $(BUILD_PROPS) ## Run e2e tests with Coherence with Scope set
+test-e2e-standalone-queues: test-clean test gotestsum $(BUILD_PROPS) ## Run e2e tests with Coherence queues
 	CGO_ENABLED=0 $(GOTESTSUM) --format testname --junitfile $(TEST_LOGS_DIR)/go-client-test-queues.xml \
 	  -- $(GO_TEST_FLAGS) -v -coverprofile=$(COVERAGE_DIR)/cover-functional-queues.out -v ./test/e2e/queues/... -coverpkg=./coherence/...
 	go tool cover -html=$(COVERAGE_DIR)/cover-functional-queues.out -o $(COVERAGE_DIR)/cover-functional-queues.html
 	@echo
 	@echo "**** CODE COVERAGE ****"
 	@cat $(COVERAGE_DIR)/cover-functional-queues.html | grep 'github.com/oracle/coherence-go-client/coherence' | grep option | sed 's/^.*github/github/' | sed 's,</option.*,,'
+
+# ----------------------------------------------------------------------------------------------------------------------
+# Executes the Go end to end tests for gRPC v1 tests
+# ----------------------------------------------------------------------------------------------------------------------
+.PHONY: test-v1-base
+test-v1-base: test-clean test gotestsum $(BUILD_PROPS) ## Run e2e tests with Coherence
+	CGO_ENABLED=0 $(GOTESTSUM) --format testname --junitfile $(TEST_LOGS_DIR)/go-client-test-v1.xml \
+	  -- $(GO_TEST_FLAGS) -v -coverprofile=$(COVERAGE_DIR)/cover-functional-v1.out -v ./test/v1/base/... -coverpkg=./coherence/...
+	go tool cover -html=$(COVERAGE_DIR)/cover-functional-v1.out -o $(COVERAGE_DIR)/cover-functional-v1.html
+	@echo
+	@echo "**** CODE COVERAGE ****"
+	@cat $(COVERAGE_DIR)/cover-functional-v1.html | grep 'github.com/oracle/coherence-go-client/coherence' | grep option | sed 's/^.*github/github/' | sed 's,</option.*,,'
+
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Executes the test of the examples
@@ -378,7 +416,7 @@ test-resolver-cluster: test-clean gotestsum $(BUILD_PROPS) ## Run Resolver tests
 # ----------------------------------------------------------------------------------------------------------------------
 $(TOOLS_BIN)/golangci-lint:
 	@mkdir -p $(TOOLS_BIN)
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(TOOLS_BIN) v1.52.2
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(TOOLS_BIN) v1.61.0
 
 
 # ----------------------------------------------------------------------------------------------------------------------

@@ -24,6 +24,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"testing"
 	"time"
 )
 
@@ -57,6 +58,7 @@ const (
 	envTLSClientCert      = "COHERENCE_TLS_CLIENT_CERT_OPTION"
 	envTLSClientKey       = "COHERENCE_TLS_CLIENT_KEY_OPTION"
 	envIgnoreInvalidCerts = "COHERENCE_IGNORE_INVALID_CERTS_OPTION"
+	secure                = "SECURE"
 )
 
 // SetTestContext sets the current context
@@ -67,6 +69,54 @@ func SetTestContext(context *TestContext) {
 // GetTestContext gets the current context
 func GetTestContext() *TestContext {
 	return currentTestContext
+}
+
+func RunTest(m *testing.M, grpcPort, httpPort, restPort int, startup bool) {
+	var (
+		err        error
+		secureMode string
+		exitCode   int
+	)
+
+	if val := os.Getenv(secure); val != "" {
+		secureMode = val
+	}
+	myContext := TestContext{ClusterName: "cluster1", GrpcPort: grpcPort, HTTPPort: httpPort,
+		URL: GetManagementURL(httpPort), ExpectedServers: 2, RestURL: GetRestURL(restPort),
+		HostName: "127.0.0.1", SecureMode: secureMode}
+	SetTestContext(&myContext)
+
+	fileName := GetFilePath("docker-compose-2-members.yaml")
+	if startup {
+		err = StartCoherenceCluster(fileName, myContext.URL)
+	}
+	if err != nil {
+		fmt.Println(err)
+		exitCode = 1
+	} else {
+		//wait for balanced services
+		if startup {
+			err = WaitForHTTPBalancedServices(myContext.RestURL+"/balanced", 120)
+		}
+		if err != nil {
+			fmt.Printf("Unable to wait for balanced services: %v\n", err)
+			exitCode = 1
+		} else {
+			exitCode = m.Run()
+		}
+	}
+
+	fmt.Printf("Tests completed with return code %d\n", exitCode)
+	if exitCode != 0 {
+		if startup {
+			//collect logs from docker images
+			_ = CollectDockerLogs()
+		}
+	}
+	if startup {
+		_, _ = DockerComposeDown(fileName)
+	}
+	os.Exit(exitCode)
 }
 
 // CreateTempDirectory creates a temporary directory
@@ -265,7 +315,7 @@ func issueRequest(requestType, url string, data []byte) (*http.Response, error) 
 	client := &http.Client{Transport: tr,
 		Timeout: time.Duration(120) * time.Second,
 		Jar:     cookies,
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+		CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
 			return http.ErrUseLastResponse
 		}}
 	req, err = http.NewRequest(requestType, url, bytes.NewBuffer(data))
@@ -302,7 +352,7 @@ func WaitForHTTPBalancedServices(url string, timeout int) error {
 		content, err := IssueGetRequest(url)
 		if err != nil {
 			// unable to connect, so wait 5 seconds
-			fmt.Println("Waiting for services" + url + ", sleeping 5")
+			fmt.Println("Waiting for services " + url + ", sleeping 5, ")
 			Sleep(5)
 			duration += 5
 		} else {

@@ -8,13 +8,13 @@ package coherence
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/oracle/coherence-go-client/coherence/filters"
 	"github.com/oracle/coherence-go-client/proto"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"io"
-	"log"
 	"reflect"
 	"strings"
 	"sync"
@@ -80,6 +80,8 @@ var (
 
 	_ SessionLifecycleListener             = &sessionLifecycleListener{}
 	_ MapLifecycleListener[string, string] = &mapLifecycleListener[string, string]{}
+
+	ErrNotSupported = errors.New("this attribute is not support for gRPC v0 clients")
 )
 
 type eventStream struct {
@@ -198,6 +200,9 @@ type MapEvent[K comparable, V any] interface {
 	OldValue() (*V, error)
 	NewValue() (*V, error)
 	Type() MapEventType
+	IsExpired() (bool, error)
+	IsPriming() (bool, error)
+	IsSynthetic() (bool, error)
 }
 
 // mapEvent struct containing data members to satisfy the [MapEvent] contract.
@@ -225,9 +230,21 @@ type mapEvent[K comparable, V any] struct {
 
 	// newValue the deserialized new value, if any, associated with this key
 	newValue *V
+
+	// isgRPCv1 indicates if this event is from gRPCv1, if not then the isExpired will return error
+	isgRPCv1 bool
+
+	// isExpired indicates if the event is an expiry event, only valid for gRPC v1
+	isExpired bool
+
+	// isPriming indicates if the event is a priming event, only valid for gRPC v1
+	isPriming bool
+
+	// isSynthetic indicates if the event is a priming event, only valid for gRPC v1
+	isSynthetic bool
 }
 
-// newMapEvent creates and returns a pointer to a new [M apEvent].
+// newMapEvent creates and returns a pointer to a new [MapEvent].
 func newMapEvent[K comparable, V any](source NamedMap[K, V], response *proto.MapEventResponse) *mapEvent[K, V] {
 	return &mapEvent[K, V]{
 		source:        source,
@@ -268,6 +285,30 @@ func (e *mapEvent[K, V]) OldValue() (*V, error) {
 		e.oldValue = valDeser
 	}
 	return e.oldValue, nil
+}
+
+// IsExpired returns true if the event was generated from an expiry event. Only valid for gRPC v1 connections.
+func (e *mapEvent[K, V]) IsExpired() (bool, error) {
+	if e.isgRPCv1 {
+		return e.isExpired, nil
+	}
+	return false, ErrNotSupported
+}
+
+// IsPriming returns true if the event is a priming event. Only valid for gRPC v1 connections.
+func (e *mapEvent[K, V]) IsPriming() (bool, error) {
+	if e.isgRPCv1 {
+		return e.isPriming, nil
+	}
+	return false, ErrNotSupported
+}
+
+// IsSynthetic returns true if the event is a synthetic event. Only valid for gRPC v1 connections.
+func (e *mapEvent[K, V]) IsSynthetic() (bool, error) {
+	if e.isgRPCv1 {
+		return e.isSynthetic, nil
+	}
+	return false, ErrNotSupported
 }
 
 // NewValue returns the new value, if any, of the entry for which this event
@@ -719,7 +760,7 @@ func makeFilterListenerGroup[K comparable, V any](manager *mapEventManager[K, V]
 // gRPC event stream that is used to send MapListenerRequests and process
 // MapListenerResponses.
 type mapEventManager[K comparable, V any] struct {
-	bc                   baseClient[K, V]
+	bc                   *baseClient[K, V]
 	namedMap             *NamedMap[K, V]
 	session              *Session
 	serializer           Serializer[any]
@@ -743,12 +784,12 @@ type pendingListenerOp[K comparable, V any] struct {
 
 // newMapEventManager creates/initializes and returns a pointer to a new
 // mapEventManager.
-func newMapEventManager[K comparable, V any](namedMap *NamedMap[K, V], bc baseClient[K, V], session *Session) (*mapEventManager[K, V], error) {
+func newMapEventManager[K comparable, V any](namedMap *NamedMap[K, V], bc *baseClient[K, V], session *Session) (*mapEventManager[K, V], error) {
 	manager := mapEventManager[K, V]{
 		bc:                   bc,
 		namedMap:             namedMap,
 		session:              session,
-		serializer:           NewSerializer[any]("json"),
+		serializer:           NewSerializer[any](bc.format),
 		keyListeners:         map[K]*listenerGroup[K, V]{},
 		filterListeners:      map[filters.Filter]*listenerGroup[K, V]{},
 		filterIDToGroup:      map[int64]*listenerGroup[K, V]{},
@@ -911,7 +952,7 @@ func (m *mapEventManager[K, V]) ensureStream() (*eventStream, error) {
 		request.Type = proto.MapListenerRequest_INIT
 		err = grpcStream.Send(&request)
 		if err != nil {
-			log.Printf("event stream send failed: %s\n", err)
+			logMessage(ERROR, "event stream send failed: %s", err)
 			cancel()
 			return nil, err
 		}
@@ -927,7 +968,7 @@ func (m *mapEventManager[K, V]) ensureStream() (*eventStream, error) {
 					statusLocal := status.Code(err)
 					if statusLocal != codes.Canceled {
 						// only log if it's not a cancelled error as this is just the client closing
-						log.Printf("event stream recv failed: %s\n", err)
+						logMessage(ERROR, "event stream recv failed: %s", err)
 					}
 					cancel()
 					return
@@ -947,7 +988,7 @@ func (m *mapEventManager[K, V]) ensureStream() (*eventStream, error) {
 
 						key, err := receivedMapEvent.Key()
 						if err != nil {
-							fmt.Printf("Unable to deserialize event key: %s", err)
+							logMessage(WARNING, "Unable to deserialize event key: %s", err)
 							cancel()
 							return
 						}
@@ -1050,46 +1091,116 @@ type saveListener[K comparable, V any] struct {
 // reRegisterListeners re-registers listeners on reconnect session.
 func reRegisterListeners[K comparable, V any](ctx context.Context, namedMap *NamedMap[K, V], bc *baseClient[K, V]) error {
 	var (
-		err   error
-		debug = bc.session.debug
+		err                   error
+		debug                 = bc.session.debugConnection
+		serverProtocolVersion = bc.getProtocolVersion()
+		keyListeners          = make(map[K]saveListener[K, V], 0)
+		filterListeners       = make(map[filters.Filter]saveListener[K, V], 0)
 	)
 
 	// save the key and filter listeners as we need to close the eventManager
-	keyListeners := make(map[K]saveListener[K, V], 0)
-	filterListeners := make(map[filters.Filter]saveListener[K, V], 0)
+	if serverProtocolVersion == 0 {
+		for k, lg := range bc.eventManager.keyListeners {
+			for l, lite := range lg.listeners {
+				keyListeners[k] = saveListener[K, V]{lite: lite, listener: l}
+			}
+		}
 
-	for k, lg := range bc.eventManager.keyListeners {
-		for l, lite := range lg.listeners {
-			keyListeners[k] = saveListener[K, V]{lite: lite, listener: l}
+		for f, lg := range bc.eventManager.filterListeners {
+			for l, lite := range lg.listeners {
+				filterListeners[f] = saveListener[K, V]{lite: lite, listener: l}
+			}
+		}
+	} else {
+		// gRPC V1+
+		for k, lg := range bc.keyListenersV1 {
+			for l, lite := range lg.listeners {
+				keyListeners[k] = saveListener[K, V]{lite: lite, listener: l}
+			}
+		}
+
+		for f, lg := range bc.filterListenersV1 {
+			for l, lite := range lg.listeners {
+				filterListeners[f] = saveListener[K, V]{lite: lite, listener: l}
+			}
 		}
 	}
 
-	for f, lg := range bc.eventManager.filterListeners {
-		for l, lite := range lg.listeners {
-			filterListeners[f] = saveListener[K, V]{lite: lite, listener: l}
+	if serverProtocolVersion == 0 {
+		// destroy the event manager and create a new one
+		bc.eventManager.close()
+		bc.eventManager, err = newMapEventManager[K, V](namedMap, bc, bc.session)
+		if err != nil {
+			return err
+		}
+	} else {
+		bc.session.debugConnection("re-registering listeners")
+		bc.session.mapMutex.Lock()
+		defer bc.session.mapMutex.Unlock()
+
+		// save the cache names
+		cacheNames := make([]string, 0)
+		for c := range bc.session.cacheIDMap {
+			cacheNames = append(cacheNames, c)
+		}
+
+		err2 := bc.session.ensureConnection()
+		if err2 != nil {
+			return err2
+		}
+
+		// re-create the new stream
+		manager, err1 := newStreamManagerV1(bc.session, cacheServiceProtocol)
+		if err1 == nil {
+			// save the stream manager for a successful V1 client connection
+			bc.session.v1StreamManagerCache = manager
+			bc.session.cacheIDMapMutex.Lock()
+
+			// reset the filters for V1
+			bc.keyListenersV1 = make(map[K]*listenerGroupV1[K, V], 0)
+			bc.filterListenersV1 = make(map[filters.Filter]*listenerGroupV1[K, V], 0)
+			bc.filterIDToGroupV1 = make(map[int64]*listenerGroupV1[K, V], 0)
+
+			// re-ensure all the caches as the connected has gone and so has the gRPC Proxy
+			for _, c := range cacheNames {
+				cacheID, err3 := bc.session.v1StreamManagerCache.ensureCache(context.Background(), c)
+				if err3 != nil {
+					// unrecoverable
+					bc.session.Close()
+					bc.session.cacheIDMapMutex.Unlock()
+					return err3
+				}
+				bc.session.debugConnection("re-ensureCache cacheId=%v for cache=%v", cacheID, c)
+			}
+		} else {
+			return fmt.Errorf("unable to re-stablish v1 stream: %v", err1)
 		}
 	}
 
-	// destroy the event manager and create a new one
-	bc.eventManager.close()
-	bc.eventManager, err = newMapEventManager[K, V](namedMap, *bc, bc.session)
-	if err != nil {
-		return err
-	}
+	bc.session.cacheIDMapMutex.Unlock()
 
 	// re-register key listeners
 	for k, save := range keyListeners {
-		debug(fmt.Sprintf("re-registering listener %v for key%v", save.listener, k))
-		if err = bc.eventManager.addKeyListener(ctx, save.listener, k, save.lite); err != nil {
-			return fmt.Errorf("unable to re-register listener %v for key%v - %v", k, save.listener, err)
+		debug("re-registering listener %v for key: %v", save.listener, k)
+		if serverProtocolVersion == 0 {
+			if err = bc.eventManager.addKeyListener(ctx, save.listener, k, save.lite); err != nil {
+				return fmt.Errorf("unable to re-register listener %v for key%v - %v", k, save.listener, err)
+			}
+		} else {
+			// gRPC V1
+			return addKeyListenerInternalV1[K, V](ctx, bc, save.listener, k, save.lite)
 		}
 	}
 
 	// re-register filter listeners
 	for f, save := range filterListeners {
-		debug(fmt.Sprintf("re-registering listener %v for filter %v", save.listener, f))
-		if err = bc.eventManager.addFilterListener(ctx, save.listener, f, save.lite); err != nil {
-			return fmt.Errorf("unable to add filter listener %v for filter %v - %v", f, save.listener, err)
+		debug("re-registering listener %v for filter %v", save.listener, f)
+		if serverProtocolVersion == 0 {
+			if err = bc.eventManager.addFilterListener(ctx, save.listener, f, save.lite); err != nil {
+				return fmt.Errorf("unable to add filter listener %v for filter %v - %v", f, save.listener, err)
+			}
+		} else {
+			return addFilterListenerInternalV1[K, V](ctx, bc, save.listener, f, save.lite)
 		}
 	}
 
@@ -1118,7 +1229,6 @@ func eventTypeFromID(id int32) MapEventType {
 	case 3:
 		return EntryDeleted
 	default:
-		fmt.Printf("Unknown event id %s", string(id))
-		return ""
+		return "Zero"
 	}
 }

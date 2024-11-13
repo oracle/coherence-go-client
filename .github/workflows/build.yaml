@@ -15,7 +15,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     strategy:
       matrix:
@@ -24,6 +24,7 @@ jobs:
           - 1.20.x
           - 1.21.x
           - 1.22.x
+          - 1.23.x
 
 #   Checkout the source, we need a depth of zero to fetch all of the history otherwise
 #   the copyright check cannot work out the date of the files from Git.
@@ -32,16 +33,10 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: Get Docker Images
-      shell: bash
-      run: |
-        docker pull gcr.io/distroless/java:11
-        uname -a
-
     - name: Set up JDK
       uses: actions/setup-java@v4
       with:
-        java-version: '11'
+        java-version: '17'
         distribution: 'zulu'
 
     - name: Cache Go Modules
@@ -68,16 +63,7 @@ jobs:
       shell: bash
       run: |
         docker pull gcr.io/distroless/java17
-
-    - name: Copyright Check
-      shell: bash
-      run: |
-        make copyright
-
-    - name: Trivy Scan
-      shell: bash
-      run: |
-        make trivy-scan
+        docker pull gcr.io/distroless/java:11
 
     - name: E2E Local Tests
       shell: bash

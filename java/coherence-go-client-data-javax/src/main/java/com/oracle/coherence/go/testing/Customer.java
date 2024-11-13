@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Oracle and/or its affiliates.
+ * Copyright (c) 2023, 2024 Oracle and/or its affiliates.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * https://oss.oracle.com/licenses/upl.
  */
@@ -9,6 +9,7 @@ package com.oracle.coherence.go.testing;
 
 import javax.json.bind.annotation.JsonbProperty;
 import java.io.Serializable;
+import java.util.Objects;
 
 /**
  * Class to represent a customer.
@@ -73,10 +74,10 @@ public class Customer
 
         if (id != customer.id) return false;
         if (Double.compare(customer.outstandingBalance, outstandingBalance) != 0) return false;
-        if (customerName != null ? !customerName.equals(customer.customerName) : customer.customerName != null) return false;
-        if (homeAddress != null ? !homeAddress.equals(customer.homeAddress) : customer.homeAddress != null) return false;
-        if (postalAddress != null ? !postalAddress.equals(customer.postalAddress) : customer.postalAddress != null) return false;
-        return customerType != null ? customerType.equals(customer.customerType) : customer.customerType == null;
+        if (!Objects.equals(customerName, customer.customerName)) return false;
+        if (!Objects.equals(homeAddress, customer.homeAddress)) return false;
+        if (!Objects.equals(postalAddress, customer.postalAddress)) return false;
+        return Objects.equals(customerType, customer.customerType);
     }
 
     @Override

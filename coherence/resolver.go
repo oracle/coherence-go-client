@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"github.com/oracle/coherence-go-client/coherence/discovery"
 	"google.golang.org/grpc/resolver"
-	"log"
 	"math/rand"
 	"strings"
 	"sync"
@@ -24,7 +23,7 @@ const (
 
 var (
 	emptyAddresses = make([]string, 0)
-	resolverDebug  = func(v ...any) {
+	resolverDebug  = func(_ string, _ ...any) {
 		// noop as default debug mode
 	}
 	randomizeAddresses bool
@@ -57,14 +56,26 @@ type nsLookupResolver struct {
 
 func (r *nsLookupResolver) resolve() {
 	r.mutex.Lock()
+	grpcEndpoints := generateNSAddresses(r.target.Endpoint())
 	defer r.mutex.Unlock()
 
-	grpcEndpoints := generateNSAddresses(r.target.Endpoint())
 	if len(grpcEndpoints) == 0 {
-		msg := "resolver produced zero addresses"
-		resolverDebug(msg)
-		r.cc.ReportError(errors.New(msg))
-		return
+		// try 8 times over 2 seconds to get gRPC addresses as we may be in the middle of fail-over
+		for i := 0; i < 8; i++ {
+			resolverDebug("retrying NSLookup attempt", i)
+			time.Sleep(time.Duration(250) * time.Millisecond)
+			grpcEndpoints = generateNSAddresses(r.target.Endpoint())
+			if len(grpcEndpoints) != 0 {
+				break
+			}
+		}
+
+		if len(grpcEndpoints) == 0 {
+			msg := "resolver produced zero addresses"
+			resolverDebug(msg)
+			r.cc.ReportError(errors.New(msg))
+			return
+		}
 	}
 
 	addresses := make([]resolver.Address, len(grpcEndpoints))
@@ -80,8 +91,11 @@ func (r *nsLookupResolver) resolve() {
 		})
 	}
 
-	resolverDebug(fmt.Sprintf("resolver produced the following addresses: %v, randomize=%v", addresses, randomizeAddresses))
+	resolverDebug("resolver produced the following addresses: %v, randomize=%v", addresses, randomizeAddresses)
 	_ = r.cc.UpdateState(resolver.State{Addresses: addresses})
+	if len(addresses) > 0 {
+		resolverDebug("resolver chose address: %s", addresses[0])
+	}
 }
 
 func (r *nsLookupResolver) start() {
@@ -97,7 +111,7 @@ func (*nsLookupResolver) Close() {
 func generateNSAddresses(endpoint string) []string {
 	addresses, err := NsLookupGrpcAddresses(endpoint)
 	if err != nil {
-		resolverDebug(fmt.Sprintf("NSlookup returned error: %v", err))
+		resolverDebug("NSlookup returned error: %v", err)
 		return emptyAddresses
 	}
 	return addresses
@@ -126,7 +140,7 @@ func NsLookupGrpcAddresses(address string) ([]string, error) {
 		defer nsF.Close()
 
 		query := discovery.NSPrefix + discovery.ClusterForeignLookup + "/" + foreignCluster + discovery.NSLocalPort
-		resolverDebug(fmt.Sprintf("lookup for foreign cluster NS port using %s", query))
+		resolverDebug("lookup for foreign cluster NS port using %s", query)
 		port, err := nsF.Lookup(query)
 		if err != nil {
 			return emptyAddresses, fmt.Errorf("unable to lookup foreign clsuter NS port: %v", err)
@@ -136,7 +150,7 @@ func NsLookupGrpcAddresses(address string) ([]string, error) {
 		s1 := strings.Split(address, ":")
 		address = fmt.Sprintf("%s:%v", s1[0], port)
 
-		resolverDebug(fmt.Sprintf("actualy NS port for %s is %s", foreignCluster, address))
+		resolverDebug("NS port for %s is %s", foreignCluster, address)
 		// fall through and do the actual lookup using new address
 	}
 
@@ -193,8 +207,8 @@ func parseNsLookupString(addresses string) ([]string, error) {
 func checkResolverDebug() {
 	if getBoolValueFromEnvVarOrDefault(envResolverDebug, false) {
 		// enable session debugging
-		resolverDebug = func(v ...any) {
-			log.Println("RESOLVER DEBUG:", v)
+		resolverDebug = func(s string, v ...any) {
+			logMessage(DEBUG, s, v...)
 		}
 	}
 }

@@ -12,7 +12,7 @@ import (
 	"github.com/oracle/coherence-go-client/coherence"
 	"github.com/oracle/coherence-go-client/coherence/filters"
 	"github.com/oracle/coherence-go-client/coherence/processors"
-	. "github.com/oracle/coherence-go-client/test/utils"
+	"github.com/oracle/coherence-go-client/test/utils"
 	"testing"
 	"time"
 )
@@ -25,7 +25,7 @@ const (
 // TestNearCacheOperationsAgainstMapAndCache runs all near cache tests against NamedMap and NamedCache.
 func TestNearCacheOperationsAgainstMapAndCache(t *testing.T) {
 	g := gomega.NewWithT(t)
-	session, err := GetSession()
+	session, err := utils.GetSession()
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	defer session.Close()
 
@@ -36,29 +36,29 @@ func TestNearCacheOperationsAgainstMapAndCache(t *testing.T) {
 
 	testCases := []struct {
 		testName string
-		nameMap  coherence.NamedMap[int, Person]
-		test     func(t *testing.T, namedCache coherence.NamedMap[int, Person])
+		nameMap  coherence.NamedMap[int, utils.Person]
+		test     func(t *testing.T, namedCache coherence.NamedMap[int, utils.Person])
 	}{
-		{"RunTestNearCacheBasicNamedMap", GetNearCacheNamedMap[int, Person](g, session, "near-cache-basic-map", coherence.WithNearCache(&nearCacheOptions10Seconds)), RunTestNearCacheBasic},
-		{"RunTestNearCacheBasicNamedCache", GetNearCacheNamedCache[int, Person](g, session, "near-cache-basic-cache", coherence.WithNearCache(&nearCacheOptions10Seconds)), RunTestNearCacheBasic},
-		{"RunTestNearWithClearNamedCache", GetNearCacheNamedCache[int, Person](g, session, "near-cache-clear-cache", coherence.WithNearCache(&nearCacheOptions10Seconds)), RunTestNearWithClear},
-		{"RunTestNearWithClearNamedMap", GetNearCacheNamedCache[int, Person](g, session, "near-cache-clear-map", coherence.WithNearCache(&nearCacheOptions10Seconds)), RunTestNearWithClear},
-		{"RunTestNearCacheRemovesNamedMap", GetNearCacheNamedMap[int, Person](g, session, "near-cache-removes-map", coherence.WithNearCache(&nearCacheOptions120Seconds)), RunTestNearCacheRemoves},
-		{"RunTestNearCacheRemovesNamedCache", GetNearCacheNamedCache[int, Person](g, session, "near-cache-removes-cache", coherence.WithNearCache(&nearCacheOptions120Seconds)), RunTestNearCacheRemoves},
-		{"RunTestNearCacheContainsKeyNamedMap", GetNearCacheNamedMap[int, Person](g, session, "near-cache-removes-map", coherence.WithNearCache(&nearCacheOptions120Seconds)), RunTestNearCacheContainsKey},
-		{"RunTestNearCacheContainsKeyNamedCache", GetNearCacheNamedCache[int, Person](g, session, "near-cache-removes-cache", coherence.WithNearCache(&nearCacheOptions120Seconds)), RunTestNearCacheContainsKey},
-		{"RunTestNearCacheReplacesNamedMap", GetNearCacheNamedMap[int, Person](g, session, "near-cache-replaces-map", coherence.WithNearCache(&nearCacheOptions120Seconds)), RunTestNearCacheReplaces},
-		{"RunTestNearCacheReplacesNamedCache", GetNearCacheNamedCache[int, Person](g, session, "near-cache-replaces-cache", coherence.WithNearCache(&nearCacheOptions120Seconds)), RunTestNearCacheReplaces},
-		{"RunTestNearCacheGetAllNamedMap", GetNearCacheNamedMap[int, Person](g, session, "near-cache-get-all-map", coherence.WithNearCache(&nearCacheOptions120Seconds)), RunTestNearCacheGetAll},
-		{"RunTestNearCacheGetAllNamedCache", GetNearCacheNamedCache[int, Person](g, session, "near-cache-get-all-cache", coherence.WithNearCache(&nearCacheOptions120Seconds)), RunTestNearCacheGetAll},
-		{"RunTestNearCacheGetAllNamedMap2", GetNearCacheNamedMap[int, Person](g, session, "near-cache-get-all-map2", coherence.WithNearCache(&nearCacheOptions120Seconds)), RunTestNearCacheGetAll2},
-		{"RunTestNearCacheGetAllNamedCache2", GetNearCacheNamedCache[int, Person](g, session, "near-cache-get-all-cache2", coherence.WithNearCache(&nearCacheOptions120Seconds)), RunTestNearCacheGetAll2},
-		{"RunTestNearCacheWithHighUnitsNamedMap", GetNearCacheNamedMap[int, Person](g, session, "near-cache-high-units-map", coherence.WithNearCache(&nearCacheOptionsHighUnits1)), RunTestNearCacheWithHighUnits},
-		{"RunTestNearCacheWithHighUnitsNamedCache", GetNearCacheNamedCache[int, Person](g, session, "near-cache-high-units-cache", coherence.WithNearCache(&nearCacheOptionsHighUnits1)), RunTestNearCacheWithHighUnits},
-		{"RunTestNearCacheWithHighUnitsMemoryNamedMap", GetNearCacheNamedMap[int, Person](g, session, "near-cache-high-units-mem-map", coherence.WithNearCache(&nearCacheOptionsHighUnits2)), RunTestNearCacheWithHighUnitsMemory},
-		{"RunTestNearCacheWithHighUnitsMemoryNamedCache", GetNearCacheNamedCache[int, Person](g, session, "near-cache-high-units-mem-cache", coherence.WithNearCache(&nearCacheOptionsHighUnits2)), RunTestNearCacheWithHighUnitsMemory},
-		{"RunTestNearCacheWithHighUnitsAccessNamedMap", GetNearCacheNamedMap[int, Person](g, session, "near-cache-high-units-access-mem-map", coherence.WithNearCache(&nearCacheOptionsHighUnits1)), RunTestNearCacheWithHighUnitsAccess},
-		{"RunTestNearCacheWithHighUnitsAccessNamedCache", GetNearCacheNamedCache[int, Person](g, session, "near-cache-high-units-access-mem-cache", coherence.WithNearCache(&nearCacheOptionsHighUnits1)), RunTestNearCacheWithHighUnitsAccess},
+		{"RunTestNearCacheBasicNamedMap", GetNearCacheNamedMap[int, utils.Person](g, session, "near-cache-basic-map", coherence.WithNearCache(&nearCacheOptions10Seconds)), RunTestNearCacheBasic},
+		{"RunTestNearCacheBasicNamedCache", GetNearCacheNamedCache[int, utils.Person](g, session, "near-cache-basic-cache", coherence.WithNearCache(&nearCacheOptions10Seconds)), RunTestNearCacheBasic},
+		{"RunTestNearWithClearNamedCache", GetNearCacheNamedCache[int, utils.Person](g, session, "near-cache-clear-cache", coherence.WithNearCache(&nearCacheOptions10Seconds)), RunTestNearWithClear},
+		{"RunTestNearWithClearNamedMap", GetNearCacheNamedCache[int, utils.Person](g, session, "near-cache-clear-map", coherence.WithNearCache(&nearCacheOptions10Seconds)), RunTestNearWithClear},
+		{"RunTestNearCacheRemovesNamedMap", GetNearCacheNamedMap[int, utils.Person](g, session, "near-cache-removes-map", coherence.WithNearCache(&nearCacheOptions120Seconds)), RunTestNearCacheRemoves},
+		{"RunTestNearCacheRemovesNamedCache", GetNearCacheNamedCache[int, utils.Person](g, session, "near-cache-removes-cache", coherence.WithNearCache(&nearCacheOptions120Seconds)), RunTestNearCacheRemoves},
+		{"RunTestNearCacheContainsKeyNamedMap", GetNearCacheNamedMap[int, utils.Person](g, session, "near-cache-removes-map", coherence.WithNearCache(&nearCacheOptions120Seconds)), RunTestNearCacheContainsKey},
+		{"RunTestNearCacheContainsKeyNamedCache", GetNearCacheNamedCache[int, utils.Person](g, session, "near-cache-removes-cache", coherence.WithNearCache(&nearCacheOptions120Seconds)), RunTestNearCacheContainsKey},
+		{"RunTestNearCacheReplacesNamedMap", GetNearCacheNamedMap[int, utils.Person](g, session, "near-cache-replaces-map", coherence.WithNearCache(&nearCacheOptions120Seconds)), RunTestNearCacheReplaces},
+		{"RunTestNearCacheReplacesNamedCache", GetNearCacheNamedCache[int, utils.Person](g, session, "near-cache-replaces-cache", coherence.WithNearCache(&nearCacheOptions120Seconds)), RunTestNearCacheReplaces},
+		{"RunTestNearCacheGetAllNamedMap", GetNearCacheNamedMap[int, utils.Person](g, session, "near-cache-get-all-map", coherence.WithNearCache(&nearCacheOptions120Seconds)), RunTestNearCacheGetAll},
+		{"RunTestNearCacheGetAllNamedCache", GetNearCacheNamedCache[int, utils.Person](g, session, "near-cache-get-all-cache", coherence.WithNearCache(&nearCacheOptions120Seconds)), RunTestNearCacheGetAll},
+		{"RunTestNearCacheGetAllNamedMap2", GetNearCacheNamedMap[int, utils.Person](g, session, "near-cache-get-all-map2", coherence.WithNearCache(&nearCacheOptions120Seconds)), RunTestNearCacheGetAll2},
+		{"RunTestNearCacheGetAllNamedCache2", GetNearCacheNamedCache[int, utils.Person](g, session, "near-cache-get-all-cache2", coherence.WithNearCache(&nearCacheOptions120Seconds)), RunTestNearCacheGetAll2},
+		{"RunTestNearCacheWithHighUnitsNamedMap", GetNearCacheNamedMap[int, utils.Person](g, session, "near-cache-high-units-map", coherence.WithNearCache(&nearCacheOptionsHighUnits1)), RunTestNearCacheWithHighUnits},
+		{"RunTestNearCacheWithHighUnitsNamedCache", GetNearCacheNamedCache[int, utils.Person](g, session, "near-cache-high-units-cache", coherence.WithNearCache(&nearCacheOptionsHighUnits1)), RunTestNearCacheWithHighUnits},
+		{"RunTestNearCacheWithHighUnitsMemoryNamedMap", GetNearCacheNamedMap[int, utils.Person](g, session, "near-cache-high-units-mem-map", coherence.WithNearCache(&nearCacheOptionsHighUnits2)), RunTestNearCacheWithHighUnitsMemory},
+		{"RunTestNearCacheWithHighUnitsMemoryNamedCache", GetNearCacheNamedCache[int, utils.Person](g, session, "near-cache-high-units-mem-cache", coherence.WithNearCache(&nearCacheOptionsHighUnits2)), RunTestNearCacheWithHighUnitsMemory},
+		{"RunTestNearCacheWithHighUnitsAccessNamedMap", GetNearCacheNamedMap[int, utils.Person](g, session, "near-cache-high-units-access-mem-map", coherence.WithNearCache(&nearCacheOptionsHighUnits1)), RunTestNearCacheWithHighUnitsAccess},
+		{"RunTestNearCacheWithHighUnitsAccessNamedCache", GetNearCacheNamedCache[int, utils.Person](g, session, "near-cache-high-units-access-mem-cache", coherence.WithNearCache(&nearCacheOptionsHighUnits1)), RunTestNearCacheWithHighUnitsAccess},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.testName, func(t *testing.T) {
@@ -67,18 +67,18 @@ func TestNearCacheOperationsAgainstMapAndCache(t *testing.T) {
 	}
 }
 
-func RunTestNearCacheBasic(t *testing.T, namedMap coherence.NamedMap[int, Person]) {
+func RunTestNearCacheBasic(t *testing.T, namedMap coherence.NamedMap[int, utils.Person]) {
 	var (
 		g        = gomega.NewWithT(t)
 		err      error
-		person1  = Person{ID: 1, Name: "Tim"}
-		oldValue *Person
+		person1  = utils.Person{ID: 1, Name: "Tim"}
+		oldValue *utils.Person
 	)
 
 	oldValue, err = namedMap.Put(ctx, person1.ID, person1)
 	g.Expect(err).NotTo(gomega.HaveOccurred())
 	g.Expect(oldValue).To(gomega.BeNil())
-	AssertSize[int, Person](g, namedMap, 1)
+	utils.AssertSize[int, utils.Person](g, namedMap, 1)
 
 	// this should add to the near cache
 	_, err = namedMap.Get(ctx, person1.ID)
@@ -101,7 +101,7 @@ func RunTestNearCacheBasic(t *testing.T, namedMap coherence.NamedMap[int, Person
 	g.Expect(stats).To(gomega.Not(gomega.BeNil()))
 
 	// sleep for 15 seconds, this should expiry the entry and cause re-read
-	Sleep(15)
+	utils.Sleep(15)
 
 	_, err = namedMap.Get(ctx, person1.ID)
 	g.Expect(err).NotTo(gomega.HaveOccurred())
@@ -111,41 +111,41 @@ func RunTestNearCacheBasic(t *testing.T, namedMap coherence.NamedMap[int, Person
 	g.Expect(err).NotTo(gomega.HaveOccurred())
 
 	// sleep to allow the back-end event to arrive
-	Sleep(5)
+	utils.Sleep(5)
 
 	g.Expect(namedMap.GetNearCacheStats().Size()).To(gomega.Equal(0))
-	AssertSize[int, Person](g, namedMap, 0)
+	utils.AssertSize[int, utils.Person](g, namedMap, 0)
 
 	// add new entry and do a get to populate near cache
 	oldValue, err = namedMap.Put(ctx, person1.ID, person1)
 	g.Expect(err).NotTo(gomega.HaveOccurred())
 	g.Expect(oldValue).To(gomega.BeNil())
-	AssertSize[int, Person](g, namedMap, 1)
+	utils.AssertSize[int, utils.Person](g, namedMap, 1)
 
 	_, err = namedMap.Get(ctx, person1.ID)
 	g.Expect(err).NotTo(gomega.HaveOccurred())
 	g.Expect(namedMap.GetNearCacheStats().Size()).To(gomega.Equal(1))
 
 	// Remove the entry via an entry processor, sleep 5 seconds, which should be time for remove event to be received
-	_, err = coherence.Invoke[int, Person, Person](ctx, namedMap, 1, processors.ConditionalRemove(filters.Always(), false))
+	_, err = coherence.Invoke[int, utils.Person, utils.Person](ctx, namedMap, 1, processors.ConditionalRemove(filters.Always(), false))
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
-	Sleep(5)
+	utils.Sleep(5)
 	g.Expect(namedMap.GetNearCacheStats().Size()).To(gomega.Equal(0))
 
 	namedMap.Release()
 }
 
-func RunTestNearCacheGetAll(t *testing.T, namedMap coherence.NamedMap[int, Person]) {
+func RunTestNearCacheGetAll(t *testing.T, namedMap coherence.NamedMap[int, utils.Person]) {
 	var (
 		g       = gomega.NewWithT(t)
 		err     error
-		person1 = Person{ID: 1, Name: "Tim1"}
-		person2 = Person{ID: 2, Name: "Tim1"}
-		person3 = Person{ID: 3, Name: "Tim3"}
+		person1 = utils.Person{ID: 1, Name: "Tim1"}
+		person2 = utils.Person{ID: 2, Name: "Tim1"}
+		person3 = utils.Person{ID: 3, Name: "Tim3"}
 	)
 
-	people := make(map[int]Person, 0)
+	people := make(map[int]utils.Person, 0)
 	people[1] = person1
 	people[2] = person2
 	people[3] = person3
@@ -153,7 +153,7 @@ func RunTestNearCacheGetAll(t *testing.T, namedMap coherence.NamedMap[int, Perso
 	// populate
 	err = namedMap.PutAll(ctx, people)
 	g.Expect(err).NotTo(gomega.HaveOccurred())
-	AssertSize[int, Person](g, namedMap, 3)
+	utils.AssertSize[int, utils.Person](g, namedMap, 3)
 
 	count := 0
 	// issue a GetAll for all keys, should be no hits
@@ -174,12 +174,12 @@ func RunTestNearCacheGetAll(t *testing.T, namedMap coherence.NamedMap[int, Perso
 	namedMap.GetNearCacheStats().ResetStats()
 
 	// sleep tp wait for map events to be delivered
-	Sleep(10)
+	utils.Sleep(10)
 
 	// add the entries back
 	err = namedMap.PutAll(ctx, people)
 	g.Expect(err).NotTo(gomega.HaveOccurred())
-	AssertSize[int, Person](g, namedMap, 3)
+	utils.AssertSize[int, utils.Person](g, namedMap, 3)
 
 	// issue a Get for key 1 and 2 only
 	_, err = namedMap.Get(ctx, 1)
@@ -205,23 +205,23 @@ func RunTestNearCacheGetAll(t *testing.T, namedMap coherence.NamedMap[int, Perso
 	g.Expect(namedMap.GetNearCacheStats().Size()).To(gomega.Equal(3))
 }
 
-func RunTestNearCacheGetAll2(t *testing.T, namedMap coherence.NamedMap[int, Person]) {
+func RunTestNearCacheGetAll2(t *testing.T, namedMap coherence.NamedMap[int, utils.Person]) {
 	var (
 		g   = gomega.NewWithT(t)
 		err error
-		p1  = Person{ID: 1, Name: "Tim1-Name"}
-		p2  = Person{ID: 2, Name: "Tim2-Name"}
-		p3  = Person{ID: 3, Name: "Tim3-Name"}
+		p1  = utils.Person{ID: 1, Name: "Tim1-Name"}
+		p2  = utils.Person{ID: 2, Name: "Tim2-Name"}
+		p3  = utils.Person{ID: 3, Name: "Tim3-Name"}
 	)
 
-	people := make(map[int]Person, 0)
+	people := make(map[int]utils.Person, 0)
 	people[1] = p1
 	people[2] = p2
 	people[3] = p3
 
 	err = namedMap.PutAll(ctx, people)
 	g.Expect(err).NotTo(gomega.HaveOccurred())
-	AssertSize[int, Person](g, namedMap, 3)
+	utils.AssertSize[int, utils.Person](g, namedMap, 3)
 
 	count := 0
 	// issue a GetAll for all keys, should be no hits
@@ -248,14 +248,14 @@ func RunTestNearCacheGetAll2(t *testing.T, namedMap coherence.NamedMap[int, Pers
 	g.Expect(namedMap.GetNearCacheStats().GetCacheHits()).To(gomega.Equal(int64(3)))
 }
 
-func RunTestNearCacheRemoves(t *testing.T, namedMap coherence.NamedMap[int, Person]) {
+func RunTestNearCacheRemoves(t *testing.T, namedMap coherence.NamedMap[int, utils.Person]) {
 	var (
 		g       = gomega.NewWithT(t)
 		err     error
-		value   *Person
+		value   *utils.Person
 		removed bool
-		person1 = Person{ID: 1, Name: "Tim"}
-		person2 = Person{ID: 2, Name: "Tim2"}
+		person1 = utils.Person{ID: 1, Name: "Tim"}
+		person2 = utils.Person{ID: 2, Name: "Tim2"}
 	)
 
 	err = namedMap.Clear(ctx)
@@ -281,17 +281,17 @@ func RunTestNearCacheRemoves(t *testing.T, namedMap coherence.NamedMap[int, Pers
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 	// wait for back-end update
-	Sleep(5)
+	utils.Sleep(5)
 	g.Expect(removed).Should(gomega.Equal(true))
 	g.Expect(namedMap.GetNearCacheStats().Size()).To(gomega.Equal(0))
 }
 
-func RunTestNearCacheContainsKey(t *testing.T, namedMap coherence.NamedMap[int, Person]) {
+func RunTestNearCacheContainsKey(t *testing.T, namedMap coherence.NamedMap[int, utils.Person]) {
 	var (
 		g       = gomega.NewWithT(t)
 		err     error
-		value   *Person
-		person1 = Person{ID: 1, Name: "Tim"}
+		value   *utils.Person
+		person1 = utils.Person{ID: 1, Name: "Tim"}
 	)
 
 	err = namedMap.Clear(ctx)
@@ -315,7 +315,7 @@ func RunTestNearCacheContainsKey(t *testing.T, namedMap coherence.NamedMap[int, 
 }
 
 // RunTestNearCacheWithHighUnits tests near cache with high units of 100.
-func RunTestNearCacheWithHighUnits(t *testing.T, namedMap coherence.NamedMap[int, Person]) {
+func RunTestNearCacheWithHighUnits(t *testing.T, namedMap coherence.NamedMap[int, utils.Person]) {
 	var (
 		g   = gomega.NewWithT(t)
 		err error
@@ -325,12 +325,12 @@ func RunTestNearCacheWithHighUnits(t *testing.T, namedMap coherence.NamedMap[int
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 	for i := 1; i <= 200; i++ {
-		person := Person{ID: i, Name: fmt.Sprintf("person-%v", i)}
+		person := utils.Person{ID: i, Name: fmt.Sprintf("person-%v", i)}
 		_, err = namedMap.Put(ctx, person.ID, person)
 		g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	}
 
-	AssertSize[int, Person](g, namedMap, 200)
+	utils.AssertSize[int, utils.Person](g, namedMap, 200)
 
 	// issue 100 gets to fill the near cache
 	for i := 1; i <= 100; i++ {
@@ -350,19 +350,19 @@ func RunTestNearCacheWithHighUnits(t *testing.T, namedMap coherence.NamedMap[int
 }
 
 // RunTestNearWithClear tests a near cache that issues puts, get then clears..
-func RunTestNearWithClear(t *testing.T, namedMap coherence.NamedMap[int, Person]) {
+func RunTestNearWithClear(t *testing.T, namedMap coherence.NamedMap[int, utils.Person]) {
 	var (
 		g     = gomega.NewWithT(t)
 		err   error
-		p1Get *Person
-		p2Get *Person
+		p1Get *utils.Person
+		p2Get *utils.Person
 	)
 
 	err = namedMap.Clear(ctx)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
-	p1 := Person{ID: 1, Name: "p1"}
-	p2 := Person{ID: 2, Name: "p2"}
+	p1 := utils.Person{ID: 1, Name: "p1"}
+	p2 := utils.Person{ID: 2, Name: "p2"}
 
 	for i := 1; i < 100; i++ {
 		_, err = namedMap.Put(ctx, p1.ID, p1)
@@ -371,7 +371,7 @@ func RunTestNearWithClear(t *testing.T, namedMap coherence.NamedMap[int, Person]
 		_, err = namedMap.Put(ctx, p2.ID, p2)
 		g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
-		AssertSize[int, Person](g, namedMap, 2)
+		utils.AssertSize[int, utils.Person](g, namedMap, 2)
 
 		p1Get, err = namedMap.Get(ctx, p1.ID)
 		g.Expect(err).ShouldNot(gomega.HaveOccurred())
@@ -395,7 +395,7 @@ func RunTestNearWithClear(t *testing.T, namedMap coherence.NamedMap[int, Person]
 }
 
 // RunTestNearCacheWithHighUnits tests near cache with high units of 100 and accessing entries to ensure they are not removed.
-func RunTestNearCacheWithHighUnitsAccess(t *testing.T, namedMap coherence.NamedMap[int, Person]) {
+func RunTestNearCacheWithHighUnitsAccess(t *testing.T, namedMap coherence.NamedMap[int, utils.Person]) {
 	var (
 		g   = gomega.NewWithT(t)
 		err error
@@ -405,12 +405,12 @@ func RunTestNearCacheWithHighUnitsAccess(t *testing.T, namedMap coherence.NamedM
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 	for i := 1; i <= 200; i++ {
-		person := Person{ID: i, Name: fmt.Sprintf("person-%v", i)}
+		person := utils.Person{ID: i, Name: fmt.Sprintf("person-%v", i)}
 		_, err = namedMap.Put(ctx, person.ID, person)
 		g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	}
 
-	AssertSize[int, Person](g, namedMap, 200)
+	utils.AssertSize[int, utils.Person](g, namedMap, 200)
 
 	// issue 50 gets, should add entries to the near cache
 	for i := 1; i <= 50; i++ {
@@ -450,7 +450,7 @@ func RunTestNearCacheWithHighUnitsAccess(t *testing.T, namedMap coherence.NamedM
 }
 
 // RunTestNearCacheWithHighUnitsMemory tests near cache with high units of 50KB.
-func RunTestNearCacheWithHighUnitsMemory(t *testing.T, namedMap coherence.NamedMap[int, Person]) {
+func RunTestNearCacheWithHighUnitsMemory(t *testing.T, namedMap coherence.NamedMap[int, utils.Person]) {
 	var (
 		g   = gomega.NewWithT(t)
 		err error
@@ -459,13 +459,13 @@ func RunTestNearCacheWithHighUnitsMemory(t *testing.T, namedMap coherence.NamedM
 	err = namedMap.Clear(ctx)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
-	buffer := make(map[int]Person)
+	buffer := make(map[int]utils.Person)
 	for i := 1; i <= 5_000; i++ {
-		buffer[i] = Person{ID: 1, Name: fmt.Sprintf("person-%v", i)}
+		buffer[i] = utils.Person{ID: 1, Name: fmt.Sprintf("person-%v", i)}
 	}
 	err = namedMap.PutAll(ctx, buffer)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-	AssertSize[int, Person](g, namedMap, 5_000)
+	utils.AssertSize[int, utils.Person](g, namedMap, 5_000)
 
 	// issue 10_000 gets to fill the near cache
 	for i := 1; i <= 5_000; i++ {
@@ -492,7 +492,7 @@ func TestDuplicateNamedCache(t *testing.T) {
 		namedMap   coherence.NamedMap[int, string]
 	)
 
-	session, err = GetSession()
+	session, err = utils.GetSession()
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	defer session.Close()
 
@@ -554,7 +554,7 @@ func TestInvalidNearCacheOptions(t *testing.T) {
 		g       = gomega.NewWithT(t)
 	)
 
-	session, err = GetSession()
+	session, err = utils.GetSession()
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	defer session.Close()
 
@@ -606,7 +606,7 @@ func TestIncompatibleNearCacheOptions(t *testing.T) {
 
 	g := gomega.NewWithT(t)
 
-	session, err := GetSession()
+	session, err := utils.GetSession()
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	defer session.Close()
 
@@ -622,7 +622,7 @@ func TestIncompatibleNearCacheOptions(t *testing.T) {
 	// release and re-create namedMap with near cache options
 	namedMapNoNearCache.Release()
 
-	Sleep(10)
+	utils.Sleep(10)
 
 	namedMapNoNearCache, err = coherence.GetNamedMap[int, string](session, namedMap, coherence.WithNearCache(&nearCacheOptions1))
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
@@ -671,14 +671,14 @@ func TestIncompatibleNearCacheOptions(t *testing.T) {
 	g.Expect(namedCache2).To(gomega.Equal(namedCacheNoNearCache))
 }
 
-func RunTestNearCacheReplaces(t *testing.T, namedMap coherence.NamedMap[int, Person]) {
+func RunTestNearCacheReplaces(t *testing.T, namedMap coherence.NamedMap[int, utils.Person]) {
 	var (
 		g       = gomega.NewWithT(t)
 		err     error
-		value   *Person
+		value   *utils.Person
 		removed bool
-		person1 = Person{ID: 1, Name: "Tim"}
-		person2 = Person{ID: 1, Name: "Tim2"}
+		person1 = utils.Person{ID: 1, Name: "Tim"}
+		person2 = utils.Person{ID: 1, Name: "Tim2"}
 	)
 
 	_, err = namedMap.Put(ctx, 1, person1)
@@ -698,8 +698,8 @@ func RunTestNearCacheReplaces(t *testing.T, namedMap coherence.NamedMap[int, Per
 
 	hits := namedMap.GetNearCacheStats().GetCacheHits()
 
-	// sleep enough time for near cache to be update
-	Sleep(5)
+	// sleep enough time for near cache to be updated
+	utils.Sleep(5)
 
 	// execute get from near cache and it should be there
 	value, err = namedMap.Get(ctx, 1)
@@ -710,9 +710,9 @@ func RunTestNearCacheReplaces(t *testing.T, namedMap coherence.NamedMap[int, Per
 	// clear the cache
 	err = namedMap.Clear(ctx)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-	AssertSize[int, Person](g, namedMap, 0)
+	utils.AssertSize[int, utils.Person](g, namedMap, 0)
 
-	Sleep(5)
+	utils.Sleep(5)
 	g.Expect(namedMap.GetNearCacheStats().Size()).To(gomega.Equal(0))
 
 	// put entry back into cache
@@ -731,7 +731,7 @@ func RunTestNearCacheReplaces(t *testing.T, namedMap coherence.NamedMap[int, Per
 	g.Expect(removed).Should(gomega.Equal(true))
 	g.Expect(namedMap.GetNearCacheStats().Size()).To(gomega.Equal(1))
 
-	Sleep(5)
+	utils.Sleep(5)
 
 	value, err = namedMap.Get(ctx, 1)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())

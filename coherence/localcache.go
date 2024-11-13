@@ -265,7 +265,9 @@ func (l *localCacheImpl[K, V]) pruneEntries() {
 	if (l.options.HighUnits > 0 && currentCacheSize+1 > l.options.HighUnits) ||
 		(l.options.HighUnitsMemory > 0 && l.cacheMemory+1 > l.options.HighUnitsMemory) {
 
-		defer l.registerPruneNanos(time.Since(start).Nanoseconds())
+		defer func() {
+			l.registerPruneNanos(time.Since(start).Nanoseconds())
+		}()
 
 		entriesToDelete := int(math.Round(float64(currentCacheSize * prunePercent / 100.0)))
 

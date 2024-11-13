@@ -25,12 +25,12 @@ var _ NamedMap[string, string] = &NamedMapClient[string, string]{}
 // The type parameters are K = type of the key and V = type of the value.
 type NamedMapClient[K comparable, V any] struct {
 	NamedMap[K, V]
-	baseClient[K, V]
+	*baseClient[K, V]
 	namedMapReconnectListener[K, V]
 }
 
 func (nm *NamedMapClient[K, V]) getBaseClient() *baseClient[K, V] { //nolint
-	return &nm.baseClient
+	return nm.baseClient
 }
 
 // Invoke the specified processor against the entry mapped to the specified key.
@@ -75,7 +75,7 @@ func Invoke[K comparable, V, R any](ctx context.Context, nm NamedMap[K, V], key 
 //	        fmt.Println(se.Value)
 //	    }
 //	}
-func InvokeAllFilter[K comparable, V any, R any](ctx context.Context, nm NamedMap[K, V], fltr filters.Filter, proc processors.Processor) <-chan *StreamedValue[R] {
+func InvokeAllFilter[K comparable, V any, R any](ctx context.Context, nm NamedMap[K, V], fltr filters.Filter, proc processors.Processor) <-chan *StreamedEntry[K, R] {
 	return executeInvokeAllFilterOrKeys[K, V, R](ctx, nm.getBaseClient(), fltr, []K{}, proc)
 }
 
@@ -111,7 +111,7 @@ func InvokeAllFilterBlind[K comparable, V any](ctx context.Context, nm NamedMap[
 // The type parameter is R = type of the result of the invocation.
 //
 // The example below shows how to run an entry processor to increment the age of any people with keys 1 and 2. This function
-// returns a stream of  [StreamedValue][R] of the values changed.
+// returns a stream of  [StreamedEntry][K, R] of the values changed.
 //
 //	namedMap, err := coherence.GetNamedMap[int, Person](session, "people")
 //	if err != nil {
@@ -126,10 +126,10 @@ func InvokeAllFilterBlind[K comparable, V any](ctx context.Context, nm NamedMap[
 //	        log.Println(se.Err)
 //	    } else {
 //	        // process the result which will be the key of the person changed
-//	        fmt.Println(se.Value)
+//	        fmt.Println(se.Key, se.Value)
 //	    }
 //	}
-func InvokeAllKeys[K comparable, V any, R any](ctx context.Context, nm NamedMap[K, V], keys []K, proc processors.Processor) <-chan *StreamedValue[R] {
+func InvokeAllKeys[K comparable, V any, R any](ctx context.Context, nm NamedMap[K, V], keys []K, proc processors.Processor) <-chan *StreamedEntry[K, R] {
 	return executeInvokeAllFilterOrKeys[K, V, R](ctx, nm.getBaseClient(), nil, keys, proc)
 }
 
@@ -163,7 +163,7 @@ func InvokeAllKeysBlind[K comparable, V any](ctx context.Context, nm NamedMap[K,
 // The type parameter is R = type of the result of the invocation.
 //
 // The example below shows how to run an entry processor to increment the age of all people. This function
-// returns a stream of [StreamedValue][R] of the values changed.
+// returns a stream of [StreamedEntry][K, R] of the values changed.
 //
 //	namedMap, err := coherence.GetNamedMap[int, Person](session, "people")
 //	if err != nil {
@@ -178,10 +178,10 @@ func InvokeAllKeysBlind[K comparable, V any](ctx context.Context, nm NamedMap[K,
 //	        log.Println(se.Err)
 //	    } else {
 //	        // process the result which will be the key of the person changed
-//	        fmt.Println(se.Value)
+//	        fmt.Println(se.Key, se.Value)
 //	    }
 //	}
-func InvokeAll[K comparable, V any, R any](ctx context.Context, nm NamedMap[K, V], proc processors.Processor) <-chan *StreamedValue[R] {
+func InvokeAll[K comparable, V any, R any](ctx context.Context, nm NamedMap[K, V], proc processors.Processor) <-chan *StreamedEntry[K, R] {
 	return executeInvokeAllFilterOrKeys[K, V, R](ctx, nm.getBaseClient(), filters.Always(), nil, proc)
 }
 
@@ -333,13 +333,20 @@ func (nm *NamedMapClient[K, V]) GetCacheName() string {
 // AddLifecycleListener adds a [MapLifecycleListener] that will receive events (truncated or released) that occur
 // against the [NamedMap].
 func (nm *NamedMapClient[K, V]) AddLifecycleListener(listener MapLifecycleListener[K, V]) {
-	registerLifecycleListener(nm.getBaseClient(), listener)
+	if nm.getBaseClient().getProtocolVersion() > 0 {
+		nm.getBaseClient().addLifecycleListener(listener)
+	} else {
+		registerLifecycleListener(nm.getBaseClient(), listener)
+	}
 }
 
 // AddFilterListener adds a [MapListener] that will receive events (inserts, updates, deletes) that occur
 // against the [NamedMap] where entries satisfy the specified [filters.Filter], with the key, and optionally,
 // the old-value and new-value included.
 func (nm *NamedMapClient[K, V]) AddFilterListener(ctx context.Context, listener MapListener[K, V], filter filters.Filter) error {
+	if nm.getBaseClient().getProtocolVersion() > 0 {
+		return addFilterListenerInternalV1[K, V](ctx, nm.getBaseClient(), listener, filter, false)
+	}
 	return nm.getBaseClient().eventManager.addFilterListener(ctx, listener, filter, false)
 }
 
@@ -347,6 +354,9 @@ func (nm *NamedMapClient[K, V]) AddFilterListener(ctx context.Context, listener 
 // against the [NamedMap] where entries satisfy the specified [filters.Filter], with the key,
 // the old-value and new-value included.
 func (nm *NamedMapClient[K, V]) AddFilterListenerLite(ctx context.Context, listener MapListener[K, V], filter filters.Filter) error {
+	if nm.getBaseClient().getProtocolVersion() > 0 {
+		return addFilterListenerInternalV1[K, V](ctx, nm.getBaseClient(), listener, filter, true)
+	}
 	return nm.getBaseClient().eventManager.addFilterListener(ctx, listener, filter, true)
 }
 
@@ -354,6 +364,9 @@ func (nm *NamedMapClient[K, V]) AddFilterListenerLite(ctx context.Context, liste
 // against the map, with the key, old-value and new-value included.
 // This call is equivalent to calling [AddFilterListener] with [filters.Always] as the filter.
 func (nm *NamedMapClient[K, V]) AddListener(ctx context.Context, listener MapListener[K, V]) error {
+	if nm.getBaseClient().getProtocolVersion() > 0 {
+		return addFilterListenerInternalV1[K, V](ctx, nm.getBaseClient(), listener, nil, false)
+	}
 	return nm.getBaseClient().eventManager.addFilterListener(ctx, listener, nil, false)
 }
 
@@ -361,31 +374,42 @@ func (nm *NamedMapClient[K, V]) AddListener(ctx context.Context, listener MapLis
 // against the map, with the key, and optionally, the old-value and new-value included.
 // This call is equivalent to calling [AddFilterListenerLite] with [filters.Always] as the filter.
 func (nm *NamedMapClient[K, V]) AddListenerLite(ctx context.Context, listener MapListener[K, V]) error {
+	if nm.getBaseClient().getProtocolVersion() > 0 {
+		return addFilterListenerInternalV1[K, V](ctx, nm.getBaseClient(), listener, nil, true)
+	}
 	return nm.getBaseClient().eventManager.addFilterListener(ctx, listener, nil, true)
 }
 
 // AddKeyListener adds a [MapListener] that will receive events (inserts, updates, deletes) that occur
 // against the specified key within the [NamedMap], with the key, old-value and new-value included.
 func (nm *NamedMapClient[K, V]) AddKeyListener(ctx context.Context, listener MapListener[K, V], key K) error {
+	if nm.getBaseClient().getProtocolVersion() > 0 {
+		return addKeyListenerInternalV1[K, V](ctx, nm.getBaseClient(), listener, key, false)
+	}
+
 	return nm.getBaseClient().eventManager.addKeyListener(ctx, listener, key, false)
 }
 
 // AddKeyListenerLite adds a [MapListener] that will receive events (inserts, updates, deletes) that occur
 // against the specified key within the [NamedMap], with the key, and optionally, the old-value and new-value included.
 func (nm *NamedMapClient[K, V]) AddKeyListenerLite(ctx context.Context, listener MapListener[K, V], key K) error {
+	if nm.getBaseClient().getProtocolVersion() > 0 {
+		return addKeyListenerInternalV1[K, V](ctx, nm.getBaseClient(), listener, key, true)
+	}
+
 	return nm.getBaseClient().eventManager.addKeyListener(ctx, listener, key, true)
 }
 
 // Clear removes all mappings from the [NamedMap]. This operation is observable and will
 // trigger any registered events.
 func (nm *NamedMapClient[K, V]) Clear(ctx context.Context) error {
-	return executeClear[K, V](ctx, &nm.baseClient)
+	return executeClear[K, V](ctx, nm.baseClient)
 }
 
 // Truncate removes all mappings from the [NamedMap].
 // Note: the removal of entries caused by this truncate operation will not be observable.
 func (nm *NamedMapClient[K, V]) Truncate(ctx context.Context) error {
-	return executeTruncate[K, V](ctx, &nm.baseClient)
+	return executeTruncate[K, V](ctx, nm.baseClient)
 }
 
 // Destroy releases and destroys this instance of [NamedMap].
@@ -395,7 +419,7 @@ func (nm *NamedMapClient[K, V]) Truncate(ctx context.Context) error {
 // internal resources will be released.
 // Note: the removal of entries caused by this operation will not be observable.
 func (nm *NamedMapClient[K, V]) Destroy(ctx context.Context) error {
-	bc := &nm.baseClient
+	bc := nm.baseClient
 	s := bc.session
 
 	// protect updates to maps
@@ -438,13 +462,24 @@ func (nm *NamedMapClient[K, V]) Release() {
 
 	// remove near cache Lifecycle Listener
 	if nm.baseClient.nearCacheLifecycleListener != nil {
-		nm.RemoveLifecycleListener(nm.baseClient.nearCacheLifecycleListener.listener)
+		if nm.getBaseClient().getProtocolVersion() > 0 {
+			nm.getBaseClient().removeLifecycleListener(nm.baseClient.nearCacheLifecycleListener.listener)
+		} else {
+			nm.RemoveLifecycleListener(nm.baseClient.nearCacheLifecycleListener.listener)
+		}
 	}
 
-	executeRelease[K, V](&nm.baseClient, nm.NamedMap)
+	executeRelease[K, V](nm.baseClient, nm.NamedMap)
 
 	// remove the NamedMap from the session.maps map
 	delete(s.maps, nm.Name())
+
+	// remove the cacheID mapping
+	if s.GetProtocolVersion() > 0 {
+		s.cacheIDMapMutex.Lock()
+		delete(s.cacheIDMap, nm.Name())
+		s.cacheIDMapMutex.Unlock()
+	}
 
 	if nm.namedMapReconnectListener.listener != nil {
 		s.RemoveSessionLifecycleListener(nm.namedMapReconnectListener.listener)
@@ -464,7 +499,7 @@ func (nm *NamedMapClient[K, V]) Release() {
 //	   log.Fatal(err)
 //	}
 func (nm *NamedMapClient[K, V]) ContainsKey(ctx context.Context, key K) (bool, error) {
-	return executeContainsKey(ctx, &nm.baseClient, key)
+	return executeContainsKey(ctx, nm.baseClient, key)
 }
 
 // ContainsValue returns true if the [NamedMap] contains a mapping for the specified value.
@@ -481,7 +516,7 @@ func (nm *NamedMapClient[K, V]) ContainsKey(ctx context.Context, key K) (bool, e
 //	   log.Fatal(err)
 //	}
 func (nm *NamedMapClient[K, V]) ContainsValue(ctx context.Context, value V) (bool, error) {
-	return executeContainsValue(ctx, &nm.baseClient, value)
+	return executeContainsValue(ctx, nm.baseClient, value)
 }
 
 // ContainsEntry returns true if the [NamedMap] contains a mapping for the specified key and value.
@@ -498,12 +533,12 @@ func (nm *NamedMapClient[K, V]) ContainsValue(ctx context.Context, value V) (boo
 //	   log.Fatal(err)
 //	}
 func (nm *NamedMapClient[K, V]) ContainsEntry(ctx context.Context, key K, value V) (bool, error) {
-	return executeContainsEntry(ctx, &nm.baseClient, key, value)
+	return executeContainsEntry(ctx, nm.baseClient, key, value)
 }
 
 // IsEmpty returns true if the [NamedMap] contains no mappings.
 func (nm *NamedMapClient[K, V]) IsEmpty(ctx context.Context) (bool, error) {
-	return executeIsEmpty(ctx, &nm.baseClient)
+	return executeIsEmpty(ctx, nm.baseClient)
 }
 
 // EntrySetFilter returns a channel from which entries satisfying the specified filter can be obtained.
@@ -526,7 +561,7 @@ func (nm *NamedMapClient[K, V]) IsEmpty(ctx context.Context) (bool, error) {
 //	    }
 //	}
 func (nm *NamedMapClient[K, V]) EntrySetFilter(ctx context.Context, fltr filters.Filter) <-chan *StreamedEntry[K, V] {
-	return executeEntrySetFilter[K, V](ctx, &nm.baseClient, fltr)
+	return executeEntrySetFilter[K, V](ctx, nm.baseClient, fltr)
 }
 
 // EntrySet returns a channel from which  all entries can be obtained.
@@ -550,7 +585,7 @@ func (nm *NamedMapClient[K, V]) EntrySetFilter(ctx context.Context, fltr filters
 //	    }
 //	}
 func (nm *NamedMapClient[K, V]) EntrySet(ctx context.Context) <-chan *StreamedEntry[K, V] {
-	return executeEntrySet[K, V](ctx, &nm.baseClient)
+	return executeEntrySet[K, V](ctx, nm.baseClient)
 }
 
 // Get returns the value to which the specified key is mapped. V will be nil
@@ -571,7 +606,7 @@ func (nm *NamedMapClient[K, V]) EntrySet(ctx context.Context) <-chan *StreamedEn
 //	    fmt.Println("No person found")
 //	}
 func (nm *NamedMapClient[K, V]) Get(ctx context.Context, key K) (*V, error) {
-	return executeGet(ctx, &nm.baseClient, key)
+	return executeGet(ctx, nm.baseClient, key)
 }
 
 // GetAll returns a channel from which entries satisfying the specified filter can be obtained.
@@ -594,13 +629,13 @@ func (nm *NamedMapClient[K, V]) Get(ctx context.Context, key K) (*V, error) {
 //	    }
 //	}
 func (nm *NamedMapClient[K, V]) GetAll(ctx context.Context, keys []K) <-chan *StreamedEntry[K, V] {
-	return executeGetAll[K, V](ctx, &nm.baseClient, keys)
+	return executeGetAll[K, V](ctx, nm.baseClient, keys)
 }
 
 // GetOrDefault will return the value mapped to the specified key,
 // or if there is no mapping, it will return the specified default.
 func (nm *NamedMapClient[K, V]) GetOrDefault(ctx context.Context, key K, def V) (*V, error) {
-	return executeGetOrDefault(ctx, &nm.baseClient, key, def)
+	return executeGetOrDefault(ctx, nm.baseClient, key, def)
 }
 
 // KeySetFilter returns a channel from which keys of the entries that satisfy the filter can be obtained.
@@ -623,7 +658,7 @@ func (nm *NamedMapClient[K, V]) GetOrDefault(ctx context.Context, key K, def V) 
 //	    }
 //	}
 func (nm *NamedMapClient[K, V]) KeySetFilter(ctx context.Context, fltr filters.Filter) <-chan *StreamedKey[K] {
-	return executeKeySetFilter(ctx, &nm.baseClient, fltr)
+	return executeKeySetFilter(ctx, nm.baseClient, fltr)
 }
 
 // KeySet returns a channel from which keys of all entries can be obtained.
@@ -647,7 +682,7 @@ func (nm *NamedMapClient[K, V]) KeySetFilter(ctx context.Context, fltr filters.F
 //	    }
 //	}
 func (nm *NamedMapClient[K, V]) KeySet(ctx context.Context) <-chan *StreamedKey[K] {
-	return executeKeySet[K, V](ctx, &nm.baseClient)
+	return executeKeySet[K, V](ctx, nm.baseClient)
 }
 
 // Name returns the name of the NamedMap.
@@ -675,19 +710,19 @@ func (nm *NamedMapClient[K, V]) Name() string {
 //	    log.Fatal(err)
 //	}
 func (nm *NamedMapClient[K, V]) PutAll(ctx context.Context, entries map[K]V) error {
-	return executePutAll(ctx, &nm.baseClient, entries)
+	return executePutAll(ctx, nm.baseClient, entries, 0)
 }
 
 // PutIfAbsent adds the specified mapping if the key is not already associated with a value in the [NamedMap]
 // and returns nil, else returns the current value.
 func (nm *NamedMapClient[K, V]) PutIfAbsent(ctx context.Context, key K, value V) (*V, error) {
-	return executePutIfAbsent(ctx, &nm.baseClient, key, value)
+	return executePutIfAbsent(ctx, nm.baseClient, key, value)
 }
 
 // Put associates the specified value with the specified key returning the previously
 // mapped value, if any. V will be nil if there was no previous value.
 func (nm *NamedMapClient[K, V]) Put(ctx context.Context, key K, value V) (*V, error) {
-	return executePutWithExpiry(ctx, &nm.baseClient, key, value, time.Duration(0))
+	return executePutWithExpiry(ctx, nm.baseClient, key, value, time.Duration(0))
 }
 
 // Remove removes the mapping for a key from the [NamedMap] if it is present and
@@ -709,46 +744,60 @@ func (nm *NamedMapClient[K, V]) Put(ctx context.Context, key K, value V) (*V, er
 //	    fmt.Println("Previous person was", *oldValue)
 //	}
 func (nm *NamedMapClient[K, V]) Remove(ctx context.Context, key K) (*V, error) {
-	return executeRemove(ctx, &nm.baseClient, key)
+	return executeRemove(ctx, nm.baseClient, key)
 }
 
 // RemoveLifecycleListener removes the lifecycle listener that was previously registered to receive events.
 func (nm *NamedMapClient[K, V]) RemoveLifecycleListener(listener MapLifecycleListener[K, V]) {
-	unregisterLifecycleListener[K, V](nm.getBaseClient(), listener)
+	if nm.getBaseClient().getProtocolVersion() > 0 {
+		nm.getBaseClient().removeLifecycleListener(listener)
+	} else {
+		unregisterLifecycleListener[K, V](nm.getBaseClient(), listener)
+	}
 }
 
 // RemoveFilterListener removes the listener that was previously registered to receive events
 // where entries satisfy the specified filters.Filter.
 func (nm *NamedMapClient[K, V]) RemoveFilterListener(ctx context.Context, listener MapListener[K, V], f filters.Filter) error {
+	if nm.getBaseClient().getProtocolVersion() > 0 {
+		return removeFilterListenerInternalV1[K, V](ctx, nm.getBaseClient(), listener, f)
+	}
 	return nm.getBaseClient().eventManager.removeFilterListener(ctx, listener, f)
 }
 
 // RemoveKeyListener removes the listener that was previously registered to receive events against the specified key.
 func (nm *NamedMapClient[K, V]) RemoveKeyListener(ctx context.Context, listener MapListener[K, V], key K) error {
+	if nm.getBaseClient().getProtocolVersion() > 0 {
+		return removeKeyListenerInternalV1[K, V](ctx, nm.getBaseClient(), listener, key)
+	}
+
 	return nm.getBaseClient().eventManager.removeKeyListener(ctx, listener, key)
 }
 
 // RemoveListener removes the listener that was previously registered to receive events.
 func (nm *NamedMapClient[K, V]) RemoveListener(ctx context.Context, listener MapListener[K, V]) error {
+	if nm.getBaseClient().getProtocolVersion() > 0 {
+		return removeFilterListenerInternalV1[K, V](ctx, nm.getBaseClient(), listener, nil)
+	}
 	return nm.RemoveFilterListener(ctx, listener, nil)
 }
 
 // RemoveMapping removes the entry for the specified key only if it is currently
 // mapped to the specified value.
 func (nm *NamedMapClient[K, V]) RemoveMapping(ctx context.Context, key K, value V) (bool, error) {
-	return executeRemoveMapping(ctx, &nm.baseClient, key, value)
+	return executeRemoveMapping(ctx, nm.baseClient, key, value)
 }
 
 // Replace replaces the entry for the specified key only if it is
 // currently mapped to some value.
 func (nm *NamedMapClient[K, V]) Replace(ctx context.Context, key K, value V) (*V, error) {
-	return executeReplace(ctx, &nm.baseClient, key, value)
+	return executeReplace(ctx, nm.baseClient, key, value)
 }
 
 // ReplaceMapping replaces the entry for the specified key only if it is
 // currently mapped to some value. Returns true if the value was replaced.
 func (nm *NamedMapClient[K, V]) ReplaceMapping(ctx context.Context, key K, prevValue V, newValue V) (bool, error) {
-	return executeReplaceMapping(ctx, &nm.baseClient, key, prevValue, newValue)
+	return executeReplaceMapping(ctx, nm.baseClient, key, prevValue, newValue)
 }
 
 // GetSession returns the session.
@@ -758,7 +807,7 @@ func (nm *NamedMapClient[K, V]) GetSession() *Session {
 
 // Size returns the number of mappings contained within the [NamedMap].
 func (nm *NamedMapClient[K, V]) Size(ctx context.Context) (int, error) {
-	return executeSize(ctx, &nm.baseClient)
+	return executeSize(ctx, nm.baseClient)
 }
 
 // ValuesFilter returns a view of filtered values contained in the [NamedMap].
@@ -781,7 +830,7 @@ func (nm *NamedMapClient[K, V]) Size(ctx context.Context) (int, error) {
 //	    }
 //	}
 func (nm *NamedMapClient[K, V]) ValuesFilter(ctx context.Context, fltr filters.Filter) <-chan *StreamedValue[V] {
-	return executeValues(ctx, &nm.baseClient, fltr)
+	return executeValues(ctx, nm.baseClient, fltr)
 }
 
 // Values returns a view of all values contained in the [NamedMap].
@@ -805,7 +854,7 @@ func (nm *NamedMapClient[K, V]) ValuesFilter(ctx context.Context, fltr filters.F
 //	    }
 //	}
 func (nm *NamedMapClient[K, V]) Values(ctx context.Context) <-chan *StreamedValue[V] {
-	return executeValuesNoFilter[K, V](ctx, &nm.baseClient)
+	return executeValuesNoFilter[K, V](ctx, nm.baseClient)
 }
 
 // IsReady returns whether this [NamedMap] is ready to be used.
@@ -814,7 +863,7 @@ func (nm *NamedMapClient[K, V]) Values(ctx context.Context) <-chan *StreamedValu
 // storage-enabled members.
 // If it is not supported by the gRPC proxy, an error will be returned.
 func (nm *NamedMapClient[K, V]) IsReady(ctx context.Context) (bool, error) {
-	return executeIsReady[K, V](ctx, &nm.baseClient)
+	return executeIsReady[K, V](ctx, nm.baseClient)
 }
 
 // GetNearCacheStats returns the [CacheStats] for a near cache for a [NamedMap].
@@ -879,24 +928,33 @@ func getNamedMap[K comparable, V any](session *Session, name string, sOpts *Sess
 			return nil, getExistingNearCacheError("NamedMap", name)
 		}
 
-		session.debug("using existing NamedMap", existing)
+		session.debug("using existing NamedMap: %v", existing)
 		return existing, nil
 	}
 
 	newMap := &NamedMapClient[K, V]{
 		baseClient: newBaseClient[K, V](session, name, format, sOpts, cacheOptions),
 	}
-	if err := newMap.baseClient.ensureClientConnection(); err != nil {
+	if err = newMap.baseClient.ensureClientConnection(); err != nil {
 		return nil, err
 	}
 
 	namedMap := convertNamedMapClient[K, V](newMap)
 
-	manager, err := newMapEventManager(&namedMap, newMap.baseClient, session)
-	if err != nil {
-		return nil, err
+	if session.GetProtocolVersion() > 0 {
+		// ensure the cache via gRPC v1
+		_, err = session.v1StreamManagerCache.ensureCache(context.Background(), name)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		// only create event manager if v0
+		manager, err1 := newMapEventManager(&namedMap, newMap.baseClient, session)
+		if err1 != nil {
+			return nil, err1
+		}
+		newMap.baseClient.eventManager = manager
 	}
-	newMap.baseClient.eventManager = manager
 
 	// store the new cache
 	session.maps[name] = newMap
@@ -920,7 +978,7 @@ func getNamedMap[K comparable, V any](session *Session, name string, sOpts *Sess
 		newMap.AddLifecycleListener(newMap.baseClient.nearCacheLifecycleListener.listener)
 	}
 
-	session.debug("newNamedMap", newMap, "session:", session)
+	session.debug("newNamedMap: %v", newMap)
 	return newMap, nil
 }
 
@@ -935,10 +993,10 @@ func newNamedMapReconnectListener[K comparable, V any](nm NamedMapClient[K, V]) 
 		listener: NewSessionLifecycleListener(),
 	}
 
-	listener.listener.OnReconnected(func(e SessionLifecycleEvent) {
+	listener.listener.OnReconnected(func(_ SessionLifecycleEvent) {
 		// re-register listeners for the NamedMap
 		namedMap := convertNamedMapClient[K, V](&nm)
-		if err := reRegisterListeners[K, V](context.Background(), &namedMap, &nm.baseClient); err != nil {
+		if err := reRegisterListeners[K, V](context.Background(), &namedMap, nm.baseClient); err != nil {
 			log.Println(err)
 		}
 	})
@@ -946,16 +1004,20 @@ func newNamedMapReconnectListener[K comparable, V any](nm NamedMapClient[K, V]) 
 	return &listener
 }
 
-func newBaseClient[K comparable, V any](session *Session, name string, format string, sOpts *SessionOptions, cOpts *CacheOptions) baseClient[K, V] {
+func newBaseClient[K comparable, V any](session *Session, name string, format string, sOpts *SessionOptions, cOpts *CacheOptions) *baseClient[K, V] {
 	bc := baseClient[K, V]{
-		session:         session,
-		name:            name,
-		sessionOpts:     sOpts,
-		format:          format,
-		keySerializer:   NewSerializer[K](format),
-		valueSerializer: NewSerializer[V](format),
-		mutex:           &sync.RWMutex{},
-		cacheOpts:       cOpts,
+		session:              session,
+		name:                 name,
+		sessionOpts:          sOpts,
+		format:               format,
+		keySerializer:        NewSerializer[K](format),
+		valueSerializer:      NewSerializer[V](format),
+		mutex:                &sync.RWMutex{},
+		cacheOpts:            cOpts,
+		keyListenersV1:       make(map[K]*listenerGroupV1[K, V], 0),
+		filterListenersV1:    make(map[filters.Filter]*listenerGroupV1[K, V], 0),
+		filterIDToGroupV1:    make(map[int64]*listenerGroupV1[K, V], 0),
+		lifecycleListenersV1: make([]*MapLifecycleListener[K, V], 0),
 	}
 
 	// if near cache options specified then setup internal local cache
@@ -974,7 +1036,7 @@ func newBaseClient[K comparable, V any](session *Session, name string, format st
 		bc.nearCache = nearCache
 	}
 
-	return bc
+	return &bc
 }
 
 func newNearNamedMapMapLister[K comparable, V any](nc NamedMapClient[K, V], cache *localCacheImpl[K, V]) *namedCacheNearCacheListener[K, V] {

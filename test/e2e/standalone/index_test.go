@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Oracle and/or its affiliates.
+ * Copyright (c) 2023, 2024 Oracle and/or its affiliates.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * https://oss.oracle.com/licenses/upl.
  */
@@ -8,30 +8,31 @@ package standalone
 
 import (
 	"encoding/json"
-	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega"
 	"github.com/oracle/coherence-go-client/coherence"
 	"github.com/oracle/coherence-go-client/coherence/aggregators"
 	"github.com/oracle/coherence-go-client/coherence/extractors"
 	"github.com/oracle/coherence-go-client/coherence/filters"
-	. "github.com/oracle/coherence-go-client/test/utils"
+	"github.com/oracle/coherence-go-client/test/utils"
+	"log"
 	"strings"
 	"testing"
 )
 
 // TestIndexAgainstMapAndCache runs index tests against NamedMap and NamedCache
 func TestIndexAgainstMapAndCache(t *testing.T) {
-	g := NewWithT(t)
-	session, err := GetSession()
-	g.Expect(err).ShouldNot(HaveOccurred())
+	g := gomega.NewWithT(t)
+	session, err := utils.GetSession()
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	defer session.Close()
 
 	testCases := []struct {
 		testName string
-		nameMap  coherence.NamedMap[int, Person]
-		test     func(t *testing.T, namedCache coherence.NamedMap[int, Person])
+		nameMap  coherence.NamedMap[int, utils.Person]
+		test     func(t *testing.T, namedCache coherence.NamedMap[int, utils.Person])
 	}{
-		{"NamedMapRunTestIndex", GetNamedMap[int, Person](g, session, "index-map"), RunTestIndex},
-		{"NamedCacheRunTestIndex", GetNamedCache[int, Person](g, session, "index-cache"), RunTestIndex},
+		{"NamedMapRunTestIndex", utils.GetNamedMap[int, utils.Person](g, session, "index-map"), RunTestIndex},
+		{"NamedCacheRunTestIndex", utils.GetNamedCache[int, utils.Person](g, session, "index-cache"), RunTestIndex},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.testName, func(t *testing.T) {
@@ -40,56 +41,66 @@ func TestIndexAgainstMapAndCache(t *testing.T) {
 	}
 }
 
-func RunTestIndex(t *testing.T, namedMap coherence.NamedMap[int, Person]) {
+func RunTestIndex(t *testing.T, namedMap coherence.NamedMap[int, utils.Person]) {
 	var (
-		g   = NewWithT(t)
+		g   = gomega.NewWithT(t)
 		err error
 	)
 
 	addPerson(g, namedMap)
 
+	log.SetFlags(log.LstdFlags | log.Lmicroseconds)
+
+	log.Println("Add Index")
 	// add indexes without comparators
 	err = coherence.AddIndex(ctx, namedMap, extractors.Extract[int]("id"), true)
-	g.Expect(err).ShouldNot(HaveOccurred())
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
-	Sleep(5)
+	utils.Sleep(5)
 
-	g.Expect(canFindIndex(g, namedMap)).To(BeTrue())
+	log.Println("canFindIndex Index")
+	g.Expect(canFindIndex(g, namedMap)).To(gomega.BeTrue())
 
+	log.Println("Remove Index")
 	err = coherence.RemoveIndex(ctx, namedMap, extractors.Extract[int]("id"))
-	g.Expect(err).ShouldNot(HaveOccurred())
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
-	Sleep(5)
+	utils.Sleep(5)
 
-	g.Expect(canFindIndex(g, namedMap)).To(BeFalse())
+	log.Println("canFindIndex Index")
+	g.Expect(canFindIndex(g, namedMap)).To(gomega.BeFalse())
 
+	log.Println("Add Index with Comparator")
 	// add index with comparator
 	err = coherence.AddIndexWithComparator(ctx, namedMap, extractors.Extract[int]("id"), extractors.Extract[int]("name"))
-	g.Expect(err).ShouldNot(HaveOccurred())
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
-	Sleep(10)
+	utils.Sleep(10)
 
-	g.Expect(canFindIndex(g, namedMap)).To(BeTrue())
+	log.Println("canFindIndex Index")
+	g.Expect(canFindIndex(g, namedMap)).To(gomega.BeTrue())
 
+	log.Println("Remove Index")
 	err = coherence.RemoveIndex(ctx, namedMap, extractors.Extract[int]("id"))
-	g.Expect(err).ShouldNot(HaveOccurred())
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
-	Sleep(10)
+	utils.Sleep(10)
 
-	g.Expect(canFindIndex(g, namedMap)).To(BeFalse())
+	log.Println("canFindIndex Index")
+	g.Expect(canFindIndex(g, namedMap)).To(gomega.BeFalse())
 }
 
-func canFindIndex(g *WithT, namedMap coherence.NamedMap[int, Person]) bool {
+func canFindIndex(g *gomega.WithT, namedMap coherence.NamedMap[int, utils.Person]) bool {
 	var jsonData []byte
-	jsonResult, err := coherence.AggregateFilter[int, Person, map[string]interface{}](ctx, namedMap, filters.Equal(extractors.Extract[int]("id"), 1),
+	jsonResult, err := coherence.AggregateFilter[int, utils.Person, map[string]interface{}](ctx, namedMap, filters.Equal(extractors.Extract[int]("id"), 1),
 		aggregators.QueryRecorder(aggregators.Explain))
-	g.Expect(err).ShouldNot(HaveOccurred())
-	g.Expect(len(*jsonResult)).Should(BeNumerically(">", 0))
-	g.Expect((*jsonResult)["results"]).To(Not(BeNil()))
-	g.Expect((*jsonResult)["type"]).To(Not(BeNil()))
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	g.Expect(len(*jsonResult)).Should(gomega.BeNumerically(">", 0))
+	g.Expect((*jsonResult)["results"]).To(gomega.Not(gomega.BeNil()))
+	g.Expect((*jsonResult)["type"]).To(gomega.Not(gomega.BeNil()))
 
 	jsonData, err = json.Marshal((*jsonResult)["results"])
-	g.Expect(err).ShouldNot(HaveOccurred())
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 	jsonString := string(jsonData)
 	return strings.Contains(jsonString, "\"extractor\":\".id\",\"index\":\"Simple") ||

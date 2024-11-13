@@ -12,7 +12,7 @@ import (
 	"github.com/oracle/coherence-go-client/coherence/extractors"
 	"github.com/oracle/coherence-go-client/coherence/filters"
 	"github.com/oracle/coherence-go-client/coherence/processors"
-	. "github.com/oracle/coherence-go-client/test/utils"
+	"github.com/oracle/coherence-go-client/test/utils"
 	"testing"
 )
 
@@ -20,35 +20,35 @@ import (
 func TestProcessorAgainstMapAndCache(t *testing.T) {
 	g := gomega.NewWithT(t)
 
-	session, err := GetSession()
+	session, err := utils.GetSession()
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	defer session.Close()
 
 	testCases := []struct {
 		testName string
-		nameMap  coherence.NamedMap[int, Person]
-		test     func(t *testing.T, namedCache coherence.NamedMap[int, Person])
+		nameMap  coherence.NamedMap[int, utils.Person]
+		test     func(t *testing.T, namedCache coherence.NamedMap[int, utils.Person])
 	}{
-		{"NamedMapRunTestInvokeIncrement", GetNamedMap[int, Person](g, session, "increment-map"), RunTestInvokeIncrement},
-		{"NamedCacheRunTestInvokeIncrement", GetNamedCache[int, Person](g, session, "increment-cache"), RunTestInvokeIncrement},
-		{"NamedMapRunTestInvokeMultiply", GetNamedMap[int, Person](g, session, "multiply-map"), RunTestInvokeMultiply},
-		{"NamedCacheRunTestInvokeMultiply", GetNamedCache[int, Person](g, session, "multiply-cache"), RunTestInvokeMultiply},
-		{"NamedMapRunTestInvokeConditionalRemove", GetNamedMap[int, Person](g, session, "cond-remove-map"), RunTestInvokeConditionalRemove},
-		{"NamedCacheRunTestInvokeConditionalRemove", GetNamedCache[int, Person](g, session, "cond-remove-cache"), RunTestInvokeConditionalRemove},
-		{"NamedMapRunTestInvokeConditionalPut", GetNamedMap[int, Person](g, session, "cond-put-map"), RunTestInvokeConditionalPut},
-		{"NamedCacheRunTestInvokeConditionalPut", GetNamedCache[int, Person](g, session, "cond-put-cache"), RunTestInvokeConditionalPut},
-		{"NamedMapRunTestExtractProcessor", GetNamedMap[int, Person](g, session, "extractor-map"), RunTestExtractProcessor},
-		{"NamedCacheRunTestExtractProcessor", GetNamedCache[int, Person](g, session, "extractor-cache"), RunTestExtractProcessor},
-		{"NamedMapRunTestInvokeUpdater", GetNamedMap[int, Person](g, session, "updater-map"), RunTestInvokeUpdater},
-		{"NamedCacheRunTestInvokeUpdater", GetNamedCache[int, Person](g, session, "updater-cache"), RunTestInvokeUpdater},
-		{"NamedMapRunTestMethodInvocationProcessor", GetNamedMap[int, Person](g, session, "mip-map"), RunTestMethodInvocationProcessor},
-		{"NamedCacheRunTestMethodInvocationProcessor", GetNamedCache[int, Person](g, session, "mip-cache"), RunTestMethodInvocationProcessor},
-		{"NamedMapRunTestMethodInvocationProcessorMutator", GetNamedMap[int, Person](g, session, "mip-mutate-map"), RunTestMethodInvocationProcessorMutator},
-		{"NamedCacheRunTestMethodInvocationProcessorMutator", GetNamedCache[int, Person](g, session, "mip-mutate-cache"), RunTestMethodInvocationProcessorMutator},
-		{"NamedMapRunTestInvokeConditionalPutAll", GetNamedMap[int, Person](g, session, "map-conditional-put-all"), RunTestInvokeConditionalPutAll},
-		{"NamedCacheRunTestInvokeConditionalPutAll", GetNamedCache[int, Person](g, session, "cache-conditional-put-all"), RunTestInvokeConditionalPutAll},
-		{"NamedMapRunTestInvokeAll", GetNamedMap[int, Person](g, session, "map-invoke-all"), RunTestInvokeAll},
-		{"NamedCacheRunTestInvokeAll", GetNamedCache[int, Person](g, session, "cache-invoke-all"), RunTestInvokeAll},
+		{"NamedMapRunTestInvokeIncrement", utils.GetNamedMap[int, utils.Person](g, session, "increment-map"), RunTestInvokeIncrement},
+		{"NamedCacheRunTestInvokeIncrement", utils.GetNamedCache[int, utils.Person](g, session, "increment-cache"), RunTestInvokeIncrement},
+		{"NamedMapRunTestInvokeMultiply", utils.GetNamedMap[int, utils.Person](g, session, "multiply-map"), RunTestInvokeMultiply},
+		{"NamedCacheRunTestInvokeMultiply", utils.GetNamedCache[int, utils.Person](g, session, "multiply-cache"), RunTestInvokeMultiply},
+		{"NamedMapRunTestInvokeConditionalRemove", utils.GetNamedMap[int, utils.Person](g, session, "cond-remove-map"), RunTestInvokeConditionalRemove},
+		{"NamedCacheRunTestInvokeConditionalRemove", utils.GetNamedCache[int, utils.Person](g, session, "cond-remove-cache"), RunTestInvokeConditionalRemove},
+		{"NamedMapRunTestInvokeConditionalPut", utils.GetNamedMap[int, utils.Person](g, session, "cond-put-map"), RunTestInvokeConditionalPut},
+		{"NamedCacheRunTestInvokeConditionalPut", utils.GetNamedCache[int, utils.Person](g, session, "cond-put-cache"), RunTestInvokeConditionalPut},
+		{"NamedMapRunTestExtractProcessor", utils.GetNamedMap[int, utils.Person](g, session, "extractor-map"), RunTestExtractProcessor},
+		{"NamedCacheRunTestExtractProcessor", utils.GetNamedCache[int, utils.Person](g, session, "extractor-cache"), RunTestExtractProcessor},
+		{"NamedMapRunTestInvokeUpdater", utils.GetNamedMap[int, utils.Person](g, session, "updater-map"), RunTestInvokeUpdater},
+		{"NamedCacheRunTestInvokeUpdater", utils.GetNamedCache[int, utils.Person](g, session, "updater-cache"), RunTestInvokeUpdater},
+		{"NamedMapRunTestMethodInvocationProcessor", utils.GetNamedMap[int, utils.Person](g, session, "mip-map"), RunTestMethodInvocationProcessor},
+		{"NamedCacheRunTestMethodInvocationProcessor", utils.GetNamedCache[int, utils.Person](g, session, "mip-cache"), RunTestMethodInvocationProcessor},
+		{"NamedMapRunTestMethodInvocationProcessorMutator", utils.GetNamedMap[int, utils.Person](g, session, "mip-mutate-map"), RunTestMethodInvocationProcessorMutator},
+		{"NamedCacheRunTestMethodInvocationProcessorMutator", utils.GetNamedCache[int, utils.Person](g, session, "mip-mutate-cache"), RunTestMethodInvocationProcessorMutator},
+		{"NamedMapRunTestInvokeConditionalPutAll", utils.GetNamedMap[int, utils.Person](g, session, "map-conditional-put-all"), RunTestInvokeConditionalPutAll},
+		{"NamedCacheRunTestInvokeConditionalPutAll", utils.GetNamedCache[int, utils.Person](g, session, "cache-conditional-put-all"), RunTestInvokeConditionalPutAll},
+		{"NamedMapRunTestInvokeAll", utils.GetNamedMap[int, utils.Person](g, session, "map-invoke-all"), RunTestInvokeAll},
+		{"NamedCacheRunTestInvokeAll", utils.GetNamedCache[int, utils.Person](g, session, "cache-invoke-all"), RunTestInvokeAll},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.testName, func(t *testing.T) {
@@ -61,19 +61,19 @@ func TestProcessorAgainstMapAndCache(t *testing.T) {
 func TestWithVersionedAgainstMapAndCache(t *testing.T) {
 	g := gomega.NewWithT(t)
 
-	session, err := GetSession()
+	session, err := utils.GetSession()
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	defer session.Close()
 
 	testCases := []struct {
 		testName string
-		nameMap  coherence.NamedMap[int, VersionedPerson]
-		test     func(t *testing.T, namedCache coherence.NamedMap[int, VersionedPerson])
+		nameMap  coherence.NamedMap[int, utils.VersionedPerson]
+		test     func(t *testing.T, namedCache coherence.NamedMap[int, utils.VersionedPerson])
 	}{
-		{"NamedMapRunTestVersionedPut", GetNamedMap[int, VersionedPerson](g, session, "versioned-put-map"), RunTestVersionedPut},
-		{"NamedCacheRunTestVersionedPut", GetNamedCache[int, VersionedPerson](g, session, "versioned-put-cache"), RunTestVersionedPut},
-		{"NamedMapRunTestVersionedPutAll", GetNamedMap[int, VersionedPerson](g, session, "versioned-putall-map"), RunTestVersionedPutAll},
-		{"NamedCacheRunTestVersionedPutAll", GetNamedCache[int, VersionedPerson](g, session, "versioned-putall-cache"), RunTestVersionedPutAll},
+		{"NamedMapRunTestVersionedPut", utils.GetNamedMap[int, utils.VersionedPerson](g, session, "versioned-put-map"), RunTestVersionedPut},
+		{"NamedCacheRunTestVersionedPut", utils.GetNamedCache[int, utils.VersionedPerson](g, session, "versioned-put-cache"), RunTestVersionedPut},
+		{"NamedMapRunTestVersionedPutAll", utils.GetNamedMap[int, utils.VersionedPerson](g, session, "versioned-putall-map"), RunTestVersionedPutAll},
+		{"NamedCacheRunTestVersionedPutAll", utils.GetNamedCache[int, utils.VersionedPerson](g, session, "versioned-putall-cache"), RunTestVersionedPutAll},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.testName, func(t *testing.T) {
@@ -86,7 +86,7 @@ func TestWithVersionedAgainstMapAndCache(t *testing.T) {
 func TestAgainstIntAndString(t *testing.T) {
 	g := gomega.NewWithT(t)
 
-	session, err := GetSession()
+	session, err := utils.GetSession()
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	defer session.Close()
 
@@ -95,8 +95,8 @@ func TestAgainstIntAndString(t *testing.T) {
 		nameMap  coherence.NamedMap[int, string]
 		test     func(t *testing.T, namedCache coherence.NamedMap[int, string])
 	}{
-		{"NamedMapRunTestPreloadProcessor", GetNamedMap[int, string](g, session, "preload"), RunTestPreloadProcessor},
-		{"NamedCacheRunTestPreloadProcessor", GetNamedCache[int, string](g, session, "preload"), RunTestPreloadProcessor},
+		{"NamedMapRunTestPreloadProcessor", utils.GetNamedMap[int, string](g, session, "preload"), RunTestPreloadProcessor},
+		{"NamedCacheRunTestPreloadProcessor", utils.GetNamedCache[int, string](g, session, "preload"), RunTestPreloadProcessor},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.testName, func(t *testing.T) {
@@ -115,21 +115,21 @@ func RunTestPreloadProcessor(t *testing.T, namedMap coherence.NamedMap[int, stri
 	err = namedMap.Clear(ctx)
 	g.Expect(err).To(gomega.Not(gomega.HaveOccurred()))
 
-	AssertSize(g, namedMap, 0)
+	utils.AssertSize(g, namedMap, 0)
 
 	// Preload will cause the cache store to load the value of "Number 1"
 	_, err = coherence.Invoke[int, string, string](ctx, namedMap, 1, processors.Preload())
 	g.Expect(err).NotTo(gomega.HaveOccurred())
 
 	// value should be in cache
-	AssertSize(g, namedMap, 1)
+	utils.AssertSize(g, namedMap, 1)
 
 	value, err = namedMap.Get(ctx, 1)
 	g.Expect(err).To(gomega.Not(gomega.HaveOccurred()))
 	g.Expect(*value).To(gomega.Equal("Number 1"))
 }
 
-func RunTestMethodInvocationProcessor(t *testing.T, namedMap coherence.NamedMap[int, Person]) {
+func RunTestMethodInvocationProcessor(t *testing.T, namedMap coherence.NamedMap[int, utils.Person]) {
 	var (
 		g     = gomega.NewWithT(t)
 		err   error
@@ -139,12 +139,12 @@ func RunTestMethodInvocationProcessor(t *testing.T, namedMap coherence.NamedMap[
 	addPerson(g, namedMap)
 
 	// Preload will cause the cache store to load the value of "Number 1"
-	value, err = coherence.Invoke[int, Person, string](ctx, namedMap, 1, processors.InvokeAccessor("toString"))
+	value, err = coherence.Invoke[int, utils.Person, string](ctx, namedMap, 1, processors.InvokeAccessor("toString"))
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	g.Expect(value).To(gomega.Not(gomega.BeNil()))
 }
 
-func RunTestMethodInvocationProcessorMutator(t *testing.T, namedMap coherence.NamedMap[int, Person]) {
+func RunTestMethodInvocationProcessorMutator(t *testing.T, namedMap coherence.NamedMap[int, utils.Person]) {
 	var (
 		g     = gomega.NewWithT(t)
 		err   error
@@ -154,22 +154,22 @@ func RunTestMethodInvocationProcessorMutator(t *testing.T, namedMap coherence.Na
 	addPerson(g, namedMap)
 
 	// Preload will cause the cache store to load the value of "Number 1"
-	value, err = coherence.Invoke[int, Person, int](ctx, namedMap, 1, processors.InvokeMutator("remove", "age"))
+	value, err = coherence.Invoke[int, utils.Person, int](ctx, namedMap, 1, processors.InvokeMutator("remove", "age"))
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	g.Expect(*value).To(gomega.Equal(10))
 }
 
-func RunTestVersionedPut(t *testing.T, namedMap coherence.NamedMap[int, VersionedPerson]) {
+func RunTestVersionedPut(t *testing.T, namedMap coherence.NamedMap[int, utils.VersionedPerson]) {
 	var (
 		g        = gomega.NewWithT(t)
 		err      error
-		result   *VersionedPerson
-		current  *VersionedPerson
-		person   = VersionedPerson{ID: 1, Name: "Tim", Age: 10, Salary: 1000, Version: 1}
-		oldValue *VersionedPerson
+		result   *utils.VersionedPerson
+		current  *utils.VersionedPerson
+		person   = utils.VersionedPerson{ID: 1, Name: "Tim", Age: 10, Salary: 1000, Version: 1}
+		oldValue *utils.VersionedPerson
 	)
 
-	_, err = coherence.Invoke[int, VersionedPerson, bool](ctx, namedMap, 1,
+	_, err = coherence.Invoke[int, utils.VersionedPerson, bool](ctx, namedMap, 1,
 		processors.VersionedPut(person, true, false))
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
@@ -181,7 +181,7 @@ func RunTestVersionedPut(t *testing.T, namedMap coherence.NamedMap[int, Versione
 	// update the name and keep version the same which should cause update
 	result.Name = "New Name"
 
-	_, err = coherence.Invoke[int, VersionedPerson, bool](ctx, namedMap, 1, processors.VersionedPut(result, false, false))
+	_, err = coherence.Invoke[int, utils.VersionedPerson, bool](ctx, namedMap, 1, processors.VersionedPut(result, false, false))
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	g.Expect(oldValue).To(gomega.BeNil())
 
@@ -195,7 +195,7 @@ func RunTestVersionedPut(t *testing.T, namedMap coherence.NamedMap[int, Versione
 	result.Name = "This name will not be updated"
 	result.Version = version
 
-	current, err = coherence.Invoke[int, VersionedPerson, VersionedPerson](ctx, namedMap, 1,
+	current, err = coherence.Invoke[int, utils.VersionedPerson, utils.VersionedPerson](ctx, namedMap, 1,
 		processors.VersionedPut(result, false, true))
 	g.Expect(err).Should(gomega.BeNil())
 	g.Expect(current.Name).To(gomega.Equal("New Name"))
@@ -207,11 +207,11 @@ func RunTestVersionedPut(t *testing.T, namedMap coherence.NamedMap[int, Versione
 	g.Expect(result.Version).To(gomega.Equal(3))
 }
 
-func RunTestVersionedPutAll(t *testing.T, namedMap coherence.NamedMap[int, VersionedPerson]) {
+func RunTestVersionedPutAll(t *testing.T, namedMap coherence.NamedMap[int, utils.VersionedPerson]) {
 	var (
 		g      = gomega.NewWithT(t)
 		err    error
-		values = map[int]VersionedPerson{
+		values = map[int]utils.VersionedPerson{
 			1: {ID: 1, Name: "Tim", Age: 10, Version: 1},
 			2: {ID: 2, Name: "Andrew", Age: 20, Version: 1},
 			3: {ID: 3, Name: "John", Age: 30, Version: 1},
@@ -219,33 +219,33 @@ func RunTestVersionedPutAll(t *testing.T, namedMap coherence.NamedMap[int, Versi
 		}
 	)
 
-	_, err = coherence.Invoke[int, VersionedPerson, bool](ctx, namedMap, 1,
+	_, err = coherence.Invoke[int, utils.VersionedPerson, bool](ctx, namedMap, 1,
 		processors.VersionedPutAll(values, true, false))
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
-	AssertSize(g, namedMap, 1)
+	utils.AssertSize(g, namedMap, 1)
 }
 
-func RunTestExtractProcessor(t *testing.T, namedMap coherence.NamedMap[int, Person]) {
+func RunTestExtractProcessor(t *testing.T, namedMap coherence.NamedMap[int, utils.Person]) {
 	var (
 		g        = gomega.NewWithT(t)
 		err      error
 		v        *string
 		v2       *interface{}
-		vAddress *Address
+		vAddress *utils.Address
 	)
 
 	addPerson(g, namedMap)
 
 	// ChainedExtractor
 	chainedExtractor := processors.Extractor[string]("homeAddress.city")
-	v, err = coherence.Invoke[int, Person, string](ctx, namedMap, 1, chainedExtractor)
+	v, err = coherence.Invoke[int, utils.Person, string](ctx, namedMap, 1, chainedExtractor)
 	g.Expect(err).To(gomega.Not(gomega.HaveOccurred()))
 	g.Expect(*v).To(gomega.Equal("Perth"))
 
 	// extract the address
-	proc := processors.Extractor[Address]("homeAddress")
-	vAddress, err = coherence.Invoke[int, Person, Address](ctx, namedMap, 1, proc)
+	proc := processors.Extractor[utils.Address]("homeAddress")
+	vAddress, err = coherence.Invoke[int, utils.Person, utils.Address](ctx, namedMap, 1, proc)
 	g.Expect(err).To(gomega.Not(gomega.HaveOccurred()))
 	g.Expect(vAddress.Address1).To(gomega.Equal("address1"))
 
@@ -254,28 +254,28 @@ func RunTestExtractProcessor(t *testing.T, namedMap coherence.NamedMap[int, Pers
 		AndThen(processors.Extractor[int]("age")).
 		AndThen(processors.Extractor[float32]("salary"))
 
-	v2, err = coherence.Invoke[int, Person, interface{}](ctx, namedMap, 1, proc)
+	v2, err = coherence.Invoke[int, utils.Person, interface{}](ctx, namedMap, 1, proc)
 
 	g.Expect(err).To(gomega.Not(gomega.HaveOccurred()))
 	g.Expect(*v2).To(gomega.Equal([]interface{}{"Tim", float64(10), float64(1000)}))
 
 	proc = processors.Extractor[string]("name")
-	v, err = coherence.Invoke[int, Person, string](ctx, namedMap, 1, proc)
+	v, err = coherence.Invoke[int, utils.Person, string](ctx, namedMap, 1, proc)
 	g.Expect(err).To(gomega.Not(gomega.HaveOccurred()))
 	g.Expect(*v).To(gomega.Equal("Tim"))
 }
 
-func RunTestInvokeIncrement(t *testing.T, namedMap coherence.NamedMap[int, Person]) {
+func RunTestInvokeIncrement(t *testing.T, namedMap coherence.NamedMap[int, utils.Person]) {
 	var (
 		g      = gomega.NewWithT(t)
 		err    error
-		result *Person
+		result *utils.Person
 		v      *int
 	)
 
 	addPerson(g, namedMap)
 
-	v, err = coherence.Invoke[int, Person, int](ctx, namedMap, 1, processors.Increment("age", 1, true))
+	v, err = coherence.Invoke[int, utils.Person, int](ctx, namedMap, 1, processors.Increment("age", 1, true))
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 	// postInc == true which means return the value before it was incremented
@@ -286,7 +286,7 @@ func RunTestInvokeIncrement(t *testing.T, namedMap coherence.NamedMap[int, Perso
 	g.Expect(result).To(gomega.Not(gomega.BeNil()))
 	g.Expect(result.Age).To(gomega.Equal(11))
 
-	v, err = coherence.Invoke[int, Person, int](ctx, namedMap, 1, processors.Increment("age", 1))
+	v, err = coherence.Invoke[int, utils.Person, int](ctx, namedMap, 1, processors.Increment("age", 1))
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 	// postInc == false which means return the value before it was incremented
@@ -298,17 +298,17 @@ func RunTestInvokeIncrement(t *testing.T, namedMap coherence.NamedMap[int, Perso
 	g.Expect(result.Age).To(gomega.Equal(12))
 }
 
-func RunTestInvokeMultiply(t *testing.T, namedMap coherence.NamedMap[int, Person]) {
+func RunTestInvokeMultiply(t *testing.T, namedMap coherence.NamedMap[int, utils.Person]) {
 	var (
 		g      = gomega.NewWithT(t)
 		err    error
-		result *Person
+		result *utils.Person
 		v      *float32
 	)
 
 	addPerson(g, namedMap)
 
-	v, err = coherence.Invoke[int, Person, float32](ctx, namedMap, 1, processors.Multiply("salary", 1.1, true))
+	v, err = coherence.Invoke[int, utils.Person, float32](ctx, namedMap, 1, processors.Multiply("salary", 1.1, true))
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 	// postInc == true which means return the value before it was multiplied
@@ -319,7 +319,7 @@ func RunTestInvokeMultiply(t *testing.T, namedMap coherence.NamedMap[int, Person
 	g.Expect(result).To(gomega.Not(gomega.BeNil()))
 	g.Expect(result.Salary).To(gomega.Equal(float32(1100)))
 
-	v, err = coherence.Invoke[int, Person, float32](ctx, namedMap, 1, processors.Multiply("salary", 2.0))
+	v, err = coherence.Invoke[int, utils.Person, float32](ctx, namedMap, 1, processors.Multiply("salary", 2.0))
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 	// postInc == false which means return the value after it was multiplied
@@ -331,90 +331,90 @@ func RunTestInvokeMultiply(t *testing.T, namedMap coherence.NamedMap[int, Person
 	g.Expect(result.Salary).To(gomega.Equal(float32(2200)))
 }
 
-func RunTestInvokeConditionalRemove(t *testing.T, namedMap coherence.NamedMap[int, Person]) {
+func RunTestInvokeConditionalRemove(t *testing.T, namedMap coherence.NamedMap[int, utils.Person]) {
 	var (
 		g        = gomega.NewWithT(t)
 		err      error
-		current  *Person
-		person   = Person{ID: 1, Name: "Tim", Age: 10, Salary: 1000}
-		oldValue *Person
+		current  *utils.Person
+		person   = utils.Person{ID: 1, Name: "Tim", Age: 10, Salary: 1000}
+		oldValue *utils.Person
 	)
 
 	_, err = namedMap.Put(ctx, 1, person)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 	// try and remove an entry with never filter and return the value as it will not be removed
-	current, err = coherence.Invoke[int, Person, Person](ctx, namedMap, 1, processors.ConditionalRemove(filters.Never(), true))
+	current, err = coherence.Invoke[int, utils.Person, utils.Person](ctx, namedMap, 1, processors.ConditionalRemove(filters.Never(), true))
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	g.Expect(*current).To(gomega.Equal(person))
 
 	// this will return nil for value which means return value as it was removed
-	oldValue, err = coherence.Invoke[int, Person, Person](ctx, namedMap, 1, processors.ConditionalRemove(filters.Always()))
+	oldValue, err = coherence.Invoke[int, utils.Person, utils.Person](ctx, namedMap, 1, processors.ConditionalRemove(filters.Always()))
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	g.Expect(oldValue).To(gomega.BeNil())
 
 	// should have been removed
-	AssertSize(g, namedMap, 0)
+	utils.AssertSize(g, namedMap, 0)
 
 	oldValue, err = namedMap.Put(ctx, 1, person)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	g.Expect(oldValue).To(gomega.BeNil())
 
-	oldValue, err = coherence.Invoke[int, Person, Person](ctx, namedMap, 1, processors.ConditionalRemove(filters.Greater(extractors.Extract[int]("age"), 5)))
+	oldValue, err = coherence.Invoke[int, utils.Person, utils.Person](ctx, namedMap, 1, processors.ConditionalRemove(filters.Greater(extractors.Extract[int]("age"), 5)))
 	// nil which means no value returns
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	g.Expect(oldValue).To(gomega.BeNil())
 
 	// should have been removed as age is greater than 5
-	AssertSize(g, namedMap, 0)
+	utils.AssertSize(g, namedMap, 0)
 
 	oldValue, err = namedMap.Put(ctx, 1, person)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	g.Expect(oldValue).To(gomega.BeNil())
 
-	oldValue, err = coherence.Invoke[int, Person, Person](ctx, namedMap, 1,
+	oldValue, err = coherence.Invoke[int, utils.Person, utils.Person](ctx, namedMap, 1,
 		processors.ConditionalRemove(filters.Greater(extractors.Extract[int]("age"), 10)))
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	g.Expect(oldValue).To(gomega.BeNil())
 
 	// should not been removed as age is NOT greater than 10
-	AssertSize(g, namedMap, 1)
+	utils.AssertSize(g, namedMap, 1)
 }
 
-func RunTestInvokeConditionalPut(t *testing.T, namedMap coherence.NamedMap[int, Person]) {
+func RunTestInvokeConditionalPut(t *testing.T, namedMap coherence.NamedMap[int, utils.Person]) {
 	var (
 		g        = gomega.NewWithT(t)
 		err      error
-		person   = Person{ID: 1, Name: "Tim", Age: 10, Salary: 1000}
-		oldValue *Person
+		person   = utils.Person{ID: 1, Name: "Tim", Age: 10, Salary: 1000}
+		oldValue *utils.Person
 	)
 
 	// should put as filter is true
-	oldValue, err = coherence.Invoke[int, Person, Person](ctx, namedMap, 1, processors.ConditionalPut[Person](filters.Always(), person))
+	oldValue, err = coherence.Invoke[int, utils.Person, utils.Person](ctx, namedMap, 1, processors.ConditionalPut[utils.Person](filters.Always(), person))
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	g.Expect(oldValue).To(gomega.BeNil())
-	AssertSize(g, namedMap, 1)
+	utils.AssertSize(g, namedMap, 1)
 
-	ClearNamedMap[int, Person](g, namedMap)
+	utils.ClearNamedMap[int, utils.Person](g, namedMap)
 
 	// should put as filter is false
-	oldValue, err = coherence.Invoke[int, Person, Person](ctx, namedMap, 1, processors.ConditionalPut[Person](filters.Never(), person))
+	oldValue, err = coherence.Invoke[int, utils.Person, utils.Person](ctx, namedMap, 1, processors.ConditionalPut[utils.Person](filters.Never(), person))
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	g.Expect(oldValue).To(gomega.BeNil())
-	AssertSize(g, namedMap, 0)
+	utils.AssertSize(g, namedMap, 0)
 }
 
-func RunTestInvokeUpdater(t *testing.T, namedMap coherence.NamedMap[int, Person]) {
+func RunTestInvokeUpdater(t *testing.T, namedMap coherence.NamedMap[int, utils.Person]) {
 	var (
 		g      = gomega.NewWithT(t)
 		err    error
-		result *Person
+		result *utils.Person
 		value  *bool
 	)
 
 	addPerson(g, namedMap)
 
-	value, err = coherence.Invoke[int, Person, bool](ctx, namedMap, 1, processors.Update("age", 20))
+	value, err = coherence.Invoke[int, utils.Person, bool](ctx, namedMap, 1, processors.Update("age", 20))
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	g.Expect(*value).To(gomega.Equal(true))
 
@@ -427,7 +427,7 @@ func RunTestInvokeUpdater(t *testing.T, namedMap coherence.NamedMap[int, Person]
 	type result2 [2]bool
 	var updated *result2
 	proc := processors.Update("age", 22).AndThen(processors.Update("name", "James Brown"))
-	updated, err = coherence.Invoke[int, Person, result2](ctx, namedMap, 1, proc)
+	updated, err = coherence.Invoke[int, utils.Person, result2](ctx, namedMap, 1, proc)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	g.Expect(len(updated)).To(gomega.Equal(2))
 	g.Expect(updated[0]).To(gomega.Equal(true))
@@ -440,11 +440,11 @@ func RunTestInvokeUpdater(t *testing.T, namedMap coherence.NamedMap[int, Person]
 	g.Expect(result.Name).To(gomega.Equal("James Brown"))
 }
 
-func RunTestInvokeConditionalPutAll(t *testing.T, namedMap coherence.NamedMap[int, Person]) {
+func RunTestInvokeConditionalPutAll(t *testing.T, namedMap coherence.NamedMap[int, utils.Person]) {
 	var (
 		g      = gomega.NewWithT(t)
 		err    error
-		values = map[int]Person{
+		values = map[int]utils.Person{
 			2: {ID: 2, Name: "Andrew", Age: 20},
 			1: {ID: 1, Name: "Tim", Age: 10},
 			3: {ID: 3, Name: "John", Age: 30},
@@ -453,19 +453,19 @@ func RunTestInvokeConditionalPutAll(t *testing.T, namedMap coherence.NamedMap[in
 	)
 
 	// should put as filter is true
-	_, err = coherence.Invoke[int, Person, int](ctx, namedMap, 1, processors.ConditionalPutAll[int, Person](filters.Always(), values))
+	_, err = coherence.Invoke[int, utils.Person, int](ctx, namedMap, 1, processors.ConditionalPutAll[int, utils.Person](filters.Always(), values))
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-	AssertSize(g, namedMap, 1)
+	utils.AssertSize(g, namedMap, 1)
 
-	ClearNamedMap[int, Person](g, namedMap)
+	utils.ClearNamedMap[int, utils.Person](g, namedMap)
 
 	// should put as filter is false
-	_, err = coherence.Invoke[int, Person, int](ctx, namedMap, 1, processors.ConditionalPutAll[int, Person](filters.Never(), values))
+	_, err = coherence.Invoke[int, utils.Person, int](ctx, namedMap, 1, processors.ConditionalPutAll[int, utils.Person](filters.Never(), values))
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-	AssertSize(g, namedMap, 0)
+	utils.AssertSize(g, namedMap, 0)
 }
 
-func RunTestInvokeAll(t *testing.T, namedMap coherence.NamedMap[int, Person]) {
+func RunTestInvokeAll(t *testing.T, namedMap coherence.NamedMap[int, utils.Person]) {
 	var (
 		g   = gomega.NewWithT(t)
 		err error
@@ -475,7 +475,7 @@ func RunTestInvokeAll(t *testing.T, namedMap coherence.NamedMap[int, Person]) {
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 	// Increment the age of every person
-	ch := coherence.InvokeAll[int, Person, int](ctx, namedMap, processors.Increment("age", 1, true))
+	ch := coherence.InvokeAll[int, utils.Person, int](ctx, namedMap, processors.Increment("age", 1, true))
 	results := make([]int, 0)
 	for se := range ch {
 		// Check the error
@@ -504,7 +504,7 @@ func RunTestInvokeAll(t *testing.T, namedMap coherence.NamedMap[int, Person]) {
 	err = namedMap.PutAll(ctx, peopleData)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
-	err = coherence.InvokeAllBlind[int, Person](ctx, namedMap, processors.Increment("age", 1, true))
+	err = coherence.InvokeAllBlind[int, utils.Person](ctx, namedMap, processors.Increment("age", 1, true))
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 	// validate that the entry processor actually worked
@@ -518,9 +518,9 @@ func RunTestInvokeAll(t *testing.T, namedMap coherence.NamedMap[int, Person]) {
 }
 
 // addPerson adds a Person and asserts that the size is 1
-func addPerson(g *gomega.WithT, namedMap coherence.NamedMap[int, Person]) {
-	_, err := namedMap.Put(ctx, 1, Person{ID: 1, Name: "Tim", Age: 10, Salary: 1000,
-		HomeAddress: Address{Address1: "address1", Address2: "address1", City: "Perth", State: "WA", PostCode: 6000}})
+func addPerson(g *gomega.WithT, namedMap coherence.NamedMap[int, utils.Person]) {
+	_, err := namedMap.Put(ctx, 1, utils.Person{ID: 1, Name: "Tim", Age: 10, Salary: 1000,
+		HomeAddress: utils.Address{Address1: "address1", Address2: "address1", City: "Perth", State: "WA", PostCode: 6000}})
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-	AssertSize(g, namedMap, 1)
+	utils.AssertSize(g, namedMap, 1)
 }

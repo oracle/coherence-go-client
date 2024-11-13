@@ -143,7 +143,7 @@ func GetNamedQueue[V any](ctx context.Context, session *Session, queueName strin
 			return nil, getExistingError("NamedQueue", queueName)
 		}
 
-		session.debug("using existing NamedQueue", existing)
+		session.debug("using existing NamedQueue: %v", existing)
 		return *existing, nil
 	}
 
@@ -184,7 +184,7 @@ func GetBlockingNamedQueue[V any](ctx context.Context, session *Session, queueNa
 			return nil, getExistingError("NamedBlockingQueue", queueName)
 		}
 
-		session.debug("using existing NamedBlockingQueue", existing)
+		session.debug("using existing NamedBlockingQueue: %v", existing)
 		return *existing, nil
 	}
 
@@ -421,7 +421,7 @@ func newQueueCacheListener[V any](namedQueue *namedBlockingQueue[V]) *queueCache
 		namedQueue: namedQueue,
 	}
 
-	listener.listener.OnInserted(func(e MapEvent[QueueKey, V]) {
+	listener.listener.OnInserted(func(_ MapEvent[QueueKey, V]) {
 		// notify all registered listeners that an entry has been added to the Queue
 		namedQueue.notifier.notifyAll()
 	})

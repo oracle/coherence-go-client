@@ -24,6 +24,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -59,13 +60,20 @@ type Session struct {
 	caches                map[string]interface{}
 	maps                  map[string]interface{}
 	queues                map[string]interface{}
+	cacheIDMapMutex       sync.RWMutex
+	cacheIDMap            map[string]int32
 	lifecycleMutex        sync.RWMutex
 	lifecycleListeners    []*SessionLifecycleListener
 	sessionConnectCtx     context.Context
-	connectMutex          sync.RWMutex   // mutes for connection attempts
-	firstConnectAttempted bool           // indicates if the first connection has been attempted
-	hasConnected          bool           // indicates if the session has ever connected
-	debug                 func(v ...any) // a function to output debug messages
+	connectMutex          sync.RWMutex         // mutes for connection attempts
+	firstConnectAttempted bool                 // indicates if the first connection has been attempted
+	hasConnected          bool                 // indicates if the session has ever connected
+	debug                 func(string, ...any) // a function to output debug messages
+	debugConnection       func(string, ...any) // a function to output debug messages for gRPCV1 connections
+	messageDebugMode      string               // either "on" or "full"
+	requestID             int64                // request id for gRPC v1
+	filterID              int64                // filter id for gRPC v1
+	v1StreamManagerCache  *streamManagerV1
 }
 
 // SessionOptions holds the session attributes like host, port, tls attributes etc.
@@ -151,11 +159,17 @@ func NewSession(ctx context.Context, options ...func(session *SessionOptions)) (
 		closed:                false,
 		firstConnectAttempted: false,
 		hasConnected:          false,
-		debug:                 func(v ...any) {},
-		maps:                  make(map[string]interface{}, 0),
-		caches:                make(map[string]interface{}, 0),
-		queues:                make(map[string]interface{}, 0),
-		lifecycleListeners:    []*SessionLifecycleListener{},
+		debug: func(_ string, _ ...any) {
+			// empty by default
+		},
+		debugConnection: func(_ string, _ ...any) {
+			// empty by default
+		},
+		maps:               make(map[string]interface{}, 0),
+		caches:             make(map[string]interface{}, 0),
+		queues:             make(map[string]interface{}, 0),
+		cacheIDMap:         make(map[string]int32, 0),
+		lifecycleListeners: []*SessionLifecycleListener{},
 		sessOpts: &SessionOptions{
 			PlainText:          false,
 			IgnoreInvalidCerts: false,
@@ -174,9 +188,22 @@ func NewSession(ctx context.Context, options ...func(session *SessionOptions)) (
 
 	if getBoolValueFromEnvVarOrDefault(envSessionDebug, false) {
 		// enable session debugging
-		session.debug = func(v ...any) {
-			log.Println("DEBUG:", v)
+		session.debug = func(format string, v ...any) {
+			logMessage(DEBUG, format, v...)
 		}
+	}
+
+	messageDebug := getStringValueFromEnvVarOrDefault(envMessageDebug, "")
+	if messageDebug != "" {
+		// enable session debugging
+		session.debugConnection = func(s string, v ...any) {
+			msg := getLogMessage(DEBUG, s, v...)
+			if session.messageDebugMode == "on" && len(msg) > 256 {
+				msg = msg[:256]
+			}
+			log.Println(msg)
+		}
+		session.messageDebugMode = messageDebug
 	}
 
 	// apply any options
@@ -322,6 +349,57 @@ func WithTLSConfig(tlsConfig *tls.Config) func(sessionOptions *SessionOptions) {
 	}
 }
 
+func (s *Session) NextRequestID() int64 {
+	return atomic.AddInt64(&s.requestID, 1)
+}
+
+func (s *Session) NextFilterID() int64 {
+	return atomic.AddInt64(&s.filterID, 1)
+}
+
+func (s *Session) getCacheID(cache string) *int32 {
+	s.cacheIDMapMutex.Lock()
+	defer s.cacheIDMapMutex.Unlock()
+
+	if v, ok := s.cacheIDMap[cache]; ok {
+		return &v
+	}
+	return nil
+}
+
+func (s *Session) getCacheNameFromCacheID(cacheID int32) *string {
+	s.cacheIDMapMutex.Lock()
+	defer s.cacheIDMapMutex.Unlock()
+
+	for k, v := range s.cacheIDMap {
+		if v == cacheID {
+			return &k
+		}
+	}
+
+	return nil
+}
+
+func (s *Session) getNamedMapClient(name string) interface{} {
+	s.mapMutex.Lock()
+	defer s.mapMutex.Unlock()
+
+	if existingCache, ok := s.maps[name]; ok {
+		return existingCache
+	}
+	return nil
+}
+
+func (s *Session) getNamedCacheClient(name string) interface{} {
+	s.mapMutex.Lock()
+	defer s.mapMutex.Unlock()
+
+	if existingCache, ok := s.caches[name]; ok {
+		return existingCache
+	}
+	return nil
+}
+
 // ID returns the identifier of a session.
 func (s *Session) ID() string {
 	return s.sessionID.String()
@@ -337,6 +415,10 @@ func (s *Session) Close() {
 		s.closed = true
 
 		s.mapMutex.Unlock()
+
+		if s.GetProtocolVersion() > 0 {
+			_ = s.v1StreamManagerCache.eventStream.grpcStream.CloseSend()
+		}
 		s.dispatch(Closed, func() SessionLifecycleEvent {
 			return newSessionLifecycleEvent(s, Closed)
 		})
@@ -349,8 +431,12 @@ func (s *Session) Close() {
 }
 
 func (s *Session) String() string {
-	return fmt.Sprintf("Session{id=%s, closed=%v, caches=%d, maps=%d, options=%v}", s.sessionID.String(), s.closed,
-		len(s.caches), len(s.maps), s.sessOpts)
+	var serverProtocolVersion int32
+	if s.v1StreamManagerCache != nil {
+		serverProtocolVersion = s.v1StreamManagerCache.serverProtocolVersion
+	}
+	return fmt.Sprintf("Session{id=%s, closed=%v, caches=%d, maps=%d, serverProtocolVersion=%v, options=%v}", s.sessionID.String(), s.closed,
+		len(s.caches), len(s.maps), serverProtocolVersion, s.sessOpts)
 }
 
 // GetRequestTimeout returns the session timeout in millis.
@@ -380,7 +466,7 @@ func (s *Session) ensureConnection() error {
 			if s.GetReadyTimeout() != 0 {
 				return waitForReady(s)
 			}
-			s.debug(fmt.Sprintf("session: %s attempting connection to address %s", s.sessionID, s.sessOpts.Address))
+			logMessage(INFO, "Session: [%s] attempting connection to address %s", s.sessionID, s.sessOpts.Address)
 			s.conn.Connect()
 			return nil
 		}
@@ -392,7 +478,7 @@ func (s *Session) ensureConnection() error {
 	tlsOpt, err := s.sessOpts.createTLSOption()
 	if err != nil {
 		errString := fmt.Sprintf("error while setting up channel credentials: %v", err)
-		return fmt.Errorf(errString)
+		return errors.New(errString)
 	}
 	s.dialOptions = append(s.dialOptions, tlsOpt)
 
@@ -415,14 +501,28 @@ func (s *Session) ensureConnection() error {
 	conn, err := grpc.DialContext(newCtx, s.sessOpts.Address, s.dialOptions...)
 
 	if err != nil {
-		log.Printf("could not connect. Reason: %v", err)
+		logMessage(WARNING, "Session: [%s] could not connect. Reason: %v", s.sessionID, err)
 		return err
 	}
 
 	s.conn = conn
 	s.firstConnectAttempted = true
 
-	// register for state change events - This uses and experimental gRPC API
+	var apiMessage = " serverProtocolVersion: 0"
+
+	// attempt to connect to V1 gRPC endpoint first and fallback if not available
+	manager, err1 := newStreamManagerV1(s, cacheServiceProtocol)
+	if err1 == nil {
+		// save the stream manager for a successful V1 client connection
+		s.v1StreamManagerCache = manager
+		apiMessage = fmt.Sprintf(" %v", manager)
+	} else {
+		s.debug("error connecting to session via v1, falling back to v0: %v", err1)
+	}
+
+	logMessage(INFO, "Session [%s] connected to [%s]%s", s.sessionID, s.sessOpts.Address, apiMessage)
+
+	// register for state change events - This uses an experimental gRPC API
 	// so may not be reliable or may change in the future.
 	// refer: https://grpc.github.io/grpc/core/md_doc_connectivity-semantics-and-api.html
 	go func(session *Session) {
@@ -441,29 +541,36 @@ func (s *Session) ensureConnection() error {
 				return
 			}
 
+			if session.GetProtocolVersion() > 0 {
+				firstConnect = !s.hasConnected
+			}
+
 			newState := session.conn.GetState()
-			session.debug("connection:", lastState, "=>", newState)
+			session.debug("connection: %v => %v", lastState, newState)
 
 			if newState == connectivity.Shutdown {
-				log.Printf("closed session %v", session.sessionID)
+				logMessage(INFO, "Session [%s] closed", session.sessionID)
 				session.Close()
 				return
 			}
 
-			if newState == connectivity.Ready {
+			if newState == connectivity.Ready || newState == connectivity.Idle {
 				if !firstConnect && !connected {
+					// Reconnect
 					disconnectTime = 0
-					log.Printf("session: %s re-connected to address %s", session.sessionID, session.sessOpts.Address)
+					session.closed = false
+					connected = true
+
+					logMessage(INFO, "Session [%s] re-connected to address %s", session.sessionID, session.sessOpts.Address)
 					session.dispatch(Reconnected, func() SessionLifecycleEvent {
 						return newSessionLifecycleEvent(session, Reconnected)
 					})
-					session.closed = false
-					connected = true
 				} else if firstConnect && !connected {
+					// Initial Connect
 					firstConnect = false
 					connected = true
 					session.hasConnected = true
-					log.Printf("session: %s connected to address %s", session.sessionID, session.sessOpts.Address)
+					logMessage(INFO, "Session [%s] connected to address %s", session.sessionID, session.sessOpts.Address)
 					session.dispatch(Connected, func() SessionLifecycleEvent {
 						return newSessionLifecycleEvent(session, Connected)
 					})
@@ -471,7 +578,7 @@ func (s *Session) ensureConnection() error {
 			} else {
 				if connected {
 					disconnectTime = -1
-					log.Printf("session: %s disconnected from address %s", session.sessionID, session.sessOpts.Address)
+					logMessage(WARNING, "Session [%s] disconnected from address %s", session.sessionID, session.sessOpts.Address)
 					session.dispatch(Disconnected, func() SessionLifecycleEvent {
 						return newSessionLifecycleEvent(session, Disconnected)
 					})
@@ -484,7 +591,7 @@ func (s *Session) ensureConnection() error {
 					} else {
 						waited := time.Now().UnixMilli() - disconnectTime
 						if waited >= session.GetDisconnectTimeout().Milliseconds() {
-							log.Printf("session: %s unable to reconnect within disconnect timeout of [%s]. Closing session.",
+							logMessage(ERROR, "Session [%s] unable to reconnect within disconnect timeout of [%s], closing session.",
 								session.sessionID, session.GetDisconnectTimeout().String())
 							session.Close()
 							return
@@ -502,6 +609,14 @@ func (s *Session) ensureConnection() error {
 	}(s)
 
 	return nil
+}
+
+// GetProtocolVersion returns the protocol version used by the server.
+func (s *Session) GetProtocolVersion() int32 {
+	if s.v1StreamManagerCache == nil {
+		return 0
+	}
+	return s.v1StreamManagerCache.serverProtocolVersion
 }
 
 // waitForReady waits until the connection is ready up to the ready session timeout and will
@@ -530,7 +645,8 @@ func waitForReady(s *Session) error {
 			return nil
 		}
 		if !messageLogged {
-			log.Printf("State is %v, waiting until ready timeout of %v for valid connection", state, readyTimeout)
+			logMessage(INFO, "Session [%s] State is %v, waiting until ready timeout of %v for valid connection",
+				s.sessionID, state, readyTimeout)
 			messageLogged = true
 		}
 	}

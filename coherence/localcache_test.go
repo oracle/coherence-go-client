@@ -7,135 +7,135 @@ package coherence
 
 import (
 	"fmt"
-	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega"
 	"sync"
 	"testing"
 	"time"
 )
 
 func TestBasicLocalCacheOperations(t *testing.T) {
-	g := NewWithT(t)
+	g := gomega.NewWithT(t)
 
 	cache := newLocalCache[int, string]("my-cache-1")
-	g.Expect(cache.Size()).To(Equal(0))
+	g.Expect(cache.Size()).To(gomega.Equal(0))
 
 	old := cache.Put(1, "one")
-	g.Expect(cache.Size()).To(Equal(1))
-	g.Expect(old).To(BeNil())
+	g.Expect(cache.Size()).To(gomega.Equal(1))
+	g.Expect(old).To(gomega.BeNil())
 
 	value := cache.Get(1)
-	g.Expect(*value).To(Equal("one"))
+	g.Expect(*value).To(gomega.Equal("one"))
 
 	oldValue := cache.Put(1, "ONE")
-	g.Expect(*oldValue).To(Equal("one"))
+	g.Expect(*oldValue).To(gomega.Equal("one"))
 
 	oldValue = cache.Remove(1)
-	g.Expect(*oldValue).To(Equal("ONE"))
-	g.Expect(cache.Size()).To(Equal(0))
+	g.Expect(*oldValue).To(gomega.Equal("ONE"))
+	g.Expect(cache.Size()).To(gomega.Equal(0))
 
 	value = cache.Get(1)
-	g.Expect(value).To(BeNil())
+	g.Expect(value).To(gomega.BeNil())
 
 	cache.Put(1, "one")
 	cache.Put(2, "two")
 	cache.Put(3, "three")
-	g.Expect(cache.Size()).To(Equal(3))
+	g.Expect(cache.Size()).To(gomega.Equal(3))
 
 	cache.Clear()
-	g.Expect(cache.Size()).To(Equal(0))
+	g.Expect(cache.Size()).To(gomega.Equal(0))
 
 	cache.PutWithExpiry(1, "one", time.Duration(3)*time.Second)
 	Sleep(4)
-	g.Expect(cache.Get(1)).To(BeNil())
-	g.Expect(cache.Size()).To(Equal(0))
+	g.Expect(cache.Get(1)).To(gomega.BeNil())
+	g.Expect(cache.Size()).To(gomega.Equal(0))
 
 	cache.PutWithExpiry(1, "one", time.Duration(3)*time.Second)
 	Sleep(4)
-	g.Expect(cache.Remove(1)).To(BeNil())
-	g.Expect(cache.Size()).To(Equal(0))
+	g.Expect(cache.Remove(1)).To(gomega.BeNil())
+	g.Expect(cache.Size()).To(gomega.Equal(0))
 
 	cache.PutWithExpiry(1, "one", time.Duration(3)*time.Second)
 	Sleep(4)
-	g.Expect(cache.Size()).To(Equal(0))
+	g.Expect(cache.Size()).To(gomega.Equal(0))
 
 	cache.PutWithExpiry(1, "one", time.Duration(3)*time.Millisecond)
 	time.Sleep(time.Duration(4) * time.Millisecond)
-	g.Expect(cache.Size()).To(Equal(0))
+	g.Expect(cache.Size()).To(gomega.Equal(0))
 
 	fmt.Println(cache)
 }
 
 func TestBasicLocalCacheWithDefaultExpiry(t *testing.T) {
-	g := NewWithT(t)
+	g := gomega.NewWithT(t)
 
 	cache := newLocalCache[int, string]("my-cache", withLocalCacheExpiry(time.Duration(2)*time.Second))
-	g.Expect(cache.Size()).To(Equal(0))
+	g.Expect(cache.Size()).To(gomega.Equal(0))
 
 	cache.Put(1, "one")
-	g.Expect(cache.Size()).To(Equal(1))
+	g.Expect(cache.Size()).To(gomega.Equal(1))
 
 	Sleep(3)
-	g.Expect(cache.Size()).To(Equal(0))
+	g.Expect(cache.Size()).To(gomega.Equal(0))
 }
 
 func TestBasicLocalCacheClear(t *testing.T) {
-	g := NewWithT(t)
+	g := gomega.NewWithT(t)
 
 	cache := newLocalCache[int, string]("my-cache-clear", withLocalCacheExpiry(time.Duration(2)*time.Second))
-	g.Expect(cache.Size()).To(Equal(0))
+	g.Expect(cache.Size()).To(gomega.Equal(0))
 
 	cache.Put(1, "one")
-	g.Expect(cache.Size()).To(Equal(1))
+	g.Expect(cache.Size()).To(gomega.Equal(1))
 	cache.Clear()
 
-	g.Expect(cache.Size()).To(Equal(0))
+	g.Expect(cache.Size()).To(gomega.Equal(0))
 }
 
 func TestBasicLocalCacheRelease(t *testing.T) {
-	g := NewWithT(t)
+	g := gomega.NewWithT(t)
 
 	cache := newLocalCache[int, string]("my-cache-clear", withLocalCacheExpiry(time.Duration(2)*time.Second))
-	g.Expect(cache.Size()).To(Equal(0))
+	g.Expect(cache.Size()).To(gomega.Equal(0))
 
 	cache.Put(1, "one")
-	g.Expect(cache.Size()).To(Equal(1))
+	g.Expect(cache.Size()).To(gomega.Equal(1))
 	cache.Release()
 
-	g.Expect(cache.Size()).To(Equal(0))
+	g.Expect(cache.Size()).To(gomega.Equal(0))
 }
 
 func TestBasicLocalCacheGetAll(t *testing.T) {
-	g := NewWithT(t)
+	g := gomega.NewWithT(t)
 
 	cache := newLocalCache[int, string]("my-cache-get-all", withLocalCacheExpiry(time.Duration(10)*time.Second))
-	g.Expect(cache.Size()).To(Equal(0))
-	g.Expect(len(cache.GetAll([]int{1, 2, 3}))).To(Equal(0))
+	g.Expect(cache.Size()).To(gomega.Equal(0))
+	g.Expect(len(cache.GetAll([]int{1, 2, 3}))).To(gomega.Equal(0))
 
 	cache.Put(1, "one")
 	cache.Put(2, "two")
 	cache.Put(3, "three")
 	cache.Put(4, "four")
 	cache.Put(5, "five")
-	g.Expect(cache.Size()).To(Equal(5))
+	g.Expect(cache.Size()).To(gomega.Equal(5))
 
 	results := cache.GetAll([]int{1, 5})
-	g.Expect(len(results)).To(Equal(2))
+	g.Expect(len(results)).To(gomega.Equal(2))
 
 	v, ok := results[1]
-	g.Expect(ok).To(Equal(true))
-	g.Expect(*v).To(Equal("one"))
+	g.Expect(ok).To(gomega.Equal(true))
+	g.Expect(*v).To(gomega.Equal("one"))
 
 	v, ok = results[5]
-	g.Expect(ok).To(Equal(true))
-	g.Expect(*v).To(Equal("five"))
+	g.Expect(ok).To(gomega.Equal(true))
+	g.Expect(*v).To(gomega.Equal("five"))
 
 	v, ok = results[6]
-	g.Expect(ok).To(Equal(false))
-	g.Expect(v).To(BeNil())
+	g.Expect(ok).To(gomega.Equal(false))
+	g.Expect(v).To(gomega.BeNil())
 }
 
 func TestLocalCacheWithHighUnitsOnly(t *testing.T) {
-	g := NewWithT(t)
+	g := gomega.NewWithT(t)
 
 	cache := newLocalCache[int, string]("my-cache-high-unit1", withLocalCacheHighUnits(100))
 
@@ -143,18 +143,18 @@ func TestLocalCacheWithHighUnitsOnly(t *testing.T) {
 		cache.Put(i, fmt.Sprintf("value-%v", i))
 	}
 
-	g.Expect(cache.Size()).To(Equal(100))
+	g.Expect(cache.Size()).To(gomega.Equal(100))
 
 	// put a new entry which should cause prune of 20 entries
 	cache.Put(100, "one hundred")
 
-	g.Expect(cache.Size()).To(Equal(80))
-	g.Expect(cache.GetCachePrunes()).To(Equal(int64(1)))
+	g.Expect(cache.Size()).To(gomega.Equal(80))
+	g.Expect(cache.GetCachePrunes()).To(gomega.Equal(int64(1)))
 	fmt.Println(cache)
 }
 
 func TestLocalCacheWithHighUnitsMemoryOnly(t *testing.T) {
-	g := NewWithT(t)
+	g := gomega.NewWithT(t)
 
 	cache := newLocalCache[int, string]("my-cache-high-unit2", withLocalCacheHighUnitsMemory(1024*100))
 
@@ -163,13 +163,13 @@ func TestLocalCacheWithHighUnitsMemoryOnly(t *testing.T) {
 	}
 
 	// cache size should be less than 10,000 as it would not all fit in under 100K
-	g.Expect(cache.Size() < 10_000).To(Equal(true))
+	g.Expect(cache.Size() < 10_000).To(gomega.Equal(true))
 
 	fmt.Println(cache)
 }
 
 func TestLocalCacheWithHighUnitsOnlyAccessTime(t *testing.T) {
-	g := NewWithT(t)
+	g := gomega.NewWithT(t)
 
 	cache := newLocalCache[int, string]("my-cache-high-unit3", withLocalCacheHighUnits(100))
 
@@ -177,7 +177,7 @@ func TestLocalCacheWithHighUnitsOnlyAccessTime(t *testing.T) {
 		cache.Put(i, fmt.Sprintf("value3-%v", i))
 	}
 
-	g.Expect(cache.Size()).To(Equal(100))
+	g.Expect(cache.Size()).To(gomega.Equal(100))
 
 	// access key 1, 2 and 3, when we prune we should not see these entries be removed
 	// as they were most recently accessed
@@ -189,17 +189,17 @@ func TestLocalCacheWithHighUnitsOnlyAccessTime(t *testing.T) {
 	// put a new entry which should cause prune of 20 entries
 	cache.Put(100, "one hundred")
 
-	g.Expect(cache.Size()).To(Equal(80))
-	g.Expect(cache.GetCachePrunes()).To(Equal(int64(1)))
+	g.Expect(cache.Size()).To(gomega.Equal(80))
+	g.Expect(cache.GetCachePrunes()).To(gomega.Equal(int64(1)))
 
 	// entries 1, 2 and three should not be removed as they were accessed
-	g.Expect(cache.Get(1)).To(Not(BeNil()))
-	g.Expect(cache.Get(2)).To(Not(BeNil()))
-	g.Expect(cache.Get(3)).To(Not(BeNil()))
+	g.Expect(cache.Get(1)).To(gomega.Not(gomega.BeNil()))
+	g.Expect(cache.Get(2)).To(gomega.Not(gomega.BeNil()))
+	g.Expect(cache.Get(3)).To(gomega.Not(gomega.BeNil()))
 }
 
 func TestLocalCacheWithHighUnitsAndTTL(t *testing.T) {
-	g := NewWithT(t)
+	g := gomega.NewWithT(t)
 
 	cache := newLocalCache[int, string]("my-cache-high-unit", withLocalCacheHighUnits(100), withLocalCacheExpiry(time.Duration(2)*time.Second))
 
@@ -207,7 +207,7 @@ func TestLocalCacheWithHighUnitsAndTTL(t *testing.T) {
 		cache.Put(i, fmt.Sprintf("value-%v", i))
 	}
 
-	g.Expect(cache.Size()).To(Equal(100))
+	g.Expect(cache.Size()).To(gomega.Equal(100))
 
 	// sleep for 1 second and add a new entry
 	time.Sleep(time.Duration(1) * time.Second)
@@ -215,9 +215,9 @@ func TestLocalCacheWithHighUnitsAndTTL(t *testing.T) {
 	cache.Put(100, "one hundred")
 	cache.Put(101, "one hundred and one")
 
-	g.Expect(cache.Size()).To(Equal(81))
-	g.Expect(cache.Get(100)).To(Not(BeNil()))
-	g.Expect(cache.Get(101)).To(Not(BeNil()))
+	g.Expect(cache.Size()).To(gomega.Equal(81))
+	g.Expect(cache.Get(100)).To(gomega.Not(gomega.BeNil()))
+	g.Expect(cache.Get(101)).To(gomega.Not(gomega.BeNil()))
 
 	time.Sleep(time.Duration(2) * time.Second)
 	// put 20 new entries, all the entries, all entries < 100 should be expired
@@ -226,12 +226,12 @@ func TestLocalCacheWithHighUnitsAndTTL(t *testing.T) {
 		cache.Put(i, fmt.Sprintf("value-%v", i))
 	}
 
-	g.Expect(cache.Size()).To(Equal(20))
+	g.Expect(cache.Size()).To(gomega.Equal(20))
 }
 
 func TestLocalCacheGoRoutines(t *testing.T) {
 	var (
-		g     = NewWithT(t)
+		g     = gomega.NewWithT(t)
 		cache = newLocalCache[int, string]("my-cache-2")
 		wg    sync.WaitGroup
 	)
@@ -254,7 +254,7 @@ func TestLocalCacheGoRoutines(t *testing.T) {
 	fmt.Println("End   " + time.Now().String())
 	size := cache.Size()
 
-	g.Expect(size).To(Equal(routines * iterations))
+	g.Expect(size).To(gomega.Equal(routines * iterations))
 
 	fmt.Println(cache.GetStats())
 }

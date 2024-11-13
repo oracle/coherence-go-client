@@ -15,6 +15,7 @@ import (
 	"github.com/oracle/coherence-go-client/coherence/filters"
 	"github.com/oracle/coherence-go-client/coherence/processors"
 	pb "github.com/oracle/coherence-go-client/proto"
+	pb1 "github.com/oracle/coherence-go-client/proto/v1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/wrapperspb"
@@ -36,6 +37,9 @@ const (
 
 	// envSessionDebug enables session debug messages to be displayed.
 	envSessionDebug = "COHERENCE_SESSION_DEBUG"
+
+	// envMessageDebug enables message debug messages to be displayed.
+	envMessageDebug = "COHERENCE_MESSAGE_DEBUG"
 
 	// envResolverDebug enables resolver debug messages to be displayed.
 	envResolverDebug = "COHERENCE_RESOLVER_DEBUG"
@@ -69,10 +73,10 @@ type InvalidationStrategyType int
 // baseClient is a struct that is used for both NamedMap and NamedCache
 type baseClient[K comparable, V any] struct {
 	session                    *Session
-	name                       string          // Name of the NamedMap or NamedCache
-	sessionOpts                *SessionOptions // Options for the sessions
-	cacheOpts                  *CacheOptions   // Options for the cache or map
-	client                     pb.NamedCacheServiceClient
+	name                       string                     // Name of the NamedMap or NamedCache
+	sessionOpts                *SessionOptions            // Options for the sessions
+	cacheOpts                  *CacheOptions              // Options for the cache or map
+	client                     pb.NamedCacheServiceClient // original v0 client
 	format                     string
 	keySerializer              Serializer[K]
 	valueSerializer            Serializer[V]
@@ -83,6 +87,12 @@ type baseClient[K comparable, V any] struct {
 	nearCache                  *localCacheImpl[K, V]
 	nearCacheListener          *namedCacheNearCacheListener[K, V]
 	nearCacheLifecycleListener *namedCacheNearLifecyleListener[K, V]
+
+	// gRPC v1 listeners registered
+	keyListenersV1       map[K]*listenerGroupV1[K, V]
+	filterListenersV1    map[filters.Filter]*listenerGroupV1[K, V]
+	filterIDToGroupV1    map[int64]*listenerGroupV1[K, V]
+	lifecycleListenersV1 []*MapLifecycleListener[K, V]
 }
 
 // CacheOptions holds various cache options.
@@ -133,9 +143,13 @@ func executeClear[K comparable, V any](ctx context.Context, bc *baseClient[K, V]
 		defer cancel()
 	}
 
-	clearRequest := pb.ClearRequest{Cache: bc.name, Scope: bc.sessionOpts.Scope}
+	if bc.session.GetProtocolVersion() > 0 {
+		err = bc.session.v1StreamManagerCache.clearCache(newCtx, bc.name)
+	} else {
+		clearRequest := pb.ClearRequest{Cache: bc.name, Scope: bc.sessionOpts.Scope}
 
-	_, err = bc.client.Clear(newCtx, &clearRequest)
+		_, err = bc.client.Clear(newCtx, &clearRequest)
+	}
 
 	// clear the near cache
 	if nearCache != nil {
@@ -189,6 +203,10 @@ func executeAddIndex[K comparable, V, T, E any](ctx context.Context, bc *baseCli
 		return err
 	}
 
+	if bc.session.GetProtocolVersion() > 0 {
+		return bc.session.v1StreamManagerCache.addIndex(newCtx, bc.name, binExtractor, &sorted, binComparator)
+	}
+
 	addIndexRequest := pb.AddIndexRequest{
 		Cache: bc.name, Scope: bc.sessionOpts.Scope, Format: bc.format, Extractor: binExtractor, Sorted: sorted, Comparator: binComparator}
 	_, err = bc.client.AddIndex(newCtx, &addIndexRequest)
@@ -217,6 +235,10 @@ func executeRemoveIndex[K comparable, V, T, E any](ctx context.Context, bc *base
 		return err
 	}
 
+	if bc.session.GetProtocolVersion() > 0 {
+		return bc.session.v1StreamManagerCache.removeIndex(newCtx, bc.name, binExtractor)
+	}
+
 	removeIndexRequest := pb.RemoveIndexRequest{
 		Cache: bc.name, Scope: bc.sessionOpts.Scope, Format: bc.format, Extractor: binExtractor}
 
@@ -239,9 +261,16 @@ func executeTruncate[K comparable, V any](ctx context.Context, bc *baseClient[K,
 		defer cancel()
 	}
 
-	request := pb.TruncateRequest{Cache: bc.name, Scope: bc.sessionOpts.Scope}
+	if bc.session.GetProtocolVersion() > 0 {
+		err = bc.session.v1StreamManagerCache.truncateCache(newCtx, bc.name)
+		if err != nil {
+			return err
+		}
+	} else {
+		request := pb.TruncateRequest{Cache: bc.name, Scope: bc.sessionOpts.Scope}
 
-	_, err = bc.client.Truncate(newCtx, &request)
+		_, err = bc.client.Truncate(newCtx, &request)
+	}
 
 	// clear the near cache
 	if nearCache != nil {
@@ -263,11 +292,18 @@ func executeDestroy[K comparable, V any](ctx context.Context, bc *baseClient[K, 
 		defer cancel()
 	}
 
-	request := pb.DestroyRequest{Cache: bc.name, Scope: bc.sessionOpts.Scope}
+	if bc.session.GetProtocolVersion() > 0 {
+		err = bc.session.v1StreamManagerCache.destroyCache(newCtx, bc.name)
+		if err != nil {
+			return err
+		}
+	} else {
+		request := pb.DestroyRequest{Cache: bc.name, Scope: bc.sessionOpts.Scope}
 
-	_, err = bc.client.Destroy(newCtx, &request)
-	if err != nil {
-		return err
+		_, err = bc.client.Destroy(newCtx, &request)
+		if err != nil {
+			return err
+		}
 	}
 
 	// also mark as released, which
@@ -285,15 +321,18 @@ func executeDestroy[K comparable, V any](ctx context.Context, bc *baseClient[K, 
 
 // executeRelease releases a NamedCache or NamedMap.
 func executeRelease[K comparable, V any](bc *baseClient[K, V], nm NamedMap[K, V]) {
-	bc.eventManager.dispatch(Released, func() MapLifecycleEvent[K, V] {
-		return newMapLifecycleEvent(nm, Released)
-	})
+	if bc.session.GetProtocolVersion() == 0 {
+		bc.eventManager.dispatch(Released, func() MapLifecycleEvent[K, V] {
+			return newMapLifecycleEvent(nm, Released)
+		})
 
-	bc.released = true
-
-	if manager := bc.eventManager; manager != nil {
-		manager.close()
+		if manager := bc.eventManager; manager != nil {
+			manager.close()
+		}
+	} else {
+		bc.generateMapLifecycleEvent(nm, Released)
 	}
+	bc.released = true
 }
 
 // executeContainsKey executes the containsKey operation against a baseClient.
@@ -304,6 +343,7 @@ func executeContainsKey[K comparable, V any](ctx context.Context, bc *baseClient
 		binKey    []byte
 		nearCache = bc.nearCache
 	)
+
 	if err != nil {
 		return false, err
 	}
@@ -327,12 +367,17 @@ func executeContainsKey[K comparable, V any](ctx context.Context, bc *baseClient
 		return false, err
 	}
 
+	if bc.session.GetProtocolVersion() > 0 {
+		return bc.session.v1StreamManagerCache.containsKey(newCtx, bc.name, binKey)
+	}
+
 	containsKeyRequest := pb.ContainsKeyRequest{Cache: bc.name, Key: binKey, Format: bc.format, Scope: bc.sessionOpts.Scope}
 
 	result, err = bc.client.ContainsKey(newCtx, &containsKeyRequest)
 	if err != nil {
 		return false, err
 	}
+
 	return result.Value, nil
 }
 
@@ -357,12 +402,16 @@ func executeContainsValue[K comparable, V any](ctx context.Context, bc *baseClie
 		return false, err
 	}
 
+	if bc.session.GetProtocolVersion() > 0 {
+		return bc.session.v1StreamManagerCache.containsValue(newCtx, bc.name, binValue)
+	}
 	containsValueRequest := pb.ContainsValueRequest{Cache: bc.name, Value: binValue, Format: bc.format, Scope: bc.sessionOpts.Scope}
 
 	result, err = bc.client.ContainsValue(newCtx, &containsValueRequest)
 	if err != nil {
 		return false, err
 	}
+
 	return result.Value, nil
 }
 
@@ -393,6 +442,10 @@ func executeContainsEntry[K comparable, V any](ctx context.Context, bc *baseClie
 		return false, err
 	}
 
+	if bc.session.GetProtocolVersion() > 0 {
+		return bc.session.v1StreamManagerCache.containsEntry(newCtx, bc.name, binKey, binValue)
+	}
+
 	containsEntryRequest := pb.ContainsEntryRequest{Cache: bc.name, Key: binKey, Value: binValue, Format: bc.format, Scope: bc.sessionOpts.Scope}
 
 	result, err = bc.client.ContainsEntry(newCtx, &containsEntryRequest)
@@ -405,8 +458,9 @@ func executeContainsEntry[K comparable, V any](ctx context.Context, bc *baseClie
 // executeIsEmpty executes the IsEmpty operation against a baseClient.
 func executeIsEmpty[K comparable, V any](ctx context.Context, bc *baseClient[K, V]) (bool, error) {
 	var (
-		result *wrapperspb.BoolValue
-		err    = bc.ensureClientConnection()
+		result  *wrapperspb.BoolValue
+		err     = bc.ensureClientConnection()
+		isEmpty bool
 	)
 	if err != nil {
 		return false, err
@@ -417,22 +471,33 @@ func executeIsEmpty[K comparable, V any](ctx context.Context, bc *baseClient[K, 
 		defer cancel()
 	}
 
-	emptyRequest := pb.IsEmptyRequest{Cache: bc.name}
+	if bc.session.GetProtocolVersion() > 0 {
+		isEmpty, err = bc.session.v1StreamManagerCache.isEmpty(newCtx, bc.name)
+		if err != nil {
+			return false, err
+		}
+		result = &wrapperspb.BoolValue{Value: isEmpty}
+	} else {
+		emptyRequest := pb.IsEmptyRequest{Cache: bc.name}
 
-	result, err = bc.client.IsEmpty(newCtx, &emptyRequest)
-	if err != nil {
-		return false, err
+		result, err = bc.client.IsEmpty(newCtx, &emptyRequest)
+		if err != nil {
+			return false, err
+		}
 	}
+
 	return result.Value, nil
 }
 
 // executeGet executes the Get operation against a baseClient.
 func executeGet[K comparable, V any](ctx context.Context, bc *baseClient[K, V], key K) (*V, error) {
 	var (
-		binKey    []byte
-		err       = bc.ensureClientConnection()
-		zeroValue *V
-		nearCache = bc.nearCache
+		result      *pb.OptionalValue
+		resultBytes *[]byte
+		binKey      []byte
+		err         = bc.ensureClientConnection()
+		zeroValue   *V
+		nearCache   = bc.nearCache
 	)
 
 	if err != nil {
@@ -469,12 +534,20 @@ func executeGet[K comparable, V any](ctx context.Context, bc *baseClient[K, V], 
 		}(time.Now())
 	}
 
-	getRequest := pb.GetRequest{Key: binKey, Cache: bc.name, Format: bc.format, Scope: bc.sessionOpts.Scope}
+	if bc.session.GetProtocolVersion() > 0 {
+		resultBytes, err = bc.session.v1StreamManagerCache.get(newCtx, bc.name, binKey)
+		if err != nil {
+			return zeroValue, err
+		}
+		result = ensureOptionalValue(resultBytes)
+	} else {
+		getRequest := pb.GetRequest{Key: binKey, Cache: bc.name, Format: bc.format, Scope: bc.sessionOpts.Scope}
 
-	result, err := bc.client.Get(newCtx, &getRequest)
+		result, err = bc.client.Get(newCtx, &getRequest)
 
-	if err != nil {
-		return zeroValue, err
+		if err != nil {
+			return zeroValue, err
+		}
 	}
 
 	if result.Present {
@@ -560,6 +633,12 @@ func executeGetAll[K comparable, V any](ctx context.Context, bc *baseClient[K, V
 			return
 		}
 
+		if bc.session.GetProtocolVersion() > 0 {
+			executeGetAllV1(ctx, bc, binKeys, ch)
+			close(ch)
+			return
+		}
+
 		var (
 			request = pb.GetAllRequest{Cache: bc.name, Key: binKeys,
 				Format: bc.format, Scope: bc.sessionOpts.Scope}
@@ -605,11 +684,268 @@ func executeGetAll[K comparable, V any](ctx context.Context, bc *baseClient[K, V
 				nearCache.Put(*key, *value)
 			}
 
-			ch <- &StreamedEntry[K, V]{Key: *key, Value: *value}
+			ch <- makeStreamedEntry[K, V](key, value, nil)
 		}
 	}()
 
 	return ch
+}
+
+// executeGetAllV1 executes a getAll() when connected to v1 gRPC proxy.
+func executeGetAllV1[K comparable, V any](ctx context.Context, bc *baseClient[K, V], binKeys [][]byte, ch chan *StreamedEntry[K, V]) {
+	nearCache := bc.nearCache
+	chGetAll, err := bc.session.v1StreamManagerCache.getAll(ctx, bc.name, binKeys)
+	if err != nil {
+		ch <- &StreamedEntry[K, V]{Err: err}
+		close(ch)
+	}
+
+	var (
+		key   *K
+		value *V
+	)
+
+	for v := range chGetAll {
+		if v.Err != nil {
+			ch <- &StreamedEntry[K, V]{Err: v.Err}
+			close(ch)
+			return
+		}
+
+		// deserialize key and value
+		if key, err = bc.keySerializer.Deserialize(v.Key); err != nil {
+			ch <- &StreamedEntry[K, V]{Err: err}
+			close(ch)
+			return
+		}
+		if value, err = bc.valueSerializer.Deserialize(v.Value); err != nil {
+			ch <- &StreamedEntry[K, V]{Err: err}
+			close(ch)
+			return
+		}
+
+		if nearCache != nil {
+			// add to near cache
+			nearCache.Put(*key, *value)
+		}
+
+		ch <- makeStreamedEntry[K, V](key, value, nil)
+	}
+}
+
+// executeInvokeAllFilterOrKeysV1 executes an invokeAll() when connected to v1 gRPC proxy.
+func executeInvokeAllFilterOrKeysV1[K comparable, V any, R any](ctx context.Context, bc *baseClient[K, V], agent []byte, binKeys [][]byte, binFilter []byte, ch chan *StreamedEntry[K, R]) {
+	keysOrFilter := ensureKeysOrFilterGrpcV1(binKeys, binFilter)
+	chInvoke, err := bc.session.v1StreamManagerCache.invoke(ctx, bc.name, agent, keysOrFilter)
+
+	if err != nil {
+		ch <- &StreamedEntry[K, R]{Err: err}
+		close(ch)
+	}
+
+	getStreamedEntry[K, V, R](bc, ch, chInvoke)
+}
+
+// executeInvokeAllFilterOrKeysV1 executes an invokeAll() when connected to v1 gRPC proxy.
+func executeInvokeAllFilterOrKeysV1Value[K comparable, V any, R any](ctx context.Context, bc *baseClient[K, V], agent []byte, binKeys [][]byte, binFilter []byte, ch chan *StreamedValue[R]) {
+	keysOrFilter := ensureKeysOrFilterGrpcV1(binKeys, binFilter)
+	chInvoke, err := bc.session.v1StreamManagerCache.invoke(ctx, bc.name, agent, keysOrFilter)
+
+	if err != nil {
+		ch <- &StreamedValue[R]{Err: err}
+		close(ch)
+	}
+
+	getStreamedValuesWithEntry[K, V, R](bc, ch, chInvoke)
+}
+
+// executeInvokeAllFilterOrKeysV1 executes an invokeAll() when connected to v1 gRPC proxy.
+func executeInvokeEntrySetFilterV1[K comparable, V any](ctx context.Context, bc *baseClient[K, V], binFilter []byte, ch chan *StreamedEntry[K, V]) {
+	chInvoke, err := bc.session.v1StreamManagerCache.entrySetFilter(ctx, bc.name, binFilter)
+
+	if err != nil {
+		ch <- &StreamedEntry[K, V]{Err: err}
+		close(ch)
+	}
+
+	getStreamedEntries[K, V](bc, ch, chInvoke)
+}
+
+// executeKeySetFilterV1 executes an keySet with filter when connected to v1 gRPC proxy.
+func executeKeySetFilterV1[K comparable, V any](ctx context.Context, bc *baseClient[K, V], binFilter []byte, ch chan *StreamedKey[K]) {
+	chInvoke, err := bc.session.v1StreamManagerCache.keySetFilter(ctx, bc.name, binFilter)
+
+	if err != nil {
+		ch <- &StreamedKey[K]{Err: err}
+		close(ch)
+	}
+
+	getStreamedKeys[K, V](bc, ch, chInvoke)
+}
+
+// executeValuesFilterV1 executes an values with filter when connected to v1 gRPC proxy.
+func executeValuesFilterV1[K comparable, V any](ctx context.Context, bc *baseClient[K, V], binFilter []byte, ch chan *StreamedValue[V]) {
+	chInvoke, err := bc.session.v1StreamManagerCache.valuesFilter(ctx, bc.name, binFilter)
+
+	if err != nil {
+		ch <- &StreamedValue[V]{Err: err}
+		close(ch)
+	}
+
+	getStreamedValuesWithValue[K, V, V](bc, ch, chInvoke)
+}
+
+func getStreamedEntries[K comparable, V any](bc *baseClient[K, V], chResponse chan *StreamedEntry[K, V], ch <-chan BinaryKeyAndValue) {
+	var (
+		key   *K
+		value *V
+		err   error
+	)
+
+	for v := range ch {
+		if v.Err != nil {
+			chResponse <- &StreamedEntry[K, V]{Err: v.Err}
+			close(chResponse)
+			return
+		}
+
+		// deserialize key and value
+		if key, err = bc.keySerializer.Deserialize(v.Key); err != nil {
+			chResponse <- &StreamedEntry[K, V]{Err: err}
+			close(chResponse)
+			return
+		}
+		if value, err = bc.valueSerializer.Deserialize(v.Value); err != nil {
+			chResponse <- &StreamedEntry[K, V]{Err: err}
+			close(chResponse)
+			return
+		}
+
+		chResponse <- makeStreamedEntry[K, V](key, value, nil)
+	}
+}
+
+func getStreamedKeys[K comparable, V any](bc *baseClient[K, V], chResponse chan *StreamedKey[K], ch <-chan BinaryKey) {
+	var (
+		key *K
+		err error
+	)
+
+	for v := range ch {
+		if v.Err != nil {
+			chResponse <- &StreamedKey[K]{Err: v.Err}
+			close(chResponse)
+			return
+		}
+		// deserialize key
+		if key, err = bc.keySerializer.Deserialize(v.Key); err != nil {
+			chResponse <- &StreamedKey[K]{Err: err}
+			close(chResponse)
+			return
+		}
+
+		chResponse <- &StreamedKey[K]{Key: *key}
+	}
+}
+
+// getStreamedValues returns the binary key and value for an entry processor, but will just return the key
+func getStreamedEntry[K comparable, V any, R any](bc *baseClient[K, V], chResponse chan *StreamedEntry[K, R], ch <-chan BinaryKeyAndValue) {
+	var (
+		key   *K
+		value *R
+		err   error
+	)
+
+	for v := range ch {
+		if v.Err != nil {
+			chResponse <- &StreamedEntry[K, R]{Err: v.Err}
+			return
+		}
+
+		// deserialize key and value
+		resultSerializer := NewSerializer[R](bc.format)
+		if value, err = resultSerializer.Deserialize(v.Value); err != nil {
+			chResponse <- &StreamedEntry[K, R]{Err: err}
+			return
+		}
+
+		if key, err = bc.keySerializer.Deserialize(v.Key); err != nil {
+			chResponse <- &StreamedEntry[K, R]{Err: err}
+			close(chResponse)
+			return
+		}
+
+		chResponse <- makeStreamedEntry[K, R](key, value, err)
+	}
+}
+
+func makeStreamedEntry[K comparable, V any](key *K, value *V, err error) *StreamedEntry[K, V] {
+	streamedEntry := StreamedEntry[K, V]{Err: err}
+	if key != nil {
+		streamedEntry.Key = *key
+	}
+	if value != nil {
+		streamedEntry.Value = *value
+	}
+	return &streamedEntry
+}
+
+func getStreamedValuesWithEntry[K comparable, V any, R any](bc *baseClient[K, V], chResponse chan *StreamedValue[R], ch <-chan BinaryKeyAndValue) {
+	var (
+		value *R
+		err   error
+	)
+
+	for v := range ch {
+		if v.Err != nil {
+			chResponse <- &StreamedValue[R]{Err: v.Err}
+			close(chResponse)
+			return
+		}
+
+		// deserialize the result only
+		resultSerializer := NewSerializer[R](bc.format)
+		if value, err = resultSerializer.Deserialize(v.Value); err != nil {
+			chResponse <- &StreamedValue[R]{Err: err}
+			close(chResponse)
+			return
+		}
+
+		if value == nil {
+			chResponse <- &StreamedValue[R]{IsValueEmpty: true}
+		} else {
+			chResponse <- &StreamedValue[R]{Value: *value}
+		}
+	}
+}
+
+func getStreamedValuesWithValue[K comparable, V any, R any](bc *baseClient[K, V], chResponse chan *StreamedValue[R], ch <-chan BinaryValue) {
+	var (
+		value *R
+		err   error
+	)
+
+	for v := range ch {
+		if v.Err != nil {
+			chResponse <- &StreamedValue[R]{Err: v.Err}
+			close(chResponse)
+			return
+		}
+
+		// deserialize the result only
+		resultSerializer := NewSerializer[R](bc.format)
+		if value, err = resultSerializer.Deserialize(v.Value); err != nil {
+			chResponse <- &StreamedValue[R]{Err: err}
+			close(chResponse)
+			return
+		}
+
+		if value == nil {
+			chResponse <- &StreamedValue[R]{IsValueEmpty: true}
+		} else {
+			chResponse <- &StreamedValue[R]{Value: *value}
+		}
+	}
 }
 
 // executeGetOrDefault executes the GetOrDefault operation against a baseClient.
@@ -677,16 +1013,51 @@ func executeAggregate[K comparable, V, R any](ctx context.Context, bc *baseClien
 	}
 	// else keys and filter are empty
 
-	request := pb.AggregateRequest{Keys: binKeys, Cache: bc.name,
-		Format: bc.format, Scope: bc.sessionOpts.Scope, Aggregator: binAggregator,
-		Filter: binFilter}
+	if bc.session.GetProtocolVersion() > 0 {
+		res, err1 := bc.session.v1StreamManagerCache.aggregate(newCtx, bc.name, binAggregator, ensureKeysOrFilterGrpcV1(binKeys, binFilter))
+		if err1 != nil {
+			return zeroValue, err1
+		}
 
-	result, err = bc.client.Aggregate(newCtx, &request)
-	if err != nil {
-		return zeroValue, err
+		result = ensureBytesValue(res)
+	} else {
+		request := pb.AggregateRequest{Keys: binKeys, Cache: bc.name,
+			Format: bc.format, Scope: bc.sessionOpts.Scope, Aggregator: binAggregator,
+			Filter: binFilter}
+
+		result, err = bc.client.Aggregate(newCtx, &request)
+		if err != nil {
+			return zeroValue, err
+		}
 	}
 
 	return resultSerializer.Deserialize(result.Value)
+}
+
+func ensureKeysOrFilterGrpcV1(binKeys [][]byte, binFilter []byte) *pb1.KeysOrFilter {
+	keysOrFilter := &pb1.KeysOrFilter{}
+	if len(binKeys) != 0 {
+		keysOrFilterKeys := &pb1.KeysOrFilter_Keys{Keys: &pb1.CollectionOfBytesValues{Values: binKeys}}
+		keysOrFilter.KeyOrFilter = keysOrFilterKeys
+	} else {
+		keysOrFilterFilter := &pb1.KeysOrFilter_Filter{Filter: binFilter}
+		keysOrFilter.KeyOrFilter = keysOrFilterFilter
+	}
+
+	return keysOrFilter
+}
+
+func ensureKeyOrFilterGrpcV1(binKey []byte, binFilter []byte) *pb1.KeyOrFilter {
+	keyOrFilter := &pb1.KeyOrFilter{}
+	if len(binKey) != 0 {
+		keyOrFilterKey := &pb1.KeyOrFilter_Key{Key: binKey}
+		keyOrFilter.KeyOrFilter = keyOrFilterKey
+	} else {
+		keyOrFilterFilter := &pb1.KeyOrFilter_Filter{Filter: binFilter}
+		keyOrFilter.KeyOrFilter = keyOrFilterFilter
+	}
+
+	return keyOrFilter
 }
 
 // executeInvoke executes the Invoke operation against a baseClient.
@@ -719,6 +1090,34 @@ func executeInvoke[K comparable, V any, R any](ctx context.Context, bc *baseClie
 		return zeroValue, err
 	}
 
+	if bc.session.GetProtocolVersion() > 0 {
+		binKeys := make([][]byte, 1)
+		binKeys[0] = binKey
+
+		// create a channel from which we will get the first value
+		ch := make(chan *StreamedValue[R])
+
+		go func() {
+			defer close(ch)
+			executeInvokeAllFilterOrKeysV1Value(ctx, bc, binProcessor, binKeys, emptyByte, ch)
+		}()
+
+		v, ok := <-ch
+		if !ok {
+			// channel has closed, no data to return
+			return nil, nil
+		}
+
+		if v.Err != nil {
+			return zeroValue, v.Err
+		}
+		if v.IsValueEmpty {
+			return nil, nil
+		}
+		return &v.Value, nil
+	}
+
+	// gRPC v0
 	request := pb.InvokeRequest{Key: binKey, Cache: bc.name,
 		Format: bc.format, Scope: bc.sessionOpts.Scope, Processor: binProcessor}
 
@@ -731,17 +1130,17 @@ func executeInvoke[K comparable, V any, R any](ctx context.Context, bc *baseClie
 }
 
 // executeInvokeAll executes the InvokeAll operation with filter or keys, against a baseClient.
-func executeInvokeAllFilterOrKeys[K comparable, V any, R any](ctx context.Context, bc *baseClient[K, V], fltr filters.Filter, keys []K, proc processors.Processor) <-chan *StreamedValue[R] {
+func executeInvokeAllFilterOrKeys[K comparable, V any, R any](ctx context.Context, bc *baseClient[K, V], fltr filters.Filter, keys []K, proc processors.Processor) <-chan *StreamedEntry[K, R] {
 	var (
 		err          = bc.ensureClientConnection()
 		binFilter    = make([]byte, 0)
 		binProcessor = make([]byte, 0)
 		binKeys      = make([][]byte, 0)
-		ch           = make(chan *StreamedValue[R])
+		ch           = make(chan *StreamedEntry[K, R])
 	)
 
 	if err != nil {
-		ch <- &StreamedValue[R]{Err: err}
+		ch <- &StreamedEntry[K, R]{Err: err}
 		return ch
 	}
 
@@ -749,20 +1148,20 @@ func executeInvokeAllFilterOrKeys[K comparable, V any, R any](ctx context.Contex
 
 	procSerializer := NewSerializer[any](bc.format)
 	if binProcessor, err = procSerializer.Serialize(proc); err != nil {
-		ch <- &StreamedValue[R]{Err: err}
+		ch <- &StreamedEntry[K, R]{Err: err}
 		return ch
 	}
 
 	if fltr != nil {
 		if binFilter, err = NewSerializer[any](bc.format).Serialize(fltr); err != nil {
-			ch <- &StreamedValue[R]{Err: err}
+			ch <- &StreamedEntry[K, R]{Err: err}
 			return ch
 		}
 	}
 	if len(keys) > 0 {
 		// serialize the array of keys
 		if binKeys, err = serializeKeys[K](bc.keySerializer, keys); err != nil {
-			ch <- &StreamedValue[R]{Err: err}
+			ch <- &StreamedEntry[K, R]{Err: err}
 			return ch
 		}
 	}
@@ -771,20 +1170,28 @@ func executeInvokeAllFilterOrKeys[K comparable, V any, R any](ctx context.Contex
 		if cancel != nil {
 			defer cancel()
 		}
+
+		if bc.session.GetProtocolVersion() > 0 {
+			executeInvokeAllFilterOrKeysV1(ctx, bc, binProcessor, binKeys, binFilter, ch)
+			close(ch)
+			return
+		}
+
 		request := pb.InvokeAllRequest{Cache: bc.name, Filter: binFilter, Keys: binKeys,
 			Processor: binProcessor, Format: bc.format, Scope: bc.sessionOpts.Scope}
 		valuesClient, err1 := bc.client.InvokeAll(newCtx, &request)
 		resultSerializer := NewSerializer[R](bc.format)
 
 		if err1 != nil {
-			ch <- &StreamedValue[R]{Err: err1}
+			ch <- &StreamedEntry[K, R]{Err: err1}
 			close(ch)
 			return
 		}
 
 		for {
 			var (
-				m        = new(wrapperspb.BytesValue)
+				m        = new(pb.Entry)
+				key      *K
 				response *R
 			)
 			err1 = valuesClient.RecvMsg(m)
@@ -793,7 +1200,7 @@ func executeInvokeAllFilterOrKeys[K comparable, V any, R any](ctx context.Contex
 				close(ch)
 				return
 			} else if err1 != nil {
-				ch <- &StreamedValue[R]{Err: err1}
+				ch <- &StreamedEntry[K, R]{Err: err1}
 				close(ch)
 				return
 			}
@@ -801,12 +1208,18 @@ func executeInvokeAllFilterOrKeys[K comparable, V any, R any](ctx context.Contex
 			response, err1 = resultSerializer.Deserialize(m.Value)
 
 			if err1 != nil {
-				ch <- &StreamedValue[R]{Err: err1}
+				ch <- &StreamedEntry[K, R]{Err: err1}
+				close(ch)
+				return
+			}
+			key, err1 = bc.keySerializer.Deserialize(m.Key)
+			if err1 != nil {
+				ch <- &StreamedEntry[K, R]{Err: err1}
 				close(ch)
 				return
 			}
 
-			ch <- &StreamedValue[R]{Value: *response}
+			ch <- makeStreamedEntry(key, response, nil)
 		}
 	}()
 
@@ -818,8 +1231,14 @@ func executeKeySet[K comparable, V any](ctx context.Context, bc *baseClient[K, V
 	var (
 		err  = bc.ensureClientConnection()
 		ch   = make(chan *StreamedKey[K])
-		iter = newKeyPageIterator[K, V](ctx, bc)
+		iter keyPageIterator[K, V]
 	)
+
+	if bc.getProtocolVersion() > 0 {
+		iter = newKeyPageIteratorV1[K, V](ctx, bc)
+	} else {
+		iter = newKeyPageIterator[K, V](ctx, bc)
+	}
 
 	if err != nil {
 		ch <- &StreamedKey[K]{Err: err}
@@ -874,6 +1293,12 @@ func executeKeySetFilter[K comparable, V any](ctx context.Context, bc *baseClien
 			defer cancel()
 		}
 
+		if bc.session.GetProtocolVersion() > 0 {
+			executeKeySetFilterV1(ctx, bc, binFilter, ch)
+			close(ch)
+			return
+		}
+
 		request := pb.KeySetRequest{Cache: bc.name, Filter: binFilter,
 			Format: bc.format, Scope: bc.sessionOpts.Scope}
 		valuesClient, err1 := bc.client.KeySet(newCtx, &request)
@@ -916,7 +1341,7 @@ func executeKeySetFilter[K comparable, V any](ctx context.Context, bc *baseClien
 }
 
 // executePutAll executes the PutAll operation against a baseClient.
-func executePutAll[K comparable, V any](ctx context.Context, bc *baseClient[K, V], entries map[K]V) error {
+func executePutAll[K comparable, V any](ctx context.Context, bc *baseClient[K, V], entries map[K]V, ttl time.Duration) error {
 	var (
 		err       = bc.ensureClientConnection()
 		binKey    []byte
@@ -925,6 +1350,10 @@ func executePutAll[K comparable, V any](ctx context.Context, bc *baseClient[K, V
 	)
 	if err != nil {
 		return err
+	}
+
+	if bc.session.GetProtocolVersion() == 0 && ttl > 0 {
+		return errors.New("this Coherence cluster version does not support PutAllWithExpiry")
 	}
 
 	newCtx, cancel := bc.session.ensureContext(ctx)
@@ -948,11 +1377,23 @@ func executePutAll[K comparable, V any](ctx context.Context, bc *baseClient[K, V
 		counterPutAll++
 	}
 
-	putAllRequest := pb.PutAllRequest{Entry: e, Cache: bc.name, Format: bc.format, Scope: bc.sessionOpts.Scope}
+	if bc.session.GetProtocolVersion() > 0 {
+		v1Entries := make([]*pb1.BinaryKeyAndValue, counterPutAll)
+		for k, v := range e {
+			v1Entries[k] = &pb1.BinaryKeyAndValue{Key: v.Key, Value: v.Value}
+		}
 
-	_, err = bc.client.PutAll(newCtx, &putAllRequest)
-	if err != nil {
-		return err
+		err = bc.session.v1StreamManagerCache.putAll(newCtx, bc.name, v1Entries, ttl)
+		if err != nil {
+			return err
+		}
+	} else {
+		putAllRequest := pb.PutAllRequest{Entry: e, Cache: bc.name, Format: bc.format, Scope: bc.sessionOpts.Scope}
+
+		_, err = bc.client.PutAll(newCtx, &putAllRequest)
+		if err != nil {
+			return err
+		}
 	}
 
 	// if we have near cache and the entry exists then update
@@ -970,11 +1411,12 @@ func executePutAll[K comparable, V any](ctx context.Context, bc *baseClient[K, V
 // executePutIfAbsent executes the PutIfAbsent operation against a baseClient.
 func executePutIfAbsent[K comparable, V any](ctx context.Context, bc *baseClient[K, V], key K, value V) (*V, error) {
 	var (
-		err       = bc.ensureClientConnection()
-		result    *wrapperspb.BytesValue
-		binKey    []byte
-		binValue  []byte
-		zeroValue *V
+		err         = bc.ensureClientConnection()
+		bytesResult *[]byte
+		result      *wrapperspb.BytesValue
+		binKey      []byte
+		binValue    []byte
+		zeroValue   *V
 	)
 
 	if err != nil {
@@ -996,12 +1438,20 @@ func executePutIfAbsent[K comparable, V any](ctx context.Context, bc *baseClient
 		return zeroValue, err
 	}
 
-	putIfAbsentRequest := pb.PutIfAbsentRequest{Key: binKey, Value: binValue, Cache: bc.name, Format: bc.format,
-		Scope: bc.sessionOpts.Scope}
+	if bc.session.GetProtocolVersion() > 0 {
+		bytesResult, err = bc.session.v1StreamManagerCache.putIfAbsent(newCtx, bc.name, binKey, binValue)
+		if err != nil {
+			return zeroValue, err
+		}
+		result = ensureBytesValue(bytesResult)
+	} else {
+		putIfAbsentRequest := pb.PutIfAbsentRequest{Key: binKey, Value: binValue, Cache: bc.name, Format: bc.format,
+			Scope: bc.sessionOpts.Scope}
 
-	result, err = bc.client.PutIfAbsent(newCtx, &putIfAbsentRequest)
-	if err != nil {
-		return zeroValue, err
+		result, err = bc.client.PutIfAbsent(newCtx, &putIfAbsentRequest)
+		if err != nil {
+			return zeroValue, err
+		}
 	}
 
 	return bc.valueSerializer.Deserialize(result.Value)
@@ -1010,12 +1460,13 @@ func executePutIfAbsent[K comparable, V any](ctx context.Context, bc *baseClient
 // executePutWithExpiry executes the PutWithExpiry operation against a baseClient.
 func executePutWithExpiry[K comparable, V any](ctx context.Context, bc *baseClient[K, V], key K, value V, ttl time.Duration) (*V, error) {
 	var (
-		result    *wrapperspb.BytesValue
-		binKey    []byte
-		binValue  []byte
-		err       = bc.ensureClientConnection()
-		zeroValue *V
-		nearCache = bc.nearCache
+		result      *wrapperspb.BytesValue
+		bytesResult *[]byte
+		binKey      []byte
+		binValue    []byte
+		err         = bc.ensureClientConnection()
+		zeroValue   *V
+		nearCache   = bc.nearCache
 	)
 
 	// check that the expiry value is no > Integer.MAX_VALUE millis on Java, which is 2147483647
@@ -1042,12 +1493,20 @@ func executePutWithExpiry[K comparable, V any](ctx context.Context, bc *baseClie
 		return zeroValue, err
 	}
 
-	putRequest := pb.PutRequest{Key: binKey, Value: binValue, Cache: bc.name,
-		Format: bc.format, Ttl: ttl.Milliseconds(), Scope: bc.sessionOpts.Scope}
+	if bc.session.GetProtocolVersion() > 0 {
+		bytesResult, err = bc.session.v1StreamManagerCache.put(newCtx, bc.name, binKey, binValue, ttl)
+		if err != nil {
+			return zeroValue, err
+		}
+		result = ensureBytesValue(bytesResult)
+	} else {
+		putRequest := pb.PutRequest{Key: binKey, Value: binValue, Cache: bc.name,
+			Format: bc.format, Ttl: ttl.Milliseconds(), Scope: bc.sessionOpts.Scope}
 
-	result, err = bc.client.Put(newCtx, &putRequest)
-	if err != nil {
-		return zeroValue, err
+		result, err = bc.client.Put(newCtx, &putRequest)
+		if err != nil {
+			return zeroValue, err
+		}
 	}
 
 	// if we have near cache and the entry exists then update this as well because we do
@@ -1061,14 +1520,36 @@ func executePutWithExpiry[K comparable, V any](ctx context.Context, bc *baseClie
 	return bc.valueSerializer.Deserialize(result.Value)
 }
 
+func ensureBytesValue(result *[]byte) *wrapperspb.BytesValue {
+	var bytesValue = wrapperspb.BytesValue{}
+
+	if result != nil {
+		bytesValue.Value = *result
+	}
+
+	return &bytesValue
+}
+
+func ensureOptionalValue(result *[]byte) *pb.OptionalValue {
+	var optionalValue = pb.OptionalValue{}
+
+	if result != nil {
+		optionalValue.Value = *result
+		optionalValue.Present = true
+	}
+
+	return &optionalValue
+}
+
 // executeRemove executes the Remove operation against a baseClient.
 func executeRemove[K comparable, V any](ctx context.Context, bc *baseClient[K, V], key K) (*V, error) {
 	var (
-		err       = bc.ensureClientConnection()
-		oldValue  *wrapperspb.BytesValue
-		binKey    []byte
-		zeroValue *V
-		nearCache = bc.nearCache
+		err         = bc.ensureClientConnection()
+		oldValue    *wrapperspb.BytesValue
+		bytesResult *[]byte
+		binKey      []byte
+		zeroValue   *V
+		nearCache   = bc.nearCache
 	)
 	if err != nil {
 		return zeroValue, err
@@ -1084,11 +1565,19 @@ func executeRemove[K comparable, V any](ctx context.Context, bc *baseClient[K, V
 		return zeroValue, err
 	}
 
-	removeRequest := pb.RemoveRequest{Key: binKey, Cache: bc.name, Format: bc.format, Scope: bc.sessionOpts.Scope}
+	if bc.session.GetProtocolVersion() > 0 {
+		bytesResult, err = bc.session.v1StreamManagerCache.remove(newCtx, bc.name, binKey)
+		if err != nil {
+			return zeroValue, err
+		}
+		oldValue = ensureBytesValue(bytesResult)
+	} else {
+		removeRequest := pb.RemoveRequest{Key: binKey, Cache: bc.name, Format: bc.format, Scope: bc.sessionOpts.Scope}
 
-	oldValue, err = bc.client.Remove(newCtx, &removeRequest)
-	if err != nil {
-		return zeroValue, err
+		oldValue, err = bc.client.Remove(newCtx, &removeRequest)
+		if err != nil {
+			return zeroValue, err
+		}
 	}
 
 	if nearCache != nil {
@@ -1106,6 +1595,7 @@ func executeRemoveMapping[K comparable, V any](ctx context.Context, bc *baseClie
 		binKey    []byte
 		binValue  []byte
 		nearCache = bc.nearCache
+		removed   bool
 	)
 
 	if err != nil {
@@ -1127,11 +1617,19 @@ func executeRemoveMapping[K comparable, V any](ctx context.Context, bc *baseClie
 		return false, err
 	}
 
-	request := pb.RemoveMappingRequest{Cache: bc.name, Key: binKey, Value: binValue, Format: bc.format, Scope: bc.sessionOpts.Scope}
+	if bc.session.GetProtocolVersion() > 0 {
+		removed, err = bc.session.v1StreamManagerCache.removeMapping(newCtx, bc.name, binKey, binValue)
+		if err != nil {
+			return removed, err
+		}
+		result = &wrapperspb.BoolValue{Value: removed}
+	} else {
+		request := pb.RemoveMappingRequest{Cache: bc.name, Key: binKey, Value: binValue, Format: bc.format, Scope: bc.sessionOpts.Scope}
 
-	result, err = bc.client.RemoveMapping(newCtx, &request)
-	if err != nil {
-		return false, err
+		result, err = bc.client.RemoveMapping(newCtx, &request)
+		if err != nil {
+			return false, err
+		}
 	}
 
 	if result.Value && nearCache != nil {
@@ -1144,11 +1642,12 @@ func executeRemoveMapping[K comparable, V any](ctx context.Context, bc *baseClie
 // executeReplace executes the Replace operation against a baseClient.
 func executeReplace[K comparable, V any](ctx context.Context, bc *baseClient[K, V], key K, value V) (*V, error) {
 	var (
-		err       = bc.ensureClientConnection()
-		oldValue  *wrapperspb.BytesValue
-		binKey    []byte
-		binValue  []byte
-		zeroValue *V
+		err         = bc.ensureClientConnection()
+		oldValue    *wrapperspb.BytesValue
+		binKey      []byte
+		binValue    []byte
+		bytesResult *[]byte
+		zeroValue   *V
 	)
 	if err != nil {
 		return zeroValue, err
@@ -1169,11 +1668,19 @@ func executeReplace[K comparable, V any](ctx context.Context, bc *baseClient[K, 
 		return zeroValue, err
 	}
 
-	request := pb.ReplaceRequest{Key: binKey, Value: binValue, Cache: bc.name, Format: bc.format, Scope: bc.sessionOpts.Scope}
+	if bc.session.GetProtocolVersion() > 0 {
+		bytesResult, err = bc.session.v1StreamManagerCache.replace(newCtx, bc.name, binKey, binValue)
+		if err != nil {
+			return zeroValue, err
+		}
+		oldValue = ensureBytesValue(bytesResult)
+	} else {
+		request := pb.ReplaceRequest{Key: binKey, Value: binValue, Cache: bc.name, Format: bc.format, Scope: bc.sessionOpts.Scope}
 
-	oldValue, err = bc.client.Replace(newCtx, &request)
-	if err != nil {
-		return zeroValue, err
+		oldValue, err = bc.client.Replace(newCtx, &request)
+		if err != nil {
+			return zeroValue, err
+		}
 	}
 
 	return bc.valueSerializer.Deserialize(oldValue.Value)
@@ -1187,6 +1694,7 @@ func executeReplaceMapping[K comparable, V any](ctx context.Context, bc *baseCli
 		binKey       []byte
 		binPrevValue []byte
 		binNewValue  []byte
+		replaced     bool
 		nearCache    = bc.nearCache
 	)
 
@@ -1214,12 +1722,20 @@ func executeReplaceMapping[K comparable, V any](ctx context.Context, bc *baseCli
 		return false, err
 	}
 
-	request := pb.ReplaceMappingRequest{Cache: bc.name, Key: binKey, PreviousValue: binPrevValue,
-		NewValue: binNewValue, Format: bc.format, Scope: bc.sessionOpts.Scope}
+	if bc.session.GetProtocolVersion() > 0 {
+		replaced, err = bc.session.v1StreamManagerCache.replaceMapping(newCtx, bc.name, binKey, binPrevValue, binNewValue)
+		if err != nil {
+			return replaced, err
+		}
+		result = &wrapperspb.BoolValue{Value: replaced}
+	} else {
+		request := pb.ReplaceMappingRequest{Cache: bc.name, Key: binKey, PreviousValue: binPrevValue,
+			NewValue: binNewValue, Format: bc.format, Scope: bc.sessionOpts.Scope}
 
-	result, err = bc.client.ReplaceMapping(newCtx, &request)
-	if err != nil {
-		return false, err
+		result, err = bc.client.ReplaceMapping(newCtx, &request)
+		if err != nil {
+			return false, err
+		}
 	}
 
 	if nearCache != nil && result.Value {
@@ -1242,12 +1758,21 @@ func executeSize[K comparable, V any](ctx context.Context, bc *baseClient[K, V])
 		defer cancel()
 	}
 
+	if bc.session.GetProtocolVersion() > 0 {
+		size, err1 := bc.session.v1StreamManagerCache.size(newCtx, bc.name)
+		if err1 != nil {
+			return 0, err1
+		}
+		return int(size), nil
+	}
+
 	sizeRequest := pb.SizeRequest{Cache: bc.name}
 
 	size, err := bc.client.Size(newCtx, &sizeRequest)
 	if err != nil {
 		return 0, err
 	}
+
 	return int(size.Value), nil
 }
 
@@ -1263,6 +1788,10 @@ func executeIsReady[K comparable, V any](ctx context.Context, bc *baseClient[K, 
 		defer cancel()
 	}
 
+	if bc.session.GetProtocolVersion() > 0 {
+		return bc.session.v1StreamManagerCache.isReady(newCtx, bc.name)
+	}
+
 	isReadyRequest := pb.IsReadyRequest{Cache: bc.name}
 
 	isReady, err := bc.client.IsReady(newCtx, &isReadyRequest)
@@ -1276,8 +1805,9 @@ func executeIsReady[K comparable, V any](ctx context.Context, bc *baseClient[K, 
 // executeEntrySet executes the KeySet operation against a baseClient.
 func executeEntrySet[K comparable, V any](ctx context.Context, bc *baseClient[K, V]) <-chan *StreamedEntry[K, V] {
 	var (
-		err = bc.ensureClientConnection()
-		ch  = make(chan *StreamedEntry[K, V])
+		err  = bc.ensureClientConnection()
+		ch   = make(chan *StreamedEntry[K, V])
+		iter entryPageIterator[K, V]
 	)
 
 	if err != nil {
@@ -1285,7 +1815,11 @@ func executeEntrySet[K comparable, V any](ctx context.Context, bc *baseClient[K,
 		return ch
 	}
 
-	iter := newEntryPageIterator[K, V](ctx, bc)
+	if bc.getProtocolVersion() > 0 {
+		iter = newEntryPageIteratorV1[K, V](ctx, bc)
+	} else {
+		iter = newEntryPageIterator[K, V](ctx, bc)
+	}
 
 	go func() {
 		for {
@@ -1334,6 +1868,12 @@ func executeEntrySetFilter[K comparable, V any](ctx context.Context, bc *baseCli
 			defer cancel()
 		}
 
+		if bc.session.GetProtocolVersion() > 0 {
+			executeInvokeEntrySetFilterV1(ctx, bc, binFilter, ch)
+			close(ch)
+			return
+		}
+
 		var (
 			request = pb.EntrySetRequest{Cache: bc.name, Filter: binFilter,
 				Format: bc.format, Scope: bc.sessionOpts.Scope}
@@ -1376,7 +1916,7 @@ func executeEntrySetFilter[K comparable, V any](ctx context.Context, bc *baseCli
 				return
 			}
 
-			ch <- &StreamedEntry[K, V]{Key: *key, Value: *value}
+			ch <- makeStreamedEntry[K, V](key, value, nil)
 		}
 	}()
 
@@ -1410,6 +1950,12 @@ func executeValues[K comparable, V any](ctx context.Context, bc *baseClient[K, V
 	go func() {
 		if cancel != nil {
 			defer cancel()
+		}
+
+		if bc.session.GetProtocolVersion() > 0 {
+			executeValuesFilterV1(ctx, bc, binFilter, ch)
+			close(ch)
+			return
 		}
 		request := pb.ValuesRequest{Cache: bc.name, Filter: binFilter,
 			Format: bc.format, Scope: bc.sessionOpts.Scope}
@@ -1455,8 +2001,9 @@ func executeValues[K comparable, V any](ctx context.Context, bc *baseClient[K, V
 // executeValuesNoFilter executes the Values operation against a baseClient when no filter is required.
 func executeValuesNoFilter[K comparable, V any](ctx context.Context, bc *baseClient[K, V]) <-chan *StreamedValue[V] {
 	var (
-		err = bc.ensureClientConnection()
-		ch  = make(chan *StreamedValue[V])
+		err  = bc.ensureClientConnection()
+		ch   = make(chan *StreamedValue[V])
+		iter valuePageIterator[K, V]
 	)
 
 	if err != nil {
@@ -1464,7 +2011,11 @@ func executeValuesNoFilter[K comparable, V any](ctx context.Context, bc *baseCli
 		return ch
 	}
 
-	iter := newValuePageIterator[K, V](ctx, bc)
+	if bc.getProtocolVersion() > 0 {
+		iter = newValuePageIteratorV1[K, V](ctx, bc)
+	} else {
+		iter = newValuePageIterator[K, V](ctx, bc)
+	}
 
 	go func() {
 		for {
@@ -1485,18 +2036,62 @@ func executeValuesNoFilter[K comparable, V any](ctx context.Context, bc *baseCli
 	return ch
 }
 
+func (bc *baseClient[K, V]) getProtocolVersion() int32 {
+	return bc.session.GetProtocolVersion()
+}
+
+// generateMapLifecycleEvent emits the [MapLifeCycleEvent] for v1 clients.
+func (bc *baseClient[K, V]) generateMapLifecycleEvent(client interface{}, eventType MapLifecycleEventType) {
+	if namedMap, ok := client.(NamedMap[K, V]); ok || client == nil {
+		listeners := bc.lifecycleListenersV1
+		event := newMapLifecycleEvent(namedMap, eventType)
+		for _, l := range listeners {
+			e := *l
+			e.getEmitter().emit(eventType, event)
+		}
+
+		if eventType == Destroyed {
+			executeRelease[K, V](bc, namedMap)
+		}
+	}
+}
+
+// generateMapEvent emits the [MapEvent] for v1 clients.
+func (bc *baseClient[K, V]) generateMapEvent(client interface{}, eventResponse *pb1.MapEventMessage) {
+	if namedMap, ok := client.(NamedMap[K, V]); ok {
+		receivedMapEvent := newMapEventV1(namedMap, eventResponse)
+		if eventResponse.Key != nil {
+			key, err := bc.keySerializer.Deserialize(eventResponse.Key)
+			if err != nil {
+				logMessage(WARNING, "unable to deserialize key from eventResponse %v, ignoring eventResponse", eventResponse)
+			} else {
+				keyGroup, groupPresent := bc.keyListenersV1[*key]
+				if groupPresent {
+					keyGroup.notify(receivedMapEvent)
+				}
+			}
+		}
+		for _, id := range eventResponse.FilterIds {
+			filterGroup, groupPresent := bc.filterIDToGroupV1[id]
+			if groupPresent {
+				filterGroup.notify(receivedMapEvent)
+			}
+		}
+	}
+}
+
 // ensureClientConnection ensures the connection is established and
 // ensures a NewNamedCacheServiceClient is present.
-func (c *baseClient[K, V]) ensureClientConnection() error {
+func (bc *baseClient[K, V]) ensureClientConnection() error {
 	// ensure we have a valid connection
 	var (
-		session = c.session
+		session = bc.session
 		err     error
 	)
-	if c.destroyed {
+	if bc.destroyed {
 		return ErrDestroyed
 	}
-	if c.released {
+	if bc.released {
 		return ErrReleased
 	}
 
@@ -1505,12 +2100,14 @@ func (c *baseClient[K, V]) ensureClientConnection() error {
 		return err
 	}
 
-	// ensure we have a NamedCacheServiceClient
-	if c.client != nil {
-		return nil
-	}
+	if bc.getProtocolVersion() == 0 {
+		// ensure we have a NamedCacheServiceClient only if we are using v0
+		if bc.client != nil {
+			return nil
+		}
 
-	c.client = pb.NewNamedCacheServiceClient(session.conn)
+		bc.client = pb.NewNamedCacheServiceClient(session.conn)
+	}
 
 	return nil
 }
