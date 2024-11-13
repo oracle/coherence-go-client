@@ -416,7 +416,7 @@ func (s *Session) Close() {
 
 		s.mapMutex.Unlock()
 
-		if s.IsGrpcV1() {
+		if s.IsGrpcV1OrAbove() {
 			_ = s.v1StreamManagerCache.eventStream.grpcStream.CloseSend()
 		}
 		s.dispatch(Closed, func() SessionLifecycleEvent {
@@ -431,8 +431,12 @@ func (s *Session) Close() {
 }
 
 func (s *Session) String() string {
-	return fmt.Sprintf("Session{id=%s, closed=%v, caches=%d, maps=%d, gRPCv1=%v, options=%v}", s.sessionID.String(), s.closed,
-		len(s.caches), len(s.maps), s.IsGrpcV1(), s.sessOpts)
+	var serverProtocolVersion int32
+	if s.v1StreamManagerCache != nil {
+		serverProtocolVersion = s.v1StreamManagerCache.serverProtocolVersion
+	}
+	return fmt.Sprintf("Session{id=%s, closed=%v, caches=%d, maps=%d, serverProtocolVersion=%v, options=%v}", s.sessionID.String(), s.closed,
+		len(s.caches), len(s.maps), serverProtocolVersion, s.sessOpts)
 }
 
 // GetRequestTimeout returns the session timeout in millis.
@@ -462,7 +466,7 @@ func (s *Session) ensureConnection() error {
 			if s.GetReadyTimeout() != 0 {
 				return waitForReady(s)
 			}
-			log.Printf("INFO: Session: [%s] attempting connection to address %s", s.sessionID, s.sessOpts.Address)
+			logMessage(INFO, "Session: [%s] attempting connection to address %s", s.sessionID, s.sessOpts.Address)
 			s.conn.Connect()
 			return nil
 		}
@@ -497,26 +501,26 @@ func (s *Session) ensureConnection() error {
 	conn, err := grpc.DialContext(newCtx, s.sessOpts.Address, s.dialOptions...)
 
 	if err != nil {
-		log.Printf("WARN: Session: [%s] could not connect. Reason: %v", s.sessionID, err)
+		logMessage(WARNING, "Session: [%s] could not connect. Reason: %v", s.sessionID, err)
 		return err
 	}
 
 	s.conn = conn
 	s.firstConnectAttempted = true
 
-	var apiMessage = ""
+	var apiMessage = "serverProtocolVersion: 0"
 
 	// attempt to connect to V1 gRPC endpoint first and fallback if not available
 	manager, err1 := newStreamManagerV1(s, cacheServiceProtocol)
 	if err1 == nil {
 		// save the stream manager for a successful V1 client connection
 		s.v1StreamManagerCache = manager
-		apiMessage = fmt.Sprintf(", %v", manager)
+		apiMessage = fmt.Sprintf(" %v", manager)
 	} else {
 		s.debug("error connecting to session via v1, falling back to v0: %v", err1)
 	}
 
-	log.Printf("INFO: Session [%s] connected to [%s]%s", s.sessionID, s.sessOpts.Address, apiMessage)
+	logMessage(INFO, "Session [%s] connected to [%s]%s", s.sessionID, s.sessOpts.Address, apiMessage)
 
 	// register for state change events - This uses an experimental gRPC API
 	// so may not be reliable or may change in the future.
@@ -537,7 +541,7 @@ func (s *Session) ensureConnection() error {
 				return
 			}
 
-			if session.IsGrpcV1() {
+			if session.IsGrpcV1OrAbove() {
 				firstConnect = !s.hasConnected
 			}
 
@@ -607,8 +611,8 @@ func (s *Session) ensureConnection() error {
 	return nil
 }
 
-// IsGrpcV1 indicates if we are connected to a v1 gRPC client.
-func (s *Session) IsGrpcV1() bool {
+// IsGrpcV1OrAbove indicates if we are connected to a v1 gRPC client or above.
+func (s *Session) IsGrpcV1OrAbove() bool {
 	return s.v1StreamManagerCache != nil
 }
 
@@ -638,7 +642,7 @@ func waitForReady(s *Session) error {
 			return nil
 		}
 		if !messageLogged {
-			log.Printf("INFO: Session [%s] State is %v, waiting until ready timeout of %v for valid connection",
+			logMessage(INFO, "Session [%s] State is %v, waiting until ready timeout of %v for valid connection",
 				s.sessionID, state, readyTimeout)
 			messageLogged = true
 		}

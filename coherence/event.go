@@ -1093,7 +1093,7 @@ func reRegisterListeners[K comparable, V any](ctx context.Context, namedMap *Nam
 	var (
 		err             error
 		debug           = bc.session.debugConnection
-		isGrpcV1        = bc.isGrpcV1()
+		isGrpcV1        = bc.isGrpcV1OrAbove()
 		keyListeners    = make(map[K]saveListener[K, V], 0)
 		filterListeners = make(map[filters.Filter]saveListener[K, V], 0)
 	)

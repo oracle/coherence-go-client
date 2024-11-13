@@ -235,7 +235,7 @@ func (m *streamManagerV1) setServerInfo(r *pb1.InitResponse) {
 }
 
 func (m *streamManagerV1) String() string {
-	return fmt.Sprintf("version: %s, protocolVersion: %d, proxyMemberId: %d", m.serverVersion, m.serverProtocolVersion, m.serverProxyMemberID)
+	return fmt.Sprintf("Coherence version: %s, serverProtocolVersion: %d, proxyMemberId: %d", m.serverVersion, m.serverProtocolVersion, m.serverProxyMemberID)
 }
 
 func (m *streamManagerV1) processNamedCacheResponse(reqID int64, resp *responseMessage) {
@@ -602,7 +602,11 @@ func (m *streamManagerV1) remove(ctx context.Context, cache string, key []byte) 
 		return nil, err
 	}
 
-	requestType, err := m.submitRequest(req, pb1.NamedCacheRequestType_Remove)
+	return m.genericRequest(ctx, req, pb1.NamedCacheRequestType_Remove)
+}
+
+func (m *streamManagerV1) genericRequest(ctx context.Context, req *pb1.ProxyRequest, namedCacheReqType pb1.NamedCacheRequestType) (*[]byte, error) {
+	requestType, err := m.submitRequest(req, namedCacheReqType)
 	if err != nil {
 		return nil, err
 	}
@@ -629,25 +633,7 @@ func (m *streamManagerV1) aggregate(ctx context.Context, cache string, agent []b
 		return nil, err
 	}
 
-	requestType, err := m.submitRequest(req, pb1.NamedCacheRequestType_Aggregate)
-	if err != nil {
-		return nil, err
-	}
-
-	newCtx, cancel := m.session.ensureContext(ctx)
-	if cancel != nil {
-		defer cancel()
-	}
-
-	// remove the entry from the channel
-	defer m.cleanupRequest(req.Id)
-
-	result, err1 := waitForResponse(newCtx, requestType.ch)
-	if err1 != nil {
-		return nil, err1
-	}
-
-	return unwrapBytes(result)
+	return m.genericRequest(ctx, req, pb1.NamedCacheRequestType_Aggregate)
 }
 
 func (m *streamManagerV1) replace(ctx context.Context, cache string, key []byte, value []byte) (*[]byte, error) {
@@ -656,25 +642,7 @@ func (m *streamManagerV1) replace(ctx context.Context, cache string, key []byte,
 		return nil, err
 	}
 
-	requestType, err := m.submitRequest(req, pb1.NamedCacheRequestType_Replace)
-	if err != nil {
-		return nil, err
-	}
-
-	newCtx, cancel := m.session.ensureContext(ctx)
-	if cancel != nil {
-		defer cancel()
-	}
-
-	// remove the entry from the channel
-	defer m.cleanupRequest(req.Id)
-
-	result, err1 := waitForResponse(newCtx, requestType.ch)
-	if err1 != nil {
-		return nil, err1
-	}
-
-	return unwrapBytes(result)
+	return m.genericRequest(ctx, req, pb1.NamedCacheRequestType_Replace)
 }
 
 func (m *streamManagerV1) removeMapping(ctx context.Context, cache string, key []byte, value []byte) (bool, error) {
