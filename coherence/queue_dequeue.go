@@ -40,7 +40,6 @@ func GetNamedDeQueue[V any](ctx context.Context, session *Session, queueName str
 	var (
 		existingQueue interface{}
 		ok            bool
-		queueID       *int32
 		err           error
 		queueType     = Dequeue
 	)
@@ -66,12 +65,7 @@ func GetNamedDeQueue[V any](ctx context.Context, session *Session, queueName str
 	session.queues[queueName] = nil
 	session.mapMutex.Unlock()
 
-	queueID, err = session.v1StreamManagerQueue.ensureQueue(ctx, queueName, queueType)
-	if err != nil {
-		return nil, err
-	}
-
-	bq, err := newBaseQueueClient[V](ctx, session, queueName, queueType, *queueID)
+	bq, err := ensureQueueInternal[V](ctx, session, queueName, queueType)
 	if err != nil {
 		return nil, err
 	}
@@ -83,6 +77,15 @@ func GetNamedDeQueue[V any](ctx context.Context, session *Session, queueName str
 	session.queues[queueName] = queue
 
 	return queue, nil
+}
+
+func ensureQueueInternal[V any](ctx context.Context, session *Session, queueName string, queueType NamedQueueType) (*baseQueueClient[V], error) {
+	queueID, err := session.v1StreamManagerQueue.ensureQueue(ctx, queueName, queueType)
+	if err != nil {
+		return nil, err
+	}
+
+	return newBaseQueueClient[V](ctx, session, queueName, queueType, *queueID)
 }
 
 func (nd *namedDequeue[V]) Clear(ctx context.Context) error {

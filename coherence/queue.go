@@ -85,7 +85,6 @@ func GetNamedQueue[V any](ctx context.Context, session *Session, queueName strin
 	var (
 		existingQueue interface{}
 		ok            bool
-		queueID       *int32
 		err           error
 	)
 
@@ -118,13 +117,7 @@ func GetNamedQueue[V any](ctx context.Context, session *Session, queueName strin
 	session.queues[queueName] = nil
 	session.mapMutex.Unlock()
 
-	// ensure the queue
-	queueID, err = session.v1StreamManagerQueue.ensureQueue(ctx, queueName, queueType)
-	if err != nil {
-		return nil, err
-	}
-
-	bq, err := newBaseQueueClient[V](ctx, session, queueName, queueType, *queueID)
+	bq, err := ensureQueueInternal[V](ctx, session, queueName, queueType)
 	if err != nil {
 		return nil, err
 	}
