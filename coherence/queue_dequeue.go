@@ -45,16 +45,13 @@ func GetNamedDeQueue[V any](ctx context.Context, session *Session, queueName str
 		queueType     = Dequeue
 	)
 
-	// protect updates to maps
 	session.mapMutex.Lock()
 
-	// check to see if we already have an entry for the queue
 	if existingQueue, ok = session.queues[queueName]; ok {
 		defer session.mapMutex.Unlock()
 
 		existing, ok2 := existingQueue.(NamedDequeue[V])
 		if !ok2 {
-			// the casting failed so return an error indicating the queue exists with different type mappings
 			return nil, getExistingError("NamedDequeue", queueName)
 		}
 
@@ -66,11 +63,9 @@ func GetNamedDeQueue[V any](ctx context.Context, session *Session, queueName str
 		return existing, nil
 	}
 
-	// put a place-holder incase second go routine gets here
 	session.queues[queueName] = nil
 	session.mapMutex.Unlock()
 
-	// ensure the queue
 	queueID, err = session.v1StreamManagerQueue.ensureQueue(ctx, queueName, queueType)
 	if err != nil {
 		return nil, err
