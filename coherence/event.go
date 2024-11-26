@@ -1139,11 +1139,7 @@ func reRegisterListeners[K comparable, V any](ctx context.Context, namedMap *Nam
 		defer bc.session.mapMutex.Unlock()
 
 		// save the cache names
-		cacheNames := make([]string, 0)
-		for c := range bc.session.cacheIDMap {
-			cacheNames = append(cacheNames, c)
-		}
-
+		cacheNames := bc.session.cacheIDMap.Keys()
 		err2 := bc.session.ensureConnection()
 		if err2 != nil {
 			return err2
@@ -1154,7 +1150,6 @@ func reRegisterListeners[K comparable, V any](ctx context.Context, namedMap *Nam
 		if err1 == nil {
 			// save the stream manager for a successful V1 client connection
 			bc.session.v1StreamManagerCache = manager
-			bc.session.cacheIDMapMutex.Lock()
 
 			// reset the filters for V1
 			bc.keyListenersV1 = make(map[K]*listenerGroupV1[K, V], 0)
@@ -1167,7 +1162,6 @@ func reRegisterListeners[K comparable, V any](ctx context.Context, namedMap *Nam
 				if err3 != nil {
 					// unrecoverable
 					bc.session.Close()
-					bc.session.cacheIDMapMutex.Unlock()
 					return err3
 				}
 				bc.session.debugConnection("re-ensureCache cacheId=%v for cache=%v", cacheID, c)
@@ -1176,8 +1170,6 @@ func reRegisterListeners[K comparable, V any](ctx context.Context, namedMap *Nam
 			return fmt.Errorf("unable to re-stablish v1 stream: %v", err1)
 		}
 	}
-
-	bc.session.cacheIDMapMutex.Unlock()
 
 	// re-register key listeners
 	for k, save := range keyListeners {

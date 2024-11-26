@@ -178,9 +178,7 @@ func (nc *NamedCacheClient[K, V]) Release() {
 
 	// remove the cacheID mapping
 	if s.GetProtocolVersion() > 0 {
-		s.cacheIDMapMutex.Lock()
-		delete(s.cacheIDMap, nc.Name())
-		s.cacheIDMapMutex.Unlock()
+		s.cacheIDMap.Remove(nc.name)
 	}
 
 	if nc.namedCacheReconnectListener.listener != nil {

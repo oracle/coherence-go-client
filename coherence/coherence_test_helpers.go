@@ -15,12 +15,16 @@ import (
 
 // test helpers
 
-//func SubmitRequest(session *Session, req *pb1.ProxyRequest) (namedCacheRequest, error) {
+//func SubmitRequest(session *Session, req *pb1.ProxyRequest) (proxyRequestChannel, error) {
 //	return session.v1StreamManagerCache.submitRequest(req)
 //}
 
 func TestEnsureCache(ctx context.Context, session *Session, cache string) (*int32, error) {
 	return session.v1StreamManagerCache.ensureCache(ctx, cache)
+}
+
+func TestEnsureQueue(ctx context.Context, session *Session, queue string, queueType NamedQueueType) (*int32, error) {
+	return session.v1StreamManagerQueue.ensureQueue(ctx, queue, queueType)
 }
 
 func TestClearCache(ctx context.Context, session *Session, cache string) error {
@@ -115,6 +119,11 @@ func TestMapListenerRequest(ctx context.Context, session *Session, cache string,
 // GetSessionCacheID returns the cache id for a cache name
 func GetSessionCacheID(session *Session, cache string) *int32 {
 	return session.getCacheID(cache)
+}
+
+// GetSessionQueueID returns the queue id for a cache name
+func GetSessionQueueID(session *Session, queue string) *int32 {
+	return session.getQueueID(queue)
 }
 
 // revive:disable:unexported-return

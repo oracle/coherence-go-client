@@ -31,7 +31,7 @@ func main() {
 	}
 	defer session.Close()
 
-	namedQueue, err := coherence.GetNamedQueue[string](ctx, session, "my-queue")
+	namedQueue, err := coherence.GetNamedQueue[string](ctx, session, "my-queue", coherence.Queue)
 	if err != nil {
 		panic(err)
 	}
@@ -40,14 +40,14 @@ func main() {
 	for i := 1; i <= iterations; i++ {
 		v := fmt.Sprintf("value-%v", i)
 		log.Printf("Offer() %s to the queue\n", v)
-		err = namedQueue.Offer(v)
+		err = namedQueue.OfferTail(ctx, v)
 		if err != nil {
 			panic(err)
 		}
 	}
 
 	for i := 1; i <= iterations; i++ {
-		value, err = namedQueue.Poll()
+		value, err = namedQueue.PollHead(ctx)
 		if err != nil {
 			panic(err)
 		}
@@ -55,7 +55,7 @@ func main() {
 	}
 
 	// try to read again should get nil
-	value, err = namedQueue.Poll()
+	value, err = namedQueue.PollHead(ctx)
 	if err != nil {
 		panic(err)
 	}

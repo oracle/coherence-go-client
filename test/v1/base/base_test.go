@@ -889,6 +889,7 @@ func assertSize(g *gomega.WithT, session *coherence.Session, cache string, expec
 func getTestSession(t *testing.T, g *gomega.WithT) *coherence.Session {
 	t.Setenv("COHERENCE_SESSION_DEBUG", "true")
 	t.Setenv("COHERENCE_MESSAGE_DEBUG", "true")
+	t.Setenv("COHERENCE_CLIENT_REQUEST_TIMEOUT", "120000")
 
 	session, err := utils.GetSession()
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())

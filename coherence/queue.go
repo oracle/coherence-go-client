@@ -9,23 +9,18 @@ package coherence
 import (
 	"context"
 	"errors"
-	"github.com/google/uuid"
-	"github.com/oracle/coherence-go-client/coherence/extractors"
-	"github.com/oracle/coherence-go-client/coherence/processors"
-	"sync"
-	"time"
+	"fmt"
+	pb1 "github.com/oracle/coherence-go-client/proto/v1"
 )
 
 const (
-	longMaxValue              int64 = 9223372036854775807
-	longMinValue              int64 = -9223372036854775808
-	offerResultSuccess              = 1
-	offerResultFailedCapacity       = 2
+	Queue      NamedQueueType = NamedQueueType(pb1.NamedQueueType_Queue)
+	PagedQueue NamedQueueType = NamedQueueType(pb1.NamedQueueType_PagedQueue)
+	Dequeue    NamedQueueType = NamedQueueType(pb1.NamedQueueType_Deque)
 )
 
 var (
-	_ NamedQueue[string]         = &namedQueue[string]{}
-	_ NamedBlockingQueue[string] = &namedBlockingQueue[string]{}
+	_ NamedQueue[string] = &namedQueue[string]{}
 
 	ErrQueueFailedCapacity = errors.New("the queue has reached capacity, unable to offer")
 	ErrQueueFailedOffer    = errors.New("did not return success for offer")
@@ -34,101 +29,69 @@ var (
 
 // NamedQueue defines a non-blocking Queue implementation.
 type NamedQueue[V any] interface {
-	// Offer inserts the specified value to the end of this queue if it is possible to do
+	// Clear clears all the entries from the queue.
+	Clear(ctx context.Context) error
+
+	// Destroy destroys this queue on the server and releases all resources. After this operation it is no longer usable.
+	Destroy(ctx context.Context) error
+
+	// IsEmpty returns true if this queue is empty.
+	IsEmpty(ctx context.Context) (bool, error)
+
+	// IsReady returns true if this queue is ready to receive requests.
+	IsReady(ctx context.Context) (bool, error)
+
+	// Size returns the current size of this queue.
+	Size(ctx context.Context) (int32, error)
+
+	// OfferTail inserts the specified value to the end of this queue if it is possible to do
 	// so immediately without violating capacity restrictions. If queue is full then
 	// [ErrQueueFailedCapacity] is returned, if error is nil the element was added to the queue.
-	Offer(value V) error
+	OfferTail(ctx context.Context, value V) error
 
-	// Poll retrieves and removes the head of this queue. If error is nil and the returned
-	// value and error is nil this means that there was no entry on the head of the queue.
-	Poll() (*V, error)
-
-	// Peek retrieves, but does not remove, the head of this queue. If error is nil and nil value
+	// PeekHead retrieves, but does not remove, the head of this queue. If error is nil and nil value
 	// return then there is no entry on the head of the queue.
-	Peek() (*V, error)
+	PeekHead(ctx context.Context) (*V, error)
 
-	// GetName returns the cache name used for the queue.
+	// PollHead retrieves and removes the head of this queue. If error is nil and the returned
+	// value and error is nil this means that there was no entry on the head of the queue.
+	PollHead(ctx context.Context) (*V, error)
+
+	// GetName returns the cache name used for this queue.
 	GetName() string
 
-	// Size returns the current size of the queue.
-	Size() (int, error)
+	// Release releases a queue and removes any resources associated with it on the client side.
+	Release()
 
-	// Close closes a queue and removes any resources associated with it on the client side.
-	Close() error
-}
-
-// NamedBlockingQueue defines a blocking Queue implementation.
-type NamedBlockingQueue[V any] interface {
-	// Offer inserts the specified value to the end of the queue if it is possible to do
-	// so immediately without violating capacity restrictions. If queue is full then
-	// [ErrQueueFailedCapacity] is returned, if error is nil the element was added to the queue.
-	Offer(value V) error
-
-	// Poll retrieves and removes the head of this queue within the specified timeout.
-	// If error is [ErrQueueTimedOut] this means the operation failed to get a value within the timeout.
-	// If error is nil, then the value on the head of the queue is returned.
-	Poll(timeout time.Duration) (*V, error)
-
-	// Peek retrieves, but does not remove, the head of this queue within the specified timeout.
-	// If error is [ErrQueueTimedOut] this means the operation failed to get a value within the timeout.
-	// If error is nil, then the value on the head of the queue is returned.
-	Peek(timeout time.Duration) (*V, error)
-
-	// GetName returns the cache name used for the queue.
-	GetName() string
-
-	// Size returns the current size of the queue.
-	Size() (int, error)
-
-	// Close closes a queue and removes any resources associated with it on the client side.
-	Close() error
-}
-
-// QueueKey defines the key of a queue entry. Exported only for serialization.
-type QueueKey struct {
-	Class string `json:"@class"`
-	Hash  int    `json:"hash"`
-	ID    int64  `json:"id"`
-}
-
-// QueueOfferResult defines the result of a queue Offer(). Exported only for serialization.
-type QueueOfferResult struct {
-	Class  string `json:"@class"`
-	ID     int64  `json:"id"`
-	Result int    `json:"result"`
-}
-
-// QueuePollResult defines the result of a queue Poll(). Exported only for serialization.
-type QueuePollResult[V any] struct {
-	Class   string `json:"@class"`
-	ID      int64  `json:"id"`
-	Element V      `json:"element"`
-	Present bool   `json:"present"`
+	// GetType returns the type of the [NamedQueue].
+	GetType() NamedQueueType
 }
 
 type baseQueueClient[V any] struct {
-	cache         NamedMap[QueueKey, V]
-	queueNameHash int
-	ctx           context.Context
+	queueType       NamedQueueType
+	session         *Session
+	valueSerializer Serializer[V]
+	name            string
+	ctx             context.Context
+	queueID         int32
 }
 
 type namedQueue[V any] struct {
 	*baseQueueClient[V]
 }
 
-type namedBlockingQueue[V any] struct {
-	*baseQueueClient[V]
-	queueCacheListener *queueCacheListener[V]
-	notifyMutex        sync.Mutex
-	notifier           *queueNotifier
-}
-
 // GetNamedQueue returns a new [NamedQueue].
-func GetNamedQueue[V any](ctx context.Context, session *Session, queueName string) (NamedQueue[V], error) {
+func GetNamedQueue[V any](ctx context.Context, session *Session, queueName string, queueType NamedQueueType) (NamedQueue[V], error) {
 	var (
 		existingQueue interface{}
 		ok            bool
+		queueID       *int32
+		err           error
 	)
+
+	if queueType == Dequeue {
+		return nil, errors.New("to create a Dequeue, please use GetNamedDequeue")
+	}
 
 	// protect updates to maps
 	session.mapMutex.Lock()
@@ -137,21 +100,31 @@ func GetNamedQueue[V any](ctx context.Context, session *Session, queueName strin
 	if existingQueue, ok = session.queues[queueName]; ok {
 		defer session.mapMutex.Unlock()
 
-		existing, ok2 := existingQueue.(*NamedQueue[V])
+		existing, ok2 := existingQueue.(NamedQueue[V])
 		if !ok2 {
 			// the casting failed so return an error indicating the queue exists with different type mappings
 			return nil, getExistingError("NamedQueue", queueName)
 		}
 
+		if existing.GetType() != queueType {
+			return nil, getDifferentQueueTypeError(queueName, queueType)
+		}
+
 		session.debug("using existing NamedQueue: %v", existing)
-		return *existing, nil
+		return existing, nil
 	}
 
 	// put a place-holder incase second go routine gets here
 	session.queues[queueName] = nil
 	session.mapMutex.Unlock()
 
-	bq, err := newBaseQueueClient[V](ctx, session, queueName)
+	// ensure the queue
+	queueID, err = session.v1StreamManagerQueue.ensureQueue(ctx, queueName, queueType)
+	if err != nil {
+		return nil, err
+	}
+
+	bq, err := newBaseQueueClient[V](ctx, session, queueName, queueType, *queueID)
 	if err != nil {
 		return nil, err
 	}
@@ -165,313 +138,184 @@ func GetNamedQueue[V any](ctx context.Context, session *Session, queueName strin
 	return queue, nil
 }
 
-// GetBlockingNamedQueue returns a new [NamedBlockingQueue].
-func GetBlockingNamedQueue[V any](ctx context.Context, session *Session, queueName string) (NamedBlockingQueue[V], error) {
-	var (
-		existingQueue interface{}
-		ok            bool
-	)
-
-	// protect updates to maps
-	session.mapMutex.Lock()
-
-	// check to see if we already have an entry for the queue
-	if existingQueue, ok = session.queues[queueName]; ok {
-		defer session.mapMutex.Unlock()
-		existing, ok2 := existingQueue.(*NamedBlockingQueue[V])
-		if !ok2 {
-			// the casting failed so return an error indicating the queue exists with different type mappings
-			return nil, getExistingError("NamedBlockingQueue", queueName)
-		}
-
-		session.debug("using existing NamedBlockingQueue: %v", existing)
-		return *existing, nil
-	}
-
-	// put a place-holder incase second go routine gets here
-	session.queues[queueName] = nil
-	session.mapMutex.Unlock()
-
-	bq, err := newBaseQueueClient[V](ctx, session, queueName)
-	if err != nil {
-		return nil, err
-	}
-	session.mapMutex.Lock()
-	defer session.mapMutex.Unlock()
-
-	queue := &namedBlockingQueue[V]{
-		baseQueueClient: bq,
-		notifier:        newQueueNotifier(),
-	}
-
-	listener := newQueueCacheListener[V](queue)
-
-	queue.queueCacheListener = listener
-
-	err = bq.cache.AddListener(ctx, listener.listener)
-	if err != nil {
-		return nil, err
-	}
-
-	session.queues[queueName] = queue
-
-	return queue, nil
-}
-
-func newBaseQueueClient[V any](ctx context.Context, session *Session, queueName string) (*baseQueueClient[V], error) {
+func newBaseQueueClient[V any](ctx context.Context, session *Session, queueName string, queueType NamedQueueType, queueID int32) (*baseQueueClient[V], error) {
 	if session.closed {
 		return nil, ErrClosed
 	}
 
-	bq := baseQueueClient[V]{}
-	namedMap, hash, err := setupNamedMap[V](ctx, session, queueName)
-	if err != nil {
-		return nil, err
+	bq := baseQueueClient[V]{
+		queueType:       queueType,
+		ctx:             ctx,
+		name:            queueName,
+		queueID:         queueID,
+		session:         session,
+		valueSerializer: NewSerializer[V](session.sessOpts.Format),
 	}
-
-	bq.cache = namedMap
-	bq.ctx = ctx
-	bq.queueNameHash = hash
 
 	return &bq, nil
 }
 
-func setupNamedMap[V any](ctx context.Context, session *Session, queueName string) (NamedMap[QueueKey, V], int, error) {
-	namedMap, err := GetNamedMap[QueueKey, V](session, queueName)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	// add QueueKeyExtractor index
-	err = AddIndex[QueueKey, V](ctx, namedMap, extractors.QueueKeyExtractor[V](), true)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	// get the queue name hash
-	var (
-		hash *int
-		key  = createQueueKey(1, 1) // mock
-	)
-	hash, err = Invoke[QueueKey, V, int](ctx, namedMap, key, processors.QueueNameHashProcessor(queueName))
-	if err != nil {
-		return nil, 0, err
-	}
-
-	return namedMap, *hash, nil
-}
-
 // NamedQueue
 
-func (nq *namedQueue[V]) Offer(value V) error {
-	return offer(nq.baseQueueClient, value, longMaxValue)
+func (nq *namedQueue[V]) Clear(ctx context.Context) error {
+	return nq.baseQueueClient.session.v1StreamManagerQueue.genericQueueRequest(ctx, pb1.NamedQueueRequestType_Clear, nq.name)
 }
 
-func (nq *namedQueue[V]) Poll() (*V, error) {
-	return poll(nq.baseQueueClient, longMaxValue)
+func (nq *namedQueue[V]) Destroy(ctx context.Context) error {
+	return releaseInternal[V](ctx, nq.baseQueueClient, true)
 }
 
-func (nq *namedQueue[V]) Peek() (*V, error) {
-	return peek(nq.baseQueueClient, longMaxValue)
-}
+func releaseInternal[V any](ctx context.Context, bc *baseQueueClient[V], destroy bool) error {
+	// protect updates to maps
+	bc.session.mapMutex.Lock()
+	defer bc.session.mapMutex.Unlock()
 
-func (nq *namedQueue[V]) Close() error {
+	if destroy {
+		newCtx, cancel := bc.session.ensureContext(ctx)
+		if cancel != nil {
+			defer cancel()
+		}
+
+		err := bc.session.v1StreamManagerQueue.genericQueueRequest(newCtx, pb1.NamedQueueRequestType_Destroy, bc.name)
+		if err != nil {
+			return err
+		}
+	}
+
+	delete(bc.session.queues, bc.name)
+	bc.session.queueIDMap.Remove(bc.name)
+
 	return nil
+}
+
+func (nq *namedQueue[V]) IsEmpty(ctx context.Context) (bool, error) {
+	return nq.baseQueueClient.session.v1StreamManagerQueue.genericBoolValueQueue(ctx, pb1.NamedQueueRequestType_IsEmpty, nq.name)
+}
+
+func (nq *namedQueue[V]) IsReady(ctx context.Context) (bool, error) {
+	return nq.baseQueueClient.session.v1StreamManagerQueue.genericBoolValueQueue(ctx, pb1.NamedQueueRequestType_IsEmpty, nq.name)
 }
 
 func (nq *namedQueue[V]) GetName() string {
-	return nq.cache.Name()
+	return nq.name
 }
 
-func (nq *namedQueue[V]) Size() (int, error) {
-	return nq.cache.Size(nq.ctx)
+func (nq *namedQueue[V]) GetType() NamedQueueType {
+	return nq.queueType
 }
 
-// NamedBlockingQueue
-
-func (bq *namedBlockingQueue[V]) Offer(value V) error {
-	return offer(bq.baseQueueClient, value, longMaxValue)
+func (nq *namedQueue[V]) Release() {
+	_ = releaseInternal[V](context.Background(), nq.baseQueueClient, false)
 }
 
-// Poll attempts to call Poll() with the specified timeout. If err == [ErrQueueTimedOut] this means
-// the operation timed out. If error is non nil, this indicates an error, otherwise
-// the Poll() was successful and the pointer to the value is returned.
-func (bq *namedBlockingQueue[V]) Poll(timeout time.Duration) (*V, error) {
-	return bq.peekOrPoll(true, timeout)
+func (nq *namedQueue[V]) Size(ctx context.Context) (int32, error) {
+	return nq.baseQueueClient.session.v1StreamManagerQueue.sizeQueue(ctx, nq.name)
 }
 
-func (bq *namedBlockingQueue[V]) Peek(timeout time.Duration) (*V, error) {
-	return bq.peekOrPoll(false, timeout)
+func (nq *namedQueue[V]) OfferTail(ctx context.Context, value V) error {
+	return offerTailInternal[V](ctx, nq.baseQueueClient, value)
 }
 
-func (bq *namedBlockingQueue[V]) peekOrPoll(isPoll bool, timeout time.Duration) (*V, error) {
-	for {
-		var (
-			err   error
-			value *V
-		)
-
-		// lock while we are polling, specifically don't defer unlock
-		bq.notifyMutex.Lock()
-		if isPoll {
-			value, err = poll(bq.baseQueueClient, longMaxValue)
-		} else {
-			value, err = peek(bq.baseQueueClient, longMaxValue)
-		}
-		bq.notifyMutex.Unlock()
-
-		if err != nil {
-			return nil, err
-		}
-		if value != nil {
-			return value, nil
-		}
-
-		// no value, so wait on either event or timeout, subscribe for notification if any new entries arrive
-		// mutex is placed around the subscribe(), unsubscribe() and notifyAll() to ensure we don't try and read
-		// from a closed channel
-		id, ch := bq.notifier.subscribe()
-
-		select {
-		case <-ch:
-			// new item added, unsubscribe and attempt to poll() or peek() again,
-			bq.notifier.unsubscribe(id)
-		case <-time.After(timeout):
-			// timeout
-			bq.notifier.unsubscribe(id)
-			return nil, ErrQueueTimedOut
-		}
-	}
-}
-
-func (bq *namedBlockingQueue[V]) Close() error {
-	err := bq.cache.RemoveListener(bq.ctx, bq.queueCacheListener.listener)
+func offerTailInternal[V any](ctx context.Context, bq *baseQueueClient[V], value V) error {
+	binValue, err := bq.valueSerializer.Serialize(value)
 	if err != nil {
 		return err
 	}
 
-	return nil
-}
+	streamManager := bq.session.v1StreamManagerQueue
 
-func (bq *namedBlockingQueue[V]) GetName() string {
-	return bq.cache.Name()
-}
-
-func (bq *namedBlockingQueue[V]) Size() (int, error) {
-	return bq.cache.Size(bq.ctx)
-}
-
-// offer offers a value to the head or tail. id = longMaxValue for tail and
-// id = longMinValue.
-func offer[V any](nq *baseQueueClient[V], value V, id int64) error {
-	key := createQueueKey(nq.queueNameHash, id)
-
-	result, err := Invoke[QueueKey, V, QueueOfferResult](nq.ctx, nq.cache, key, processors.QueueOfferProcessor[V](value))
+	req, err := streamManager.newOfferTail(pb1.NamedQueueRequestType_OfferTail, bq.name, binValue)
 	if err != nil {
 		return err
 	}
 
-	if result.Result == offerResultFailedCapacity {
-		return ErrQueueFailedCapacity
+	requestType, err := streamManager.submitQueueRequest(req, pb1.NamedQueueRequestType_OfferTail)
+	if err != nil {
+		return err
 	}
 
-	if result.Result == offerResultSuccess {
+	newCtx, cancel := bq.session.ensureContext(ctx)
+	if cancel != nil {
+		defer cancel()
+	}
+
+	defer streamManager.cleanupRequest(req.Id)
+
+	result, err1 := waitForResponse(newCtx, requestType.ch)
+	if err1 != nil {
+		return err1
+	}
+
+	var message = &pb1.QueueOfferResult{}
+	if err = result.UnmarshalTo(message); err != nil {
+		err = getUnmarshallError("queueOfferResult", err)
+		return err
+	}
+	// we should have a QueueOfferResult, check this succeeded
+	if message.Succeeded {
 		return nil
 	}
 
 	return ErrQueueFailedOffer
 }
 
-func poll[V any](nq *baseQueueClient[V], id int64) (*V, error) {
-	key := createQueueKey(nq.queueNameHash, id)
+func (nq *namedQueue[V]) PeekHead(ctx context.Context) (*V, error) {
+	return peekOrPollHead[V](ctx, nq.baseQueueClient, pb1.NamedQueueRequestType_PeekHead)
+}
 
-	result, err := Invoke[QueueKey, V, QueuePollResult[V]](nq.ctx, nq.cache, key, processors.QueuePollProcessor())
+func (nq *namedQueue[V]) PollHead(ctx context.Context) (*V, error) {
+	return peekOrPollHead[V](ctx, nq.baseQueueClient, pb1.NamedQueueRequestType_PollHead)
+}
+
+func peekOrPollHead[V any](ctx context.Context, bq *baseQueueClient[V], reqType pb1.NamedQueueRequestType) (*V, error) {
+	streamManager := bq.session.v1StreamManagerQueue
+
+	req, err := streamManager.newWrapperProxyQueueRequest(bq.name, reqType, nil)
 	if err != nil {
 		return nil, err
 	}
-	if result.Present {
-		return &result.Element, nil
-	}
-	return nil, nil
-}
 
-func peek[V any](nq *baseQueueClient[V], id int64) (*V, error) {
-	key := createQueueKey(nq.queueNameHash, id)
-
-	result, err := Invoke[QueueKey, V, QueuePollResult[V]](nq.ctx, nq.cache, key, processors.QueuePeekProcessor())
+	requestType, err := streamManager.submitQueueRequest(req, reqType)
 	if err != nil {
 		return nil, err
 	}
-	if result.Present {
-		return &result.Element, nil
-	}
-	return nil, nil
-}
 
-// queueCacheListener is a [MapListener] to be called when any updates are done to the queue.
-// this is for blocking clients.
-type queueCacheListener[V any] struct {
-	listener   MapListener[QueueKey, V]
-	namedQueue *namedBlockingQueue[V]
-}
-
-func newQueueCacheListener[V any](namedQueue *namedBlockingQueue[V]) *queueCacheListener[V] {
-	listener := queueCacheListener[V]{
-		listener:   NewMapListener[QueueKey, V](),
-		namedQueue: namedQueue,
+	newCtx, cancel := bq.session.ensureContext(ctx)
+	if cancel != nil {
+		defer cancel()
 	}
 
-	listener.listener.OnInserted(func(_ MapEvent[QueueKey, V]) {
-		// notify all registered listeners that an entry has been added to the Queue
-		namedQueue.notifier.notifyAll()
-	})
+	defer streamManager.cleanupRequest(req.Id)
 
-	return &listener
-}
-
-func createQueueKey(hash int, id int64) QueueKey {
-	return QueueKey{Class: "internal.net.queue.model.QueueKey", ID: id, Hash: hash}
-}
-
-type queueNotifier struct {
-	sync.Mutex
-	listeners map[string]chan struct{}
-}
-
-func newQueueNotifier() *queueNotifier {
-	return &queueNotifier{
-		listeners: make(map[string]chan struct{}, 0),
+	result, err := waitForResponse(newCtx, requestType.ch)
+	if err != nil {
+		return nil, err
 	}
-}
 
-// subscribe subscribes to receive notifications about new queue messages.
-func (qn *queueNotifier) subscribe() (string, chan struct{}) {
-	qn.Lock()
-	defer qn.Unlock()
-
-	id := uuid.New().String()
-	ch := make(chan struct{})
-	qn.listeners[id] = ch
-	return id, ch
-}
-
-// notifyAll() notifies all listeners registered.
-func (qn *queueNotifier) notifyAll() {
-	qn.Lock()
-	defer qn.Unlock()
-
-	for _, v := range qn.listeners {
-		v <- struct{}{}
+	var message = &pb1.OptionalValue{}
+	if err = result.UnmarshalTo(message); err != nil {
+		err = getUnmarshallError("optionalValue", err)
+		return nil, err
 	}
+
+	// It not present nil and nil means there was no value for peek for poll
+	if !message.Present {
+		return nil, nil
+	}
+
+	return bq.valueSerializer.Deserialize(message.Value)
 }
 
-// unsubscribe unsubscribes from receiving notifications for a uuid.
-func (qn *queueNotifier) unsubscribe(uuid string) {
-	qn.Lock()
-	defer qn.Unlock()
+func (nq *namedQueue[V]) String() string {
+	return fmt.Sprintf("NamedQueue{name=%s, type=%v, queueID=%v}", nq.name, nq.queueType, nq.queueID)
+}
 
-	if v, ok := qn.listeners[uuid]; ok {
-		close(v)
-		delete(qn.listeners, uuid)
+func (qt NamedQueueType) String() string {
+	if qt == Queue {
+		return "Queue"
 	}
+	if qt == PagedQueue {
+		return "PagedQueue"
+	}
+	return "Dequeue"
 }
