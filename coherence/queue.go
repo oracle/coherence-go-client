@@ -11,20 +11,25 @@ import (
 	"errors"
 	"fmt"
 	pb1 "github.com/oracle/coherence-go-client/proto/v1"
+	"strings"
 )
 
 const (
-	Queue      NamedQueueType = NamedQueueType(pb1.NamedQueueType_Queue)
+	// Queue defines a simple queue which stores data in a single partition and is limited to approx 2GB of storage.
+	Queue NamedQueueType = NamedQueueType(pb1.NamedQueueType_Queue)
+
+	// PagedQueue defines a queue which distributes data over the cluster and is only limited by the cluster capacity.
 	PagedQueue NamedQueueType = NamedQueueType(pb1.NamedQueueType_PagedQueue)
-	Dequeue    NamedQueueType = NamedQueueType(pb1.NamedQueueType_Deque)
+
+	// Dequeue defines a simple double-ended queue that stores data in a single partition.
+	Dequeue NamedQueueType = NamedQueueType(pb1.NamedQueueType_Deque)
 )
 
 var (
 	_ NamedQueue[string] = &namedQueue[string]{}
 
-	ErrQueueFailedCapacity = errors.New("the queue has reached capacity, unable to offer")
-	ErrQueueFailedOffer    = errors.New("did not return success for offer")
-	ErrQueueTimedOut       = errors.New("operation timed out for Poll() or Peek()")
+	ErrQueueFailedOffer = errors.New("did not return success for offer")
+	ErrQueueNoSupported = errors.New("the coherence server version must support protocol version 1 or above to use queues")
 )
 
 // NamedQueue defines a non-blocking Queue implementation.
@@ -131,6 +136,24 @@ func GetNamedQueue[V any](ctx context.Context, session *Session, queueName strin
 	return queue, nil
 }
 
+func ensureV1StreamManagerQueue(session *Session) error {
+	session.connectMutex.Lock()
+	defer session.connectMutex.Unlock()
+	// ensure the queue if not already done
+	if session.v1StreamManagerQueue == nil {
+		queueManger, err2 := newStreamManagerV1(session, queueServiceProtocol)
+		if err2 != nil {
+			if strings.Contains(err2.Error(), "Method not found") {
+				return ErrQueueNoSupported
+			}
+			return err2
+		}
+		session.v1StreamManagerQueue = queueManger
+	}
+
+	return nil
+}
+
 func newBaseQueueClient[V any](ctx context.Context, session *Session, queueName string, queueType NamedQueueType, queueID int32) (*baseQueueClient[V], error) {
 	if session.closed {
 		return nil, ErrClosed
@@ -206,10 +229,10 @@ func (nq *namedQueue[V]) Size(ctx context.Context) (int32, error) {
 }
 
 func (nq *namedQueue[V]) OfferTail(ctx context.Context, value V) error {
-	return offerTailInternal[V](ctx, nq.baseQueueClient, value)
+	return offerInternal[V](ctx, nq.baseQueueClient, value, pb1.NamedQueueRequestType_OfferTail)
 }
 
-func offerTailInternal[V any](ctx context.Context, bq *baseQueueClient[V], value V) error {
+func offerInternal[V any](ctx context.Context, bq *baseQueueClient[V], value V, offerType pb1.NamedQueueRequestType) error {
 	binValue, err := bq.valueSerializer.Serialize(value)
 	if err != nil {
 		return err
@@ -217,12 +240,12 @@ func offerTailInternal[V any](ctx context.Context, bq *baseQueueClient[V], value
 
 	streamManager := bq.session.v1StreamManagerQueue
 
-	req, err := streamManager.newOfferTail(pb1.NamedQueueRequestType_OfferTail, bq.name, binValue)
+	req, err := streamManager.newOfferTail(offerType, bq.name, binValue)
 	if err != nil {
 		return err
 	}
 
-	requestType, err := streamManager.submitQueueRequest(req, pb1.NamedQueueRequestType_OfferTail)
+	requestType, err := streamManager.submitQueueRequest(req, offerType)
 	if err != nil {
 		return err
 	}

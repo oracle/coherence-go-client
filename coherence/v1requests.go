@@ -377,17 +377,17 @@ func (m *streamManagerV1) newWrapperProxyRequest(cache string, requestType pb1.N
 }
 
 func (m *streamManagerV1) newWrapperProxyQueueRequest(queue string, requestType pb1.NamedQueueRequestType, message *anypb.Any) (*pb1.ProxyRequest, error) {
-	var cacheID *int32
+	var queueID *int32
 
 	// validate the queue ID if it is not an ensure queue request
 	if queue != "" {
-		cacheID = m.session.getQueueID(queue)
-		if cacheID == nil {
+		queueID = m.session.getQueueID(queue)
+		if queueID == nil {
 			return nil, getQueueIDMessage(queue)
 		}
 	}
 
-	ncRequest, err := newNamedQueueRequest(cacheID, requestType, message)
+	ncRequest, err := newNamedQueueRequest(queueID, requestType, message)
 
 	if err != nil {
 		return nil, err

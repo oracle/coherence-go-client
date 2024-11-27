@@ -508,15 +508,6 @@ func (s *Session) ensureConnection() error {
 		// save the stream manager for a successful V1 client connection
 		s.v1StreamManagerCache = manager
 		apiMessage = fmt.Sprintf(" %v", manager)
-
-		// initial the queue protocol
-		queueManger, err2 := newStreamManagerV1(s, queueServiceProtocol)
-		if err2 != nil {
-			logMessage(WARNING, "unable to instantiate %v %v", queueServiceProtocol, err2)
-			s.v1StreamManagerCache = nil
-		} else {
-			s.v1StreamManagerQueue = queueManger
-		}
 	} else {
 		s.debug("error connecting to session via v1, falling back to v0: %v", err1)
 	}

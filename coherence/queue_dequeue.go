@@ -80,6 +80,10 @@ func GetNamedDeQueue[V any](ctx context.Context, session *Session, queueName str
 }
 
 func ensureQueueInternal[V any](ctx context.Context, session *Session, queueName string, queueType NamedQueueType) (*baseQueueClient[V], error) {
+	if err := ensureV1StreamManagerQueue(session); err != nil {
+		return nil, err
+	}
+
 	queueID, err := session.v1StreamManagerQueue.ensureQueue(ctx, queueName, queueType)
 	if err != nil {
 		return nil, err
@@ -113,7 +117,7 @@ func (nd *namedDequeue[V]) Size(ctx context.Context) (int32, error) {
 }
 
 func (nd *namedDequeue[V]) OfferTail(ctx context.Context, value V) error {
-	return offerTailInternal[V](ctx, nd.baseQueueClient, value)
+	return offerInternal[V](ctx, nd.baseQueueClient, value, pb1.NamedQueueRequestType_OfferTail)
 }
 
 func (nd *namedDequeue[V]) PeekHead(ctx context.Context) (*V, error) {
@@ -124,16 +128,16 @@ func (nd *namedDequeue[V]) PollHead(ctx context.Context) (*V, error) {
 	return peekOrPollHead[V](ctx, nd.baseQueueClient, pb1.NamedQueueRequestType_PollHead)
 }
 
-func (nd *namedDequeue[V]) OfferHead(_ context.Context, _ V) error {
-	return nil
+func (nd *namedDequeue[V]) OfferHead(ctx context.Context, value V) error {
+	return offerInternal[V](ctx, nd.baseQueueClient, value, pb1.NamedQueueRequestType_OfferHead)
 }
 
-func (nd *namedDequeue[V]) PollTail(_ context.Context) (*V, error) {
-	return nil, nil
+func (nd *namedDequeue[V]) PollTail(ctx context.Context) (*V, error) {
+	return peekOrPollHead[V](ctx, nd.baseQueueClient, pb1.NamedQueueRequestType_PollTail)
 }
 
-func (nd *namedDequeue[V]) PeekTail(_ context.Context) (*V, error) {
-	return nil, nil
+func (nd *namedDequeue[V]) PeekTail(ctx context.Context) (*V, error) {
+	return peekOrPollHead[V](ctx, nd.baseQueueClient, pb1.NamedQueueRequestType_PeekTail)
 }
 
 func (nd *namedDequeue[V]) GetName() string {

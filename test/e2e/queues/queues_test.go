@@ -73,6 +73,95 @@ func TestQueueTypeValidation(t *testing.T) {
 	_, err = coherence.GetNamedQueue[string](ctx, session, "q1paged", coherence.Queue)
 	g.Expect(err).Should(gomega.HaveOccurred())
 }
+func TestQeueueVDequeue(t *testing.T) {
+	var (
+		g        = gomega.NewWithT(t)
+		err      error
+		session1 *coherence.Session
+		queue1   coherence.NamedQueue[string]
+		queue2   coherence.NamedDequeue[string]
+		ctx      = context.Background()
+	)
+
+	const queueName = "my-queue"
+
+	session1, err = utils.GetSession()
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	defer session1.Close()
+
+	// get a NamedQueue with name "my-queue"
+	queue1, err = coherence.GetNamedQueue[string](ctx, session1, queueName, coherence.Queue)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+
+	// get a Dequeue with the same name, should fail
+	_, err = coherence.GetNamedDeQueue[string](ctx, session1, queueName)
+	g.Expect(err).Should(gomega.HaveOccurred())
+
+	err = queue1.Destroy(ctx)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+
+	// now try the other way around
+	queue2, err = coherence.GetNamedDeQueue[string](ctx, session1, queueName)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+
+	queue1, err = coherence.GetNamedQueue[string](ctx, session1, queueName, coherence.Queue)
+	g.Expect(err).Should(gomega.HaveOccurred())
+
+	err = queue2.Destroy(ctx)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+}
+
+func TestDequeue(t *testing.T) {
+	var (
+		ctx   = context.Background()
+		g     = gomega.NewWithT(t)
+		value *string
+	)
+
+	session, err := utils.GetSession()
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	defer session.Close()
+
+	namedDequeue, err := coherence.GetNamedDeQueue[string](ctx, session, "dequeue")
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+
+	// offer to the tail
+	err = namedDequeue.OfferTail(ctx, value1)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	validateQueueSize(g, namedDequeue, 1)
+
+	// peek the head, should be "value1"
+	value, err = namedDequeue.PeekHead(ctx)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	g.Expect(value).ShouldNot(gomega.BeNil())
+	g.Expect(*value).Should(gomega.Equal(value1))
+
+	// offer to the head
+	err = namedDequeue.OfferHead(ctx, value2)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	validateQueueSize(g, namedDequeue, 2)
+
+	// peek the head and it should be "value2"
+	value, err = namedDequeue.PeekHead(ctx)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	g.Expect(value).ShouldNot(gomega.BeNil())
+	g.Expect(*value).Should(gomega.Equal(value2))
+
+	// peek the tail, should be "value1"
+	value, err = namedDequeue.PeekTail(ctx)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	g.Expect(value).ShouldNot(gomega.BeNil())
+	g.Expect(*value).Should(gomega.Equal(value1))
+
+	// poll the tail, should be "value1"
+	value, err = namedDequeue.PeekTail(ctx)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	g.Expect(value).ShouldNot(gomega.BeNil())
+	g.Expect(*value).Should(gomega.Equal(value1))
+
+	err = namedDequeue.Destroy(ctx)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+}
 
 func TestReleaseQueue(t *testing.T) {
 	g := gomega.NewWithT(t)
@@ -363,40 +452,41 @@ func testGoRoutines(g *gomega.WithT, wg *sync.WaitGroup, queue coherence.NamedQu
 	}
 }
 
-//
-//func TestStandardQueueFromJava(t *testing.T) {
-//	var (
-//		g       = gomega.NewWithT(t)
-//		err     error
-//		session *coherence.Session
-//		result  *JavaCustomer
-//	)
-//
-//	t.Skip(skipReason)
-//
-//	const queueEntries = 1000
-//
-//	session, err = utils.GetSession()
-//	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-//	defer session.Close()
-//
-//	namedQueue, err := coherence.GetNamedQueue[JavaCustomer](context.Background(), session, "test-queue")
-//	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-//	defer namedQueue.Close()
-//
-//	// add 1000 entries to the "test-queue" in Java
-//	_, err = utils.IssueGetRequest(utils.GetTestContext().RestURL + "/populateQueues")
-//	g.Expect(err).Should(gomega.Not(gomega.HaveOccurred()))
-//	g.Expect(namedQueue.Size()).To(gomega.Equal(queueEntries))
-//
-//	for i := 1; i <= queueEntries; i++ {
-//		result, err = namedQueue.Poll()
-//		g.Expect(err).Should(gomega.Not(gomega.HaveOccurred()))
-//		g.Expect(result.ID).To(gomega.Equal(i))
-//		g.Expect(result.CustomerName).To(gomega.Equal(fmt.Sprintf("Name-%d", i)))
-//		g.Expect(result.CustomerType).To(gomega.Equal("GOLD"))
-//	}
-//}
+func TestStandardQueueFromJava(t *testing.T) {
+	var (
+		g       = gomega.NewWithT(t)
+		err     error
+		session *coherence.Session
+		result  *JavaCustomer
+		ctx     = context.Background()
+		i       int32
+	)
+
+	const queueEntries int32 = 1000
+
+	session, err = utils.GetSession()
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	defer session.Close()
+
+	namedQueue, err := coherence.GetNamedQueue[JavaCustomer](ctx, session, "test-queue", coherence.Queue)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+
+	// add 1000 entries to the "test-queue" in Java
+	_, err = utils.IssueGetRequest(utils.GetTestContext().RestURL + "/populateQueues")
+	g.Expect(err).Should(gomega.Not(gomega.HaveOccurred()))
+	g.Expect(namedQueue.Size(ctx)).To(gomega.Equal(queueEntries))
+
+	for i = 1; i <= queueEntries; i++ {
+		result, err = namedQueue.PollHead(ctx)
+		g.Expect(err).Should(gomega.Not(gomega.HaveOccurred()))
+		g.Expect(result.ID).To(gomega.Equal(int(i)))
+		g.Expect(result.CustomerName).To(gomega.Equal(fmt.Sprintf("Name-%d", i)))
+		g.Expect(result.CustomerType).To(gomega.Equal("GOLD"))
+	}
+
+	err = namedQueue.Destroy(ctx)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+}
 
 func validateQueueSize(g *gomega.WithT, namedQueue coherence.NamedQueue[string], expectedSize int32) {
 	size, err := namedQueue.Size(context.Background())
