@@ -189,7 +189,7 @@ func runTestReleaseQueue(g *gomega.WithT, session *coherence.Session, queueName 
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	validateQueueSize(g, queue, 1)
 
-	// release the queue, it should not destroy and we can get another
+	// release the queue, it should not destroy, and we can get another
 	queue.Release()
 
 	// re-get the queue
@@ -401,7 +401,7 @@ func TestStandardQueueWithGoRoutines(t *testing.T) {
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	defer session.Close()
 
-	runTestStandardQueueWithGoRoutines(g, session, "goroutings-q", coherence.Queue)
+	runTestStandardQueueWithGoRoutines(g, session, "goroutines-q", coherence.Queue)
 	runTestStandardQueueWithGoRoutines(g, session, "goroutines-paged-q", coherence.PagedQueue)
 	runTestStandardQueueWithGoRoutines(g, session, "goroutines-dq", coherence.Dequeue)
 }
@@ -483,6 +483,19 @@ func TestStandardQueueFromJava(t *testing.T) {
 		g.Expect(result.CustomerName).To(gomega.Equal(fmt.Sprintf("Name-%d", i)))
 		g.Expect(result.CustomerType).To(gomega.Equal("GOLD"))
 	}
+
+	newCustomer := JavaCustomer{
+		ID:           100000,
+		CustomerName: "Tim",
+		CustomerType: "GOLD",
+	}
+
+	err = namedQueue.OfferTail(ctx, newCustomer)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+
+	c1, err := namedQueue.PollHead(ctx)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	g.Expect(*c1).To(gomega.Equal(newCustomer))
 
 	err = namedQueue.Destroy(ctx)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())

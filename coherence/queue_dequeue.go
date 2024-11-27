@@ -105,7 +105,7 @@ func (nd *namedDequeue[V]) IsEmpty(ctx context.Context) (bool, error) {
 }
 
 func (nd *namedDequeue[V]) IsReady(ctx context.Context) (bool, error) {
-	return nd.baseQueueClient.session.v1StreamManagerQueue.genericBoolValueQueue(ctx, pb1.NamedQueueRequestType_IsEmpty, nd.name)
+	return nd.baseQueueClient.session.v1StreamManagerQueue.genericBoolValueQueue(ctx, pb1.NamedQueueRequestType_IsReady, nd.name)
 }
 
 func (nd *namedDequeue[V]) Release() {

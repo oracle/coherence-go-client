@@ -209,7 +209,7 @@ func (nq *namedQueue[V]) IsEmpty(ctx context.Context) (bool, error) {
 }
 
 func (nq *namedQueue[V]) IsReady(ctx context.Context) (bool, error) {
-	return nq.baseQueueClient.session.v1StreamManagerQueue.genericBoolValueQueue(ctx, pb1.NamedQueueRequestType_IsEmpty, nq.name)
+	return nq.baseQueueClient.session.v1StreamManagerQueue.genericBoolValueQueue(ctx, pb1.NamedQueueRequestType_IsReady, nq.name)
 }
 
 func (nq *namedQueue[V]) GetName() string {
