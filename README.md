@@ -25,13 +25,15 @@ to a Coherence Cluster using gRPC for the network transport.
   * session lifecycle events such as connected, disconnected, reconnected and closed 
 * Support for storing Go structs as JSON as well as the ability to serialize to Java objects on the server for access from other Coherence language API's 
 * Near cache support to cache frequently accessed data in the Go client to avoid sending requests across the network
-* Support for Queues in Coherence Community Edition 24.03+
+* Support for simple and double-ended queues in Coherence Community Edition 24.09+ and commercial version 14.1.2.0+
 * Full support for Go generics in all Coherence API's
 
 #### Requirements
 
-* Coherence CE 22.06.4+, 24.03+ or Coherence 14.1.1.2206.4+ Commercial edition with a configured [gRPCProxy](https://docs.oracle.com/en/middleware/standalone/coherence/14.1.1.2206/develop-remote-clients/using-coherence-grpc-server.html).
+* Coherence CE 22.06.4+, 24.09+ or Coherence 14.1.1.2206.4+ Commercial edition with a configured [gRPCProxy](https://docs.oracle.com/en/middleware/standalone/coherence/14.1.1.2206/develop-remote-clients/using-coherence-grpc-server.html).
 * Go 1.19.+
+
+> Note: If you wish to use the queues API in the latest release, you must use CE 24.09 or commercial 14.1.2.0.x.
 
 #### <a name="start"></a> Starting a gRPC enabled Coherence cluster
 
@@ -40,7 +42,7 @@ For local development, we recommend using the Coherence CE Docker image; it cont
 everything necessary for the client to operate correctly.
 
 ```bash
-docker run -d -p 1408:1408 -p 30000:30000 ghcr.io/oracle/coherence-ce:24.03
+docker run -d -p 1408:1408 -p 30000:30000 ghcr.io/oracle/coherence-ce:24.09
 ```
 
 ## Installation
@@ -150,7 +152,7 @@ Please consult the [security guide](./SECURITY.md) for our responsible security 
 
 ## License
 
-Copyright (c) 2023 Oracle and/or its affiliates.
+Copyright (c) 2024 Oracle and/or its affiliates.
 
 Released under the Universal Permissive License v1.0 as shown at
 <https://oss.oracle.com/licenses/upl/>.
