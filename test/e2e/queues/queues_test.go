@@ -73,7 +73,7 @@ func TestQueueTypeValidation(t *testing.T) {
 	_, err = coherence.GetNamedQueue[string](ctx, session, "q1paged", coherence.Queue)
 	g.Expect(err).Should(gomega.HaveOccurred())
 }
-func TestQeueueVDequeue(t *testing.T) {
+func TestQueueVDequeue(t *testing.T) {
 	var (
 		g        = gomega.NewWithT(t)
 		err      error
@@ -104,7 +104,7 @@ func TestQeueueVDequeue(t *testing.T) {
 	queue2, err = coherence.GetNamedDeQueue[string](ctx, session1, queueName)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
-	queue1, err = coherence.GetNamedQueue[string](ctx, session1, queueName, coherence.Queue)
+	_, err = coherence.GetNamedQueue[string](ctx, session1, queueName, coherence.Queue)
 	g.Expect(err).Should(gomega.HaveOccurred())
 
 	err = queue2.Destroy(ctx)
