@@ -23,10 +23,6 @@ func TestEnsureCache(ctx context.Context, session *Session, cache string) (*int3
 	return session.v1StreamManagerCache.ensureCache(ctx, cache)
 }
 
-func TestEnsureQueue(ctx context.Context, session *Session, queue string, queueType NamedQueueType) (*int32, error) {
-	return session.v1StreamManagerQueue.ensureQueue(ctx, queue, queueType)
-}
-
 func TestClearCache(ctx context.Context, session *Session, cache string) error {
 	return session.v1StreamManagerCache.clearCache(ctx, cache)
 }
