@@ -36,7 +36,7 @@ func main() {
 		panic(err)
 	}
 
-	// add1 0 entries to the end (tail) of the queue
+	// add 10 entries to the end (tail) of the queue
 	for i := 1; i <= iterations; i++ {
 		v := fmt.Sprintf("value-%v", i)
 		log.Printf("OfferTail() %s to the queue\n", v)
