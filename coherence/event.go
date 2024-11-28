@@ -61,7 +61,7 @@ const (
 type MapEventType string
 
 // MapLifecycleEventType describes an event that may be raised during the lifecycle
-// of cache.
+// of a cache.
 type MapLifecycleEventType string
 
 // SessionLifecycleEventType describes an event that may be raised during the lifecycle

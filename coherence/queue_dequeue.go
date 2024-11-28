@@ -93,18 +93,34 @@ func ensureQueueInternal[V any](ctx context.Context, session *Session, queueName
 }
 
 func (nd *namedDequeue[V]) Clear(ctx context.Context) error {
+	if nd.isDestroyed || nd.isReleased {
+		return ErrQueueDestroyedOrReleased
+	}
+
 	return nd.baseQueueClient.session.v1StreamManagerQueue.genericQueueRequest(ctx, pb1.NamedQueueRequestType_Clear, nd.name)
 }
 
 func (nd *namedDequeue[V]) Destroy(ctx context.Context) error {
+	if nd.isDestroyed || nd.isReleased {
+		return ErrQueueDestroyedOrReleased
+	}
+
 	return releaseInternal(ctx, nd.baseQueueClient, true)
 }
 
 func (nd *namedDequeue[V]) IsEmpty(ctx context.Context) (bool, error) {
+	if nd.isDestroyed || nd.isReleased {
+		return false, ErrQueueDestroyedOrReleased
+	}
+
 	return nd.baseQueueClient.session.v1StreamManagerQueue.genericBoolValueQueue(ctx, pb1.NamedQueueRequestType_IsEmpty, nd.name)
 }
 
 func (nd *namedDequeue[V]) IsReady(ctx context.Context) (bool, error) {
+	if nd.isDestroyed || nd.isReleased {
+		return false, ErrQueueDestroyedOrReleased
+	}
+
 	return nd.baseQueueClient.session.v1StreamManagerQueue.genericBoolValueQueue(ctx, pb1.NamedQueueRequestType_IsReady, nd.name)
 }
 
@@ -113,7 +129,29 @@ func (nd *namedDequeue[V]) Release() {
 }
 
 func (nd *namedDequeue[V]) Size(ctx context.Context) (int32, error) {
+	if nd.isDestroyed || nd.isReleased {
+		return 0, ErrQueueDestroyedOrReleased
+	}
+
 	return nd.baseQueueClient.session.v1StreamManagerQueue.sizeQueue(ctx, nd.name)
+}
+
+func (nd *namedDequeue[V]) AddLifecycleListener(listener QueueLifecycleListener[V]) error {
+	if nd.isDestroyed || nd.isReleased {
+		return ErrQueueDestroyedOrReleased
+	}
+
+	nd.baseQueueClient.addLifecycleListener(listener)
+	return nil
+}
+
+func (nd *namedDequeue[V]) RemoveLifecycleListener(listener QueueLifecycleListener[V]) error {
+	if nd.isDestroyed || nd.isReleased {
+		return ErrQueueDestroyedOrReleased
+	}
+
+	nd.baseQueueClient.removeLifecycleListener(listener)
+	return nil
 }
 
 func (nd *namedDequeue[V]) OfferTail(ctx context.Context, value V) error {

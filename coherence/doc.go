@@ -616,6 +616,40 @@ add or offer data to the head of the queue as well as the end of the queue, and 
 
 See the [Queues] documentation for more information on using queues on the Coherence Server.
 
+# Responding to queue lifecycle events
+
+The Coherence Go client provides the ability to add a [QueueLifecycleListener] that will receive events (truncated, released and destroyed)
+that occur against a [NamedQueue].
+
+	// consider the example below where we want to listen for all 'QueueReleased' events for a NamedQueue.
+	// in your main code, create a new NamedQueue and register the listener.
+	// Note: this is a contrived example, but you can listen for QueueDestroyed and QueueTruncated events
+	// in a similar way.
+
+	namedQueue, err := coherence.GetNamedQueue[string](session, "queue", coherence.Queue)
+	if err != nil {
+	    log.Fatal(err)
+	}
+
+	// Create a listener to monitor
+	listener := coherence.NewQueueLifecycleListener[string]().
+	    OnTruncated(func(e coherence.QueueLifecycleEvent[string]) {
+	        fmt.Printf("**EVENT=%s: source=%v\n", e.Type(), e.Source())
+	    })
+
+	_ = namedQueue.AddLifecycleListener(listener)
+	defer namedQueue.RemoveLifecycleListener(listener)
+
+	namedQueue.Release()
+
+	// sleep to ensure we receive the event before we close
+	time.Sleep(5 * time.Second)
+
+	// output:
+	// 2024/11/28 11:40:58 INFO: Session [b1435a16-f210-4289-97e4-e1654947acd5] connected to [localhost:1408] Coherence version: 24.09, serverProtocolVersion: 1, proxyMemberId: 1
+	// **EVENT=queue_released: source=NamedQueue{name=queue-events, type=Queue, queueID=1198559040}
+	// 2024/11/28 11:41:03 INFO: Session [b1435a16-f210-4289-97e4-e1654947acd5] closed
+
 # Serializing to Java objects on the server
 
 By default, the Coherence Go client serializes any keys and values to JSON and then stores them as JsonObjects in Coherence.

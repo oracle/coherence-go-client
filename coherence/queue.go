@@ -12,6 +12,7 @@ import (
 	"fmt"
 	pb1 "github.com/oracle/coherence-go-client/proto/v1"
 	"strings"
+	"sync"
 )
 
 const (
@@ -28,8 +29,9 @@ const (
 var (
 	_ NamedQueue[string] = &namedQueue[string]{}
 
-	ErrQueueFailedOffer = errors.New("did not return success for offer")
-	ErrQueueNoSupported = errors.New("the coherence server version must support protocol version 1 or above to use queues")
+	ErrQueueFailedOffer         = errors.New("did not return success for offer")
+	ErrQueueDestroyedOrReleased = errors.New("this queue has been destroyed or released")
+	ErrQueueNoSupported         = errors.New("the coherence server version must support protocol version 1 or above to use queues")
 )
 
 // NamedQueue defines a non-blocking Queue implementation.
@@ -70,15 +72,44 @@ type NamedQueue[V any] interface {
 
 	// GetType returns the type of the [NamedQueue].
 	GetType() NamedQueueType
+
+	// AddLifecycleListener Adds a MapLifecycleListener that will receive events (truncated, destroyed) that occur
+	// against the [NamedQueue].
+	AddLifecycleListener(listener QueueLifecycleListener[V]) error
+
+	// RemoveLifecycleListener removes the lifecycle listener that was previously registered to receive events.
+	RemoveLifecycleListener(listener QueueLifecycleListener[V]) error
 }
 
 type baseQueueClient[V any] struct {
-	queueType       NamedQueueType
-	session         *Session
-	valueSerializer Serializer[V]
-	name            string
-	ctx             context.Context
-	queueID         int32
+	queueType            NamedQueueType
+	session              *Session
+	valueSerializer      Serializer[V]
+	name                 string
+	ctx                  context.Context
+	queueID              int32
+	isDestroyed          bool
+	isReleased           bool
+	mutex                *sync.RWMutex
+	lifecycleListenersV1 []*QueueLifecycleListener[V]
+}
+
+// generateQueueLifecycleEvent emits the queue lifecycle events.
+func (bq *baseQueueClient[V]) generateQueueLifecycleEvent(client interface{}, eventType QueueLifecycleEventType) {
+	listeners := bq.lifecycleListenersV1
+
+	if namedQ, ok := client.(NamedQueue[V]); ok || client == nil {
+		event := newQueueLifecycleEvent(namedQ, eventType)
+		for _, l := range listeners {
+			e := *l
+			e.getEmitter().emit(eventType, event)
+		}
+
+		if eventType == QueueDestroyed {
+			bq.session.debugConnection("received destroy for queue: %s", bq.name)
+			_ = releaseInternal[V](context.Background(), bq, true)
+		}
+	}
 }
 
 type namedQueue[V any] struct {
@@ -166,6 +197,7 @@ func newBaseQueueClient[V any](ctx context.Context, session *Session, queueName 
 		queueID:         queueID,
 		session:         session,
 		valueSerializer: NewSerializer[V](session.sessOpts.Format),
+		mutex:           &sync.RWMutex{},
 	}
 
 	return &bq, nil
@@ -174,14 +206,26 @@ func newBaseQueueClient[V any](ctx context.Context, session *Session, queueName 
 // NamedQueue
 
 func (nq *namedQueue[V]) Clear(ctx context.Context) error {
+	if nq.isDestroyed || nq.isReleased {
+		return ErrQueueDestroyedOrReleased
+	}
+
 	return nq.baseQueueClient.session.v1StreamManagerQueue.genericQueueRequest(ctx, pb1.NamedQueueRequestType_Clear, nq.name)
 }
 
 func (nq *namedQueue[V]) Destroy(ctx context.Context) error {
+	if nq.isDestroyed || nq.isReleased {
+		return ErrQueueDestroyedOrReleased
+	}
+
 	return releaseInternal[V](ctx, nq.baseQueueClient, true)
 }
 
 func releaseInternal[V any](ctx context.Context, bc *baseQueueClient[V], destroy bool) error {
+	if bc.isDestroyed || bc.isReleased {
+		return ErrQueueDestroyedOrReleased
+	}
+
 	// protect updates to maps
 	bc.session.mapMutex.Lock()
 	defer bc.session.mapMutex.Unlock()
@@ -196,6 +240,12 @@ func releaseInternal[V any](ctx context.Context, bc *baseQueueClient[V], destroy
 		if err != nil {
 			return err
 		}
+		bc.isDestroyed = true
+	} else {
+		if existingQueue, ok := bc.session.queues[bc.name]; ok {
+			bc.generateQueueLifecycleEvent(existingQueue, QueueReleased)
+			bc.isReleased = true
+		}
 	}
 
 	delete(bc.session.queues, bc.name)
@@ -205,10 +255,18 @@ func releaseInternal[V any](ctx context.Context, bc *baseQueueClient[V], destroy
 }
 
 func (nq *namedQueue[V]) IsEmpty(ctx context.Context) (bool, error) {
+	if nq.isDestroyed || nq.isReleased {
+		return false, ErrQueueDestroyedOrReleased
+	}
+
 	return nq.baseQueueClient.session.v1StreamManagerQueue.genericBoolValueQueue(ctx, pb1.NamedQueueRequestType_IsEmpty, nq.name)
 }
 
 func (nq *namedQueue[V]) IsReady(ctx context.Context) (bool, error) {
+	if nq.isDestroyed || nq.isReleased {
+		return false, ErrQueueDestroyedOrReleased
+	}
+
 	return nq.baseQueueClient.session.v1StreamManagerQueue.genericBoolValueQueue(ctx, pb1.NamedQueueRequestType_IsReady, nq.name)
 }
 
@@ -225,6 +283,10 @@ func (nq *namedQueue[V]) Release() {
 }
 
 func (nq *namedQueue[V]) Size(ctx context.Context) (int32, error) {
+	if nq.isDestroyed {
+		return 0, ErrQueueDestroyedOrReleased
+	}
+
 	return nq.baseQueueClient.session.v1StreamManagerQueue.sizeQueue(ctx, nq.name)
 }
 
@@ -233,6 +295,10 @@ func (nq *namedQueue[V]) OfferTail(ctx context.Context, value V) error {
 }
 
 func offerInternal[V any](ctx context.Context, bq *baseQueueClient[V], value V, offerType pb1.NamedQueueRequestType) error {
+	if bq.isDestroyed || bq.isReleased {
+		return ErrQueueDestroyedOrReleased
+	}
+
 	binValue, err := bq.valueSerializer.Serialize(value)
 	if err != nil {
 		return err
@@ -283,7 +349,29 @@ func (nq *namedQueue[V]) PollHead(ctx context.Context) (*V, error) {
 	return peekOrPollHead[V](ctx, nq.baseQueueClient, pb1.NamedQueueRequestType_PollHead)
 }
 
+func (nq *namedQueue[V]) AddLifecycleListener(listener QueueLifecycleListener[V]) error {
+	if nq.isDestroyed || nq.isReleased {
+		return ErrQueueDestroyedOrReleased
+	}
+
+	nq.baseQueueClient.addLifecycleListener(listener)
+	return nil
+}
+
+func (nq *namedQueue[V]) RemoveLifecycleListener(listener QueueLifecycleListener[V]) error {
+	if nq.isDestroyed || nq.isReleased {
+		return ErrQueueDestroyedOrReleased
+	}
+
+	nq.baseQueueClient.removeLifecycleListener(listener)
+	return nil
+}
+
 func peekOrPollHead[V any](ctx context.Context, bq *baseQueueClient[V], reqType pb1.NamedQueueRequestType) (*V, error) {
+	if bq.isDestroyed || bq.isReleased {
+		return nil, ErrQueueDestroyedOrReleased
+	}
+
 	streamManager := bq.session.v1StreamManagerQueue
 
 	req, err := streamManager.newWrapperProxyQueueRequest(bq.name, reqType, nil)

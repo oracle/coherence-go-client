@@ -13,6 +13,7 @@ import (
 	"github.com/oracle/coherence-go-client/coherence"
 	"github.com/oracle/coherence-go-client/test/utils"
 	"sync"
+	"sync/atomic"
 	"testing"
 )
 
@@ -73,6 +74,7 @@ func TestQueueTypeValidation(t *testing.T) {
 	_, err = coherence.GetNamedQueue[string](ctx, session, "q1paged", coherence.Queue)
 	g.Expect(err).Should(gomega.HaveOccurred())
 }
+
 func TestQueueVDequeue(t *testing.T) {
 	var (
 		g        = gomega.NewWithT(t)
@@ -395,6 +397,195 @@ func runTestStandardQueueWithStruct(g *gomega.WithT, session *coherence.Session,
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 }
 
+func TestQueueCompatability(t *testing.T) {
+	g := gomega.NewWithT(t)
+	t.Skip("Skip until figured out")
+
+	runTestQueueCompatability(g, "q-q", coherence.Queue, coherence.Queue, false)
+	runTestQueueCompatability(g, "q-dq", coherence.Queue, coherence.Dequeue, true)
+	runTestQueueCompatability(g, "q-pq", coherence.Queue, coherence.PagedQueue, true)
+
+	runTestQueueCompatability(g, "dq-q", coherence.Dequeue, coherence.Queue, false)
+	runTestQueueCompatability(g, "dq-q", coherence.Dequeue, coherence.Dequeue, false)
+	runTestQueueCompatability(g, "dq-pq", coherence.Dequeue, coherence.PagedQueue, true)
+
+	runTestQueueCompatability(g, "pq-q", coherence.PagedQueue, coherence.Queue, false)
+	runTestQueueCompatability(g, "pq-dq", coherence.PagedQueue, coherence.Dequeue, true)
+	runTestQueueCompatability(g, "pq-pq", coherence.PagedQueue, coherence.PagedQueue, false)
+}
+
+func runTestQueueCompatability(g *gomega.WithT, queueName string, firstQueueType coherence.NamedQueueType, secondQueueType coherence.NamedQueueType, shouldError bool) {
+	var (
+		ctx   = context.Background()
+		queue coherence.NamedQueue[string]
+	)
+
+	session, err := utils.GetSession()
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+
+	// create the first queue
+	if firstQueueType == coherence.Dequeue {
+		queue, err = coherence.GetNamedDeQueue[string](ctx, session, queueName)
+	} else {
+		queue, err = coherence.GetNamedQueue[string](ctx, session, queueName, firstQueueType)
+	}
+
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+
+	// close the session
+	session.Close()
+
+	// In a new session, get the same queue name again with the different type
+	session, err = utils.GetSession()
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+
+	if secondQueueType == coherence.Dequeue {
+		queue, err = coherence.GetNamedDeQueue[string](ctx, session, queueName)
+	} else {
+		queue, err = coherence.GetNamedQueue[string](ctx, session, queueName, secondQueueType)
+	}
+
+	errorOccurred := err != nil
+
+	g.Expect(errorOccurred).To(gomega.Equal(shouldError))
+	if !shouldError {
+		g.Expect(queue.Destroy(ctx)).ShouldNot(gomega.HaveOccurred())
+	}
+}
+
+func TestQueueEvents(t *testing.T) {
+	g := gomega.NewWithT(t)
+
+	runTestQueueEvents(g, "q-events", coherence.Queue)
+	runTestQueueEvents(g, "d-events", coherence.Dequeue)
+	runTestQueueEvents(g, "pq-events", coherence.PagedQueue)
+}
+
+func runTestQueueEvents(g *gomega.WithT, queueName string, queueType coherence.NamedQueueType) {
+	var (
+		ctx   = context.Background()
+		queue coherence.NamedQueue[string]
+		wg    sync.WaitGroup
+	)
+
+	session, err := utils.GetSession()
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+
+	queue = getQueue[string](g, session, queueName, queueType)
+
+	listener := NewCountingQueueListener[string](queueName)
+	g.Expect(queue.AddLifecycleListener(listener.listener)).ShouldNot(gomega.HaveOccurred())
+
+	wg.Add(1)
+
+	go func(wg *sync.WaitGroup) {
+		defer wg.Done()
+
+		session2, err2 := utils.GetSession()
+		g.Expect(err2).ShouldNot(gomega.HaveOccurred())
+		defer session2.Close()
+
+		queueSame := getQueue[string](g, session2, queueName, queueType)
+		err2 = queueSame.Destroy(ctx)
+		g.Expect(err2).ShouldNot(gomega.HaveOccurred())
+		utils.Sleep(5)
+	}(&wg)
+
+	utils.Sleep(5)
+
+	wg.Wait()
+
+	g.Eventually(func() int32 { return listener.destroyCount }).Should(gomega.Equal(int32(1)))
+	g.Eventually(func() int32 { return listener.allCount }).Should(gomega.Equal(int32(1)))
+
+	// this should fail as it has been destroyed
+	g.Expect(queue.RemoveLifecycleListener(listener.listener)).Should(gomega.HaveOccurred())
+}
+
+func TestQueueEventsAddRemoveListeners(t *testing.T) {
+	g := gomega.NewWithT(t)
+
+	runQueueEventsAddRemoveListeners(g, "q-events-listeners", coherence.Queue)
+	runQueueEventsAddRemoveListeners(g, "d-events-listeners", coherence.Dequeue)
+}
+
+func runQueueEventsAddRemoveListeners(g *gomega.WithT, queueName string, queueType coherence.NamedQueueType) {
+	var (
+		ctx   = context.Background()
+		queue coherence.NamedQueue[string]
+		cache coherence.NamedCache[int, string]
+	)
+
+	session, err := utils.GetSession()
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+
+	queue = getQueue[string](g, session, queueName, queueType)
+
+	listener := NewCountingQueueListener[string](queueName)
+	g.Expect(queue.AddLifecycleListener(listener.listener)).ShouldNot(gomega.HaveOccurred())
+
+	// get a cache with the same name to issue truncate against
+	cache, err = coherence.GetNamedCache[int, string](session, queueName)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+
+	// issue a truncate on the cache, and it should show truncated count
+	g.Expect(cache.Truncate(ctx)).ShouldNot(gomega.HaveOccurred())
+
+	g.Eventually(func() int32 { return listener.truncateCount }).Should(gomega.Equal(int32(1)))
+
+	// remove the listener
+	g.Expect(queue.RemoveLifecycleListener(listener.listener)).ShouldNot(gomega.HaveOccurred())
+
+	// truncate again and shouldn't increase truncate count
+	g.Expect(cache.Truncate(ctx)).ShouldNot(gomega.HaveOccurred())
+	utils.Sleep(5)
+
+	g.Eventually(func() int32 { return listener.truncateCount }).Should(gomega.Equal(int32(1)))
+
+	g.Expect(queue.RemoveLifecycleListener(listener.listener)).ShouldNot(gomega.HaveOccurred())
+
+	g.Expect(queue.Destroy(ctx)).ShouldNot(gomega.HaveOccurred())
+
+	utils.Sleep(5)
+
+	// destroy count should not have been increased
+	g.Eventually(func() int32 { return listener.destroyCount }).Should(gomega.Equal(int32(0)))
+}
+
+func TestQueueEventsAddRemoveListenersReleased(t *testing.T) {
+	g := gomega.NewWithT(t)
+
+	runQueueEventsAddRemoveListenersReleased(g, "q-events-listeners-release", coherence.Queue)
+	runQueueEventsAddRemoveListenersReleased(g, "d-events-listeners-release", coherence.Dequeue)
+	runQueueEventsAddRemoveListenersReleased(g, "pq-events-listeners-release", coherence.PagedQueue)
+}
+
+func runQueueEventsAddRemoveListenersReleased(g *gomega.WithT, queueName string, queueType coherence.NamedQueueType) {
+	var (
+		ctx   = context.Background()
+		queue coherence.NamedQueue[string]
+	)
+
+	session, err := utils.GetSession()
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+
+	queue = getQueue[string](g, session, queueName, queueType)
+	listener := NewCountingQueueListener[string](queueName)
+	g.Expect(queue.AddLifecycleListener(listener.listener)).ShouldNot(gomega.HaveOccurred())
+
+	queue.Release()
+
+	g.Eventually(func() int32 { return listener.releaseCount }).Should(gomega.Equal(int32(1)))
+
+	// remove the listener, and it should fail as it's been released
+	g.Expect(queue.RemoveLifecycleListener(listener.listener)).Should(gomega.HaveOccurred())
+
+	// get it again and destroy
+	queue = getQueue[string](g, session, queueName, queueType)
+
+	g.Expect(queue.Destroy(ctx)).ShouldNot(gomega.HaveOccurred())
+}
+
 func TestStandardQueueWithGoRoutines(t *testing.T) {
 	g := gomega.NewWithT(t)
 	session, err := utils.GetSession()
@@ -423,6 +614,55 @@ func runTestStandardQueueWithGoRoutines(g *gomega.WithT, session *coherence.Sess
 
 	wg.Wait()
 
+}
+
+func TestQueueDestroy(t *testing.T) {
+	g := gomega.NewWithT(t)
+	session, err := utils.GetSession()
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	defer session.Close()
+
+	t.Setenv("COHERENCE_SESSION_DEBUG", "true")
+	t.Setenv("COHERENCE_MESSAGE_DEBUG", "true")
+
+	runTestQueueDestroy(g, session, "destroy-q", coherence.Queue)
+	runTestQueueDestroy(g, session, "destroy-paged-q", coherence.PagedQueue)
+	runTestQueueDestroy(g, session, "destroy-dq", coherence.Dequeue)
+}
+
+func runTestQueueDestroy(g *gomega.WithT, session *coherence.Session, queueName string, queueType coherence.NamedQueueType) {
+	var (
+		queue coherence.NamedQueue[string]
+		wg    sync.WaitGroup
+		ctx   = context.Background()
+	)
+
+	wg.Add(1)
+
+	queue = getQueue[string](g, session, queueName, queueType)
+
+	utils.Sleep(5)
+
+	go func(wg *sync.WaitGroup) {
+		defer wg.Done()
+
+		session2, err := utils.GetSession()
+		g.Expect(err).ShouldNot(gomega.HaveOccurred())
+		defer session2.Close()
+
+		queueSame := getQueue[string](g, session2, queueName, queueType)
+		g.Expect(queueSame.Destroy(ctx)).ShouldNot(gomega.HaveOccurred())
+		utils.Sleep(5)
+	}(&wg)
+
+	utils.Sleep(5)
+
+	// wait for the queue to be destroyed
+	wg.Wait()
+
+	// now the queue should be unusable
+	_, err := queue.Size(ctx)
+	g.Expect(err).To(gomega.Equal(coherence.ErrQueueDestroyedOrReleased))
 }
 
 func testGoRoutines(g *gomega.WithT, wg *sync.WaitGroup, queue coherence.NamedQueue[string], count int, write bool) {
@@ -497,8 +737,7 @@ func TestStandardQueueFromJava(t *testing.T) {
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	g.Expect(*c1).To(gomega.Equal(newCustomer))
 
-	err = namedQueue.Destroy(ctx)
-	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	g.Expect(namedQueue.Destroy(ctx)).ShouldNot(gomega.HaveOccurred())
 }
 
 func validateQueueSize(g *gomega.WithT, namedQueue coherence.NamedQueue[string], expectedSize int32) {
@@ -527,4 +766,32 @@ func getQueue[V any](g *gomega.WithT, session *coherence.Session, queueName stri
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 	return queue
+}
+
+func NewCountingQueueListener[V any](name string) *CountingQueueListener[V] {
+	countingListener := CountingQueueListener[V]{
+		name:     name,
+		listener: coherence.NewQueueLifecycleListener[V](),
+	}
+
+	countingListener.listener.OnTruncated(func(_ coherence.QueueLifecycleEvent[V]) {
+		atomic.AddInt32(&countingListener.truncateCount, 1)
+	}).OnDestroyed(func(_ coherence.QueueLifecycleEvent[V]) {
+		atomic.AddInt32(&countingListener.destroyCount, 1)
+	}).OnReleased(func(_ coherence.QueueLifecycleEvent[V]) {
+		atomic.AddInt32(&countingListener.releaseCount, 1)
+	}).OnAny(func(_ coherence.QueueLifecycleEvent[V]) {
+		atomic.AddInt32(&countingListener.allCount, 1)
+	})
+
+	return &countingListener
+}
+
+type CountingQueueListener[V any] struct {
+	listener      coherence.QueueLifecycleListener[V]
+	name          string
+	truncateCount int32
+	destroyCount  int32
+	releaseCount  int32
+	allCount      int32
 }

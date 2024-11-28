@@ -301,6 +301,28 @@ func (m *streamManagerV1) processResponse(reqID int64, resp *responseMessage) {
 		return
 	}
 
+	// process queue event
+	if reqID == 0 && resp.namedQueueResponse != nil {
+
+		// find the queueName from the queueID
+		queueName := m.session.queueIDMap.KeyFromValue(resp.namedQueueResponse.QueueId)
+		if queueName == nil {
+			logMessage(WARNING, "cannot find queue for queue id %v", queueName)
+		} else {
+			if existingQueue, ok := m.session.queues[*queueName]; ok {
+				if queueEventSubmitter, ok2 := existingQueue.(QueueEventSubmitter); ok2 {
+					switch resp.namedQueueResponse.Type {
+					case pb1.NamedQueueResponseType_Destroyed:
+						queueEventSubmitter.generateQueueLifecycleEvent(existingQueue, QueueDestroyed)
+					case pb1.NamedQueueResponseType_Truncated:
+						queueEventSubmitter.generateQueueLifecycleEvent(existingQueue, QueueTruncated)
+					}
+				}
+			}
+		}
+		return
+	}
+
 	m.session.debugConnection("id: %v Response: %v", reqID, resp)
 
 	// received a named cache or queue response, so write the response to the channel for the originating request
