@@ -398,8 +398,8 @@ func runTestStandardQueueWithStruct(g *gomega.WithT, session *coherence.Session,
 }
 
 func TestQueueCompatability(t *testing.T) {
-	g := gomega.NewWithT(t)
 	t.Skip("Skip until figured out")
+	g := gomega.NewWithT(t)
 
 	runTestQueueCompatability(g, "q-q", coherence.Queue, coherence.Queue, false)
 	runTestQueueCompatability(g, "q-dq", coherence.Queue, coherence.Dequeue, true)
