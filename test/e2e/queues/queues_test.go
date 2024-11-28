@@ -425,9 +425,9 @@ func runTestQueueCompatability(g *gomega.WithT, queueName string, firstQueueType
 
 	// create the first queue
 	if firstQueueType == coherence.Dequeue {
-		queue, err = coherence.GetNamedDeQueue[string](ctx, session, queueName)
+		_, err = coherence.GetNamedDeQueue[string](ctx, session, queueName)
 	} else {
-		queue, err = coherence.GetNamedQueue[string](ctx, session, queueName, firstQueueType)
+		_, err = coherence.GetNamedQueue[string](ctx, session, queueName, firstQueueType)
 	}
 
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
