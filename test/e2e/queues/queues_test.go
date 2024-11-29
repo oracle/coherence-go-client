@@ -398,7 +398,7 @@ func runTestStandardQueueWithStruct(g *gomega.WithT, session *coherence.Session,
 }
 
 func TestQueueCompatability(t *testing.T) {
-	t.Skip("Skip until figured out")
+	t.Skip("Skip until bug 37338153 fixed")
 	g := gomega.NewWithT(t)
 
 	runTestQueueCompatability(g, "q-q", coherence.Queue, coherence.Queue, false)
@@ -414,7 +414,7 @@ func TestQueueCompatability(t *testing.T) {
 	runTestQueueCompatability(g, "pq-pq", coherence.PagedQueue, coherence.PagedQueue, false)
 }
 
-func runTestQueueCompatability(g *gomega.WithT, queueName string, firstQueueType coherence.NamedQueueType, secondQueueType coherence.NamedQueueType, shouldError bool) {
+func runTestQueueCompatability(g *gomega.WithT, queueName string, firstQueueType coherence.NamedQueueType, secondQueueType coherence.NamedQueueType, _ bool) {
 	var (
 		ctx   = context.Background()
 		queue coherence.NamedQueue[string]
@@ -425,12 +425,14 @@ func runTestQueueCompatability(g *gomega.WithT, queueName string, firstQueueType
 
 	// create the first queue
 	if firstQueueType == coherence.Dequeue {
-		_, err = coherence.GetNamedDeQueue[string](ctx, session, queueName)
+		queue, err = coherence.GetNamedDeQueue[string](ctx, session, queueName)
 	} else {
-		_, err = coherence.GetNamedQueue[string](ctx, session, queueName, firstQueueType)
+		queue, err = coherence.GetNamedQueue[string](ctx, session, queueName, firstQueueType)
 	}
 
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+
+	testQueue(ctx, g, queue)
 
 	// close the session
 	session.Close()
@@ -445,12 +447,32 @@ func runTestQueueCompatability(g *gomega.WithT, queueName string, firstQueueType
 		queue, err = coherence.GetNamedQueue[string](ctx, session, queueName, secondQueueType)
 	}
 
-	errorOccurred := err != nil
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
-	g.Expect(errorOccurred).To(gomega.Equal(shouldError))
-	if !shouldError {
-		g.Expect(queue.Destroy(ctx)).ShouldNot(gomega.HaveOccurred())
-	}
+	testQueue(ctx, g, queue)
+
+	//errorOccurred := err != nil
+	g.Expect(queue.Destroy(ctx)).ShouldNot(gomega.HaveOccurred())
+
+	utils.Sleep(5)
+
+	//g.Expect(errorOccurred).To(gomega.Equal(shouldError))
+	//if !shouldError {
+	//	g.Expect(queue.Destroy(ctx)).ShouldNot(gomega.HaveOccurred())
+	//}
+}
+
+func testQueue(ctx context.Context, g *gomega.WithT, queue coherence.NamedQueue[string]) {
+	g.Expect(queue.OfferTail(ctx, value1)).ShouldNot(gomega.HaveOccurred())
+	g.Expect(queue.OfferTail(ctx, value2)).ShouldNot(gomega.HaveOccurred())
+
+	value, err := queue.PollHead(ctx)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	g.Expect(*value).Should(gomega.Equal(value1))
+
+	value, err = queue.PollHead(ctx)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	g.Expect(*value).Should(gomega.Equal(value2))
 }
 
 func TestQueueEvents(t *testing.T) {

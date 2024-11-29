@@ -307,7 +307,7 @@ func (m *streamManagerV1) processResponse(reqID int64, resp *responseMessage) {
 		// find the queueName from the queueID
 		queueName := m.session.queueIDMap.KeyFromValue(resp.namedQueueResponse.QueueId)
 		if queueName == nil {
-			logMessage(WARNING, "cannot find queue for queue id %v", queueName)
+			m.session.debugConnection("cannot find queue for queue id %v", queueName)
 		} else {
 			if existingQueue, ok := m.session.queues[*queueName]; ok {
 				if queueEventSubmitter, ok2 := existingQueue.(QueueEventSubmitter); ok2 {
@@ -333,7 +333,7 @@ func (m *streamManagerV1) processResponse(reqID int64, resp *responseMessage) {
 		// request exists
 		e.ch <- *resp
 	} else {
-		logMessage(WARNING, "found request %v (%v) in response but no request exists", *resp, reqID)
+		m.session.debugConnection("found request %v (%v) in response but no request exists", *resp, reqID)
 	}
 }
 
