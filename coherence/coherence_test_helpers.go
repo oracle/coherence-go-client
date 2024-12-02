@@ -15,7 +15,7 @@ import (
 
 // test helpers
 
-//func SubmitRequest(session *Session, req *pb1.ProxyRequest) (namedCacheRequest, error) {
+//func SubmitRequest(session *Session, req *pb1.ProxyRequest) (proxyRequestChannel, error) {
 //	return session.v1StreamManagerCache.submitRequest(req)
 //}
 
@@ -115,6 +115,11 @@ func TestMapListenerRequest(ctx context.Context, session *Session, cache string,
 // GetSessionCacheID returns the cache id for a cache name
 func GetSessionCacheID(session *Session, cache string) *int32 {
 	return session.getCacheID(cache)
+}
+
+// GetSessionQueueID returns the queue id for a cache name
+func GetSessionQueueID(session *Session, queue string) *int32 {
+	return session.getQueueID(queue)
 }
 
 // revive:disable:unexported-return

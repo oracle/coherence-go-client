@@ -263,3 +263,7 @@ type EventSubmitter interface {
 	generateMapLifecycleEvent(client interface{}, eventType MapLifecycleEventType)
 	generateMapEvent(client interface{}, mapEvent *pb1.MapEventMessage)
 }
+
+type QueueEventSubmitter interface {
+	generateQueueLifecycleEvent(client interface{}, eventType QueueLifecycleEventType)
+}

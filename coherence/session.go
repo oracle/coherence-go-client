@@ -21,6 +21,7 @@ import (
 	"google.golang.org/grpc/resolver"
 	"log"
 	"os"
+	"reflect"
 	"strconv"
 	"strings"
 	"sync"
@@ -60,8 +61,8 @@ type Session struct {
 	caches                map[string]interface{}
 	maps                  map[string]interface{}
 	queues                map[string]interface{}
-	cacheIDMapMutex       sync.RWMutex
-	cacheIDMap            map[string]int32
+	cacheIDMap            safeMap[string, int32]
+	queueIDMap            safeMap[string, int32]
 	lifecycleMutex        sync.RWMutex
 	lifecycleListeners    []*SessionLifecycleListener
 	sessionConnectCtx     context.Context
@@ -74,6 +75,7 @@ type Session struct {
 	requestID             int64                // request id for gRPC v1
 	filterID              int64                // filter id for gRPC v1
 	v1StreamManagerCache  *streamManagerV1
+	v1StreamManagerQueue  *streamManagerV1
 }
 
 // SessionOptions holds the session attributes like host, port, tls attributes etc.
@@ -168,7 +170,8 @@ func NewSession(ctx context.Context, options ...func(session *SessionOptions)) (
 		maps:               make(map[string]interface{}, 0),
 		caches:             make(map[string]interface{}, 0),
 		queues:             make(map[string]interface{}, 0),
-		cacheIDMap:         make(map[string]int32, 0),
+		cacheIDMap:         newSafeIDMap(),
+		queueIDMap:         newSafeIDMap(),
 		lifecycleListeners: []*SessionLifecycleListener{},
 		sessOpts: &SessionOptions{
 			PlainText:          false,
@@ -358,26 +361,15 @@ func (s *Session) NextFilterID() int64 {
 }
 
 func (s *Session) getCacheID(cache string) *int32 {
-	s.cacheIDMapMutex.Lock()
-	defer s.cacheIDMapMutex.Unlock()
+	return s.cacheIDMap.Get(cache)
+}
 
-	if v, ok := s.cacheIDMap[cache]; ok {
-		return &v
-	}
-	return nil
+func (s *Session) getQueueID(queue string) *int32 {
+	return s.queueIDMap.Get(queue)
 }
 
 func (s *Session) getCacheNameFromCacheID(cacheID int32) *string {
-	s.cacheIDMapMutex.Lock()
-	defer s.cacheIDMapMutex.Unlock()
-
-	for k, v := range s.cacheIDMap {
-		if v == cacheID {
-			return &k
-		}
-	}
-
-	return nil
+	return s.cacheIDMap.KeyFromValue(cacheID)
 }
 
 func (s *Session) getNamedMapClient(name string) interface{} {
@@ -886,4 +878,79 @@ func (s *Session) ensureContext(ctx context.Context) (context.Context, context.C
 		return context.WithTimeout(ctx, s.sessOpts.RequestTimeout)
 	}
 	return ctx, nil
+}
+
+// a thread safe map for storage of keys and values. Used for cacheId and queueId mappings.
+type safeMap[K comparable, V any] interface {
+	Add(key K, value V)
+	Clear()
+	Get(key K) *V
+	Remove(key K)
+	Keys() []K
+	KeyFromValue(V) *K
+}
+
+type safeMapImpl[K comparable, V any] struct {
+	mutex       sync.RWMutex
+	internalMap map[K]V
+}
+
+func (m *safeMapImpl[K, V]) Add(key K, value V) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	m.internalMap[key] = value
+}
+
+func (m *safeMapImpl[K, V]) Keys() []K {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	keys := make([]K, 0)
+	for k := range m.internalMap {
+		keys = append(keys, k)
+	}
+
+	return keys
+}
+
+func (m *safeMapImpl[K, V]) KeyFromValue(value V) *K {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	for k, v := range m.internalMap {
+		if reflect.DeepEqual(v, value) {
+			return &k
+		}
+	}
+
+	return nil
+}
+
+func (m *safeMapImpl[K, V]) Get(key K) *V {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	if v, ok := m.internalMap[key]; ok {
+		return &v
+	}
+	return nil
+}
+
+func (m *safeMapImpl[K, V]) Remove(key K) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	delete(m.internalMap, key)
+}
+
+func (m *safeMapImpl[K, V]) Clear() {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	m.internalMap = make(map[K]V, 0)
+}
+
+func newSafeIDMap() safeMap[string, int32] {
+	return &safeMapImpl[string, int32]{internalMap: make(map[string]int32, 0)}
 }

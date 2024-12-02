@@ -26,7 +26,7 @@ The Coherence Go client provides the following features:
     and session lifecycle events such as connected, disconnected, reconnected and closed
   - Support for storing Go structs as JSON as well as the ability to serialize to Java objects on the server for access from other Coherence language API's
   - Near cache support to cache frequently accessed data in the Go client to avoid sending requests across the network
-  - Support for Queues in Coherence Community Edition 24.03+
+  - Support for simple and double-ended queues in Coherence Community Edition 24.09+ and commercial version 14.1.2.0+
   - Full support for Go generics in all Coherence API's
 
 For more information on Coherence caches, please see the [Coherence Documentation].
@@ -482,30 +482,35 @@ in your main code, create a new [Session] and register the listener
 
 # Working with Queues
 
-When connecting to a Coherence CE cluster versions 24.03 or above you have the ability to create [NamedQueue] or [NamedBlockingQueue].
-Queues in general have the following methods.
+When connecting to a Coherence CE cluster versions 24.09 or above or commercial 14.1.2.0.+, you have the ability to create two main types of queues, a [NamedQueue] or [NamedDequeue].
 
-- Peek() - retrieve but not remove the value at the head of the queue
+A [NamedQueue] is a simple FIFO queue which can be one of two types: either [Queue] - a simple queue which stores data in a single
+partition and is limited to approx 2GB of storage, or [PagedQueue] which distributes data over the cluster and is only limited
+by the cluster capacity.
 
-- Offer() - inserts the specified value to the end of the queue if it is possible to do so
+A [NamedDequeue] is a simple double-ended queue that stores data in a single partition.
 
-- Poll() - retrieves and removes the head of this queue
+Queues in general have the following methods. See [NamedQueue] for the full list.
 
-The [NamedBlockingQueue] changes the Peek() and Poll() operations to be blocking by passing a timeout. A specific error
-is returned to indicate the blocking operation did no complete within the specified timeout.
+- PeekHead(ctx context.Context) (*V, error) - retrieve but not remove the value at the head of this queue
+
+- PollHead(ctx context.Context) (*V, error - retrieves and removes the head of this queue
+
+- OfferTail(ctx context.Context, value V) error - inserts the specified value to the end of this queue if it is possible to do so
 
 Consider the example below where we want to create a standard queue and add 10 entries, and then retrieve 10 entries.
+We have specified [coherence.Queue] as the type but this could also be [coherence.PagedQueue].
 
-	namedQueue, err := coherence.GetNamedQueue[string](ctx, session, "my-queue")
+	namedQueue, err := coherence.GetNamedQueue[string](ctx, session, "my-queue", coherence.Queue)
 	if err != nil {
 	    panic(err)
 	}
 
-	// add an entry to the head of the queue
+	// add an entry to the tail of the queue
 	for i := 1; i <= iterations; i++ {
 	    v := fmt.Sprintf("value-%v", i)
-	    log.Printf("Offer() %s to the queue\n", v)
-	    err = namedQueue.Offer(v)
+	    log.Printf("OfferTail() %s to the queue\n", v)
+	    err = namedQueue.OfferTail(ctx, v)
 	    if err != nil {
 	        panic(err)
 	    }
@@ -515,9 +520,9 @@ Consider the example below where we want to create a standard queue and add 10 e
 	// ...
 	// Offer() value-10 to the queue
 
-	// Poll() 10 entries from the queue
+	// Poll 10 entries from the head of the queue
 	for i := 1; i <= iterations; i++ {
-	    value, err = namedQueue.Poll()
+	    value, err = namedQueue.PollHead(ctx)
 	    if err != nil {
 	        panic(err)
 	    }
@@ -530,43 +535,120 @@ Consider the example below where we want to create a standard queue and add 10 e
 	// Poll() returned: value-10
 
 	// try to read again should get nil as nothing left on the queue
-	value, err = namedQueue.Poll()
+	value, err = namedQueue.PollHead(ctx)
 	if err != nil {
 	    panic(err)
 	}
 	log.Println("last value is", value)
 	// output: last value is nil
 
-In the following example, we are using a [NamedBlockingQueue] and trying to read a value from this queue
-with a timeout of 10 seconds. In this example we will just display a message if we are not able to retrieve
-a value and then try again.
+The [NamedDequeue] is a double-ended queue and has the following additional functions:
 
-Internally, while the Poll() is blocking for up to the timeout value, if and entry is
-added to the queue, the Poll() will get immediately notified via a coherence [MapEvent]
-and the Poll() will return.  If multiple go routines or processes are waiting for dequeues,
-only one of the processes will retrieve the newly inserted value.
+- OfferHead(ctx context.Context, value V) error - inserts the specific value at the head of this queue
 
-	blockingQueue, err := coherence.GetBlockingNamedQueue[Order](ctx, session, "blocking-queue"")
+- PollTail(ctx context.Context) (*V, error) - retrieves and removes the tail of this queue
+
+- PeekTail(ctx context.Context) (*V, error) - retrieves, but does not remove, the tail of this queue
+
+In the following example, we are using a [NamedDequeue] or double-ended queue, where we have the ability to
+add or offer data to the head of the queue as well as the end of the queue, and also poll and peek the the end of the queue.
+
+	namedQueue, err := coherence.GetNamedDeQueue[string](ctx, session, "double-ended-queue")
 	if err != nil {
 	    panic(err)
 	}
 
-	log.Println("Waiting to receive messages...")
-	for {
-	    order, err = blockingQueue.Poll(time.Duration(10) * time.Second)
-	    if err == coherence.ErrQueueTimedOut {
-	        log.Println("Timeout waiting for Poll()")
-	        continue
-	    }
-
+	// add 10 entries to the end (tail) of the queue
+	for i := 1; i <= iterations; i++ {
+	    v := fmt.Sprintf("value-%v", i)
+	    log.Printf("OfferTail() %s to the queue\n", v)
+	    err = namedQueue.OfferTail(ctx, v)
 	    if err != nil {
 	        panic(err)
 	    }
-
-	    // do some processing, then continue waiting for messages
 	}
 
+	// output:
+	// 2024/11/27 11:05:37 OfferTail() value-1 to the queue
+	// ..
+	// 2024/11/27 11:05:37 OfferTail() value-10 to the queue
+
+	// Offer a value to the head
+	err = namedQueue.OfferHead(ctx, "value-head")
+	if err != nil {
+	    panic(err)
+	}
+
+	// peek the tail of the queue
+	value, err = namedQueue.PeekTail(ctx)
+	if err != nil {
+	    panic(err)
+	}
+	log.Printf("PeekTail() returned: %s\n", *value)
+
+	// output:
+	// 2024/11/27 11:05:37 PeekTail() returned: value-10
+
+	// poll for iterations +1 because we added another entry to the head
+	for i := 1; i <= iterations+1; i++ {
+	    value, err = namedQueue.PollHead(ctx)
+	    if err != nil {
+	        panic(err)
+	    }
+	    log.Printf("PollHead() returned: %s\n", *value)
+	}
+
+	// output:
+	// 2024/11/27 11:05:37 PollHead() returned: value-head (the value we added to the head)
+	// 2024/11/27 11:05:37 PollHead() returned: value-1
+	// ..
+	// 2024/11/27 11:05:37 PollHead() returned: value-10
+
+	// try to read again should get nil
+	value, err = namedQueue.PollHead(ctx)
+	if err != nil {
+	    panic(err)
+	}
+	log.Println("last value is", value)
+
+	// output:
+	// 2024/11/27 11:05:37 last value is <nil>
+
 See the [Queues] documentation for more information on using queues on the Coherence Server.
+
+# Responding to queue lifecycle events
+
+The Coherence Go client provides the ability to add a [QueueLifecycleListener] that will receive events (truncated, released and destroyed)
+that occur against a [NamedQueue].
+
+	// consider the example below where we want to listen for all 'QueueReleased' events for a NamedQueue.
+	// in your main code, create a new NamedQueue and register the listener.
+	// Note: this is a contrived example, but you can listen for QueueDestroyed and QueueTruncated events
+	// in a similar way.
+
+	namedQueue, err := coherence.GetNamedQueue[string](session, "queue", coherence.Queue)
+	if err != nil {
+	    log.Fatal(err)
+	}
+
+	// Create a listener to monitor
+	listener := coherence.NewQueueLifecycleListener[string]().
+	    OnTruncated(func(e coherence.QueueLifecycleEvent[string]) {
+	        fmt.Printf("**EVENT=%s: source=%v\n", e.Type(), e.Source())
+	    })
+
+	_ = namedQueue.AddLifecycleListener(listener)
+	defer namedQueue.RemoveLifecycleListener(listener)
+
+	namedQueue.Release()
+
+	// sleep to ensure we receive the event before we close
+	time.Sleep(5 * time.Second)
+
+	// output:
+	// 2024/11/28 11:40:58 INFO: Session [b1435a16-f210-4289-97e4-e1654947acd5] connected to [localhost:1408] Coherence version: 24.09, serverProtocolVersion: 1, proxyMemberId: 1
+	// **EVENT=queue_released: source=NamedQueue{name=queue-events, type=Queue, queueID=1198559040}
+	// 2024/11/28 11:41:03 INFO: Session [b1435a16-f210-4289-97e4-e1654947acd5] closed
 
 # Serializing to Java objects on the server
 
@@ -752,6 +834,6 @@ accessed and created entries.
 [examples]: https://github.com/oracle/coherence-go-client/tree/main/examples
 [gRPC Proxy documentation]: https://docs.oracle.com/en/middleware/standalone/coherence/14.1.1.2206/develop-remote-clients/using-coherence-grpc-server.html
 [gRPC Naming]: https://github.com/grpc/grpc/blob/master/doc/naming.md
-[Queues]: https://coherence.community/latest/24.03/docs/#/docs/core/09_queues
+[Queues]: https://coherence.community/latest/24.09/docs/#/docs/core/09_queues
 */
 package coherence

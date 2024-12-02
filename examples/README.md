@@ -308,21 +308,27 @@ Source code: [queues/standard/main.go](queues/standard/main.go)
 go run queues/standard/main.go
 ```
 
-#### Blocking
+#### Dequeue (double-ended queue)
 
-This example show how to use a blocking queue. Where you can try to issue a Poll() 
-and provide a timeout incase there are no entries on the Queue.
-
+This example show how to use a Dequeue or double-ended queue. 
 To run this example there are three programs:
 
-1. [queues/blocking/publisher/main.go](queues/blocking/publisher/main.go) - Publishes a specified number of orders to a queue
-2. [queues/blocking/processor/main.go](queues/blocking/processor/main.go) - Polls() on orders-queue, processes the order and places on processed-queue
-3. [queues/blocking/subscriber/main.go](queues/blocking/subscriber/main.go) - Polls() processed-queue and displays processing time
+Source code: [queues/dequeue/main.go](queues/dequeue/main.go)
 
-To run this example, do the following in separate command terminals:
-1. Start a subscriber `go run queues/blocking/subscriber/main.go` 
-2. Start one or more processors `go run queues/blocking/processor/main.go` 
-3. Start a publisher and specify the number orders `go run queues/blocking/publisher/main.go 10000` 
+```go
+go run queues/dequeue/main.go
+```
+
+#### Queue Events
+
+This example show how to listen for events on queues.
+
+Source code: [queues/events/main.go](queues/events/main.go)
+
+```go
+go run queues/events/main.go
+```
+
 
 ### <a name="rest"></a> Basic REST server
 

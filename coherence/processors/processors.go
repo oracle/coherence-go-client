@@ -33,10 +33,6 @@ const (
 	versionedPutAllProcessorType   = processorPrefix + "VersionedPutAll"
 	compositeUpdaterType           = extractorPrefix + "CompositeUpdater"
 	universalUpdaterType           = extractorPrefix + "UniversalUpdater"
-	queueNameHashType              = queuePrefix + "QueueNameHash"
-	queueOfferType                 = queuePrefix + "QueueOffer"
-	queuePollType                  = queuePrefix + "QueuePoll"
-	queuePeekType                  = queuePrefix + "QueuePeek"
 )
 
 // Processor interface allows composition of Processors. An instance of a Processor
@@ -149,26 +145,6 @@ func VersionedPut[V any](value V, canInsert, returnCurrent bool) Processor {
 // the version of the entry within the map will be incremented.
 func VersionedPutAll[K comparable, V any](entries map[K]V, canInsert, returnCurrent bool) Processor {
 	return newVersionedPutAllProcessor[K, V](entries, canInsert, returnCurrent)
-}
-
-// QueueNameHashProcessor determines the hash for a given queue name.
-func QueueNameHashProcessor(queueName string) Processor {
-	return newQueueNameHashProcessor(queueName)
-}
-
-// QueueOfferProcessor places an item at the tail of the queue.
-func QueueOfferProcessor[V any](value V) Processor {
-	return newQueueOfferProcessor[V](value)
-}
-
-// QueuePollProcessor retrieves an item from the head of the queue.
-func QueuePollProcessor() Processor {
-	return newQueuePollProcessor()
-}
-
-// QueuePeekProcessor peeks at the first item from the head of the queue.
-func QueuePeekProcessor() Processor {
-	return newQueuePeekProcessor()
 }
 
 type abstractProcessor struct {
@@ -527,46 +503,4 @@ func (cp *versionedPutProcessor[V]) ReturnCurrent(returnCurrent bool) Processor 
 func (cp *versionedPutProcessor[V]) AllowInsert(allowInsert bool) Processor {
 	cp.CanInsert = allowInsert
 	return cp
-}
-
-type queueNameHashProcessor struct {
-	*abstractProcessor
-	Name string `json:"name"`
-}
-
-func newQueueNameHashProcessor(queueName string) *queueNameHashProcessor {
-	h := &queueNameHashProcessor{Name: queueName}
-	h.abstractProcessor = newAbstractProcessor(queueNameHashType, h)
-	return h
-}
-
-type queueOfferProcessor[V any] struct {
-	*abstractProcessor
-	Value V `json:"value"`
-}
-
-func newQueueOfferProcessor[V any](value V) *queueOfferProcessor[V] {
-	h := &queueOfferProcessor[V]{Value: value}
-	h.abstractProcessor = newAbstractProcessor(queueOfferType, h)
-	return h
-}
-
-type queuePollProcessor struct {
-	*abstractProcessor
-}
-
-func newQueuePollProcessor() *queuePollProcessor {
-	h := &queuePollProcessor{}
-	h.abstractProcessor = newAbstractProcessor(queuePollType, h)
-	return h
-}
-
-type queuePeekProcessor struct {
-	*abstractProcessor
-}
-
-func newQueuePeekProcessor() *queuePeekProcessor {
-	h := &queuePeekProcessor{}
-	h.abstractProcessor = newAbstractProcessor(queuePeekType, h)
-	return h
 }

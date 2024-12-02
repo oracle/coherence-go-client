@@ -476,9 +476,7 @@ func (nm *NamedMapClient[K, V]) Release() {
 
 	// remove the cacheID mapping
 	if s.GetProtocolVersion() > 0 {
-		s.cacheIDMapMutex.Lock()
-		delete(s.cacheIDMap, nm.Name())
-		s.cacheIDMapMutex.Unlock()
+		s.cacheIDMap.Remove(nm.Name())
 	}
 
 	if nm.namedMapReconnectListener.listener != nil {
@@ -1071,6 +1069,10 @@ func newNamedMapNearLifecycleListener[K comparable, V any](nc NamedMapClient[K, 
 // getExistingError returns an error indicating a [NamedMap] or [NamedCache] exists with different type parameters.
 func getExistingError(cacheType, name string) error {
 	return fmt.Errorf(mapOrCacheExists, cacheType, name)
+}
+
+func getDifferentQueueTypeError(name string, queueType NamedQueueType) error {
+	return fmt.Errorf("the queue %s already exists but is not %v", name, queueType)
 }
 
 // getExistingError returns an error indicating a [NamedMap] or [NamedCache] exists with different near cache options.

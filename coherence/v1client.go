@@ -14,7 +14,6 @@ import (
 	pb1 "github.com/oracle/coherence-go-client/proto/v1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	"io"
@@ -24,6 +23,7 @@ import (
 	"time"
 )
 
+// V1ProxyProtocol defines the types of proxy protocols such as "CacheService" or "QueueService".
 type V1ProxyProtocol string
 
 type logLevel string
@@ -38,16 +38,20 @@ var (
 )
 
 const (
-	protocolVersion                      = 1
-	cacheServiceProtocol V1ProxyProtocol = "CacheService"
-	errorFormat                          = "error: %v"
-	responseDebug                        = "received response: %v"
+	protocolVersion                           = 1
+	cacheServiceProtocol      V1ProxyProtocol = "CacheService"
+	queueServiceProtocol      V1ProxyProtocol = "QueueService"
+	errorFormat                               = "error: %v"
+	responseDebug                             = "received response: %v"
+	namedCacheResponseTypeURL                 = "type.googleapis.com/coherence.cache.v1.NamedCacheResponse"
+	namedQueueResponseTypeURL                 = "type.googleapis.com/coherence.concurrent.queue.v1.NamedQueueResponse"
 )
 
 // responseMessages is a response received by a waiting client.
 type responseMessage struct {
 	message            *anypb.Any
 	namedCacheResponse *pb1.NamedCacheResponse
+	namedQueueResponse *pb1.NamedQueueResponse
 	complete           bool
 	err                *string
 }
@@ -64,10 +68,9 @@ func (rm responseMessage) String() string {
 	return sb.String()
 }
 
-// namedCacheRequest holds the type of request and response messages channel.
-type namedCacheRequest struct {
-	requestType pb1.NamedCacheRequestType
-	ch          chan responseMessage
+// proxyRequestChannel holds response messages channel.
+type proxyRequestChannel struct {
+	ch chan responseMessage
 }
 
 // streamManagerV1 holds the data for a gRPC V1 connection.
@@ -77,7 +80,7 @@ type streamManagerV1 struct {
 	eventStream           *eventStreamV1
 	proxyProtocol         V1ProxyProtocol
 	serializer            Serializer[any]
-	requests              map[int64]namedCacheRequest
+	requests              map[int64]proxyRequestChannel
 	serverVersion         string
 	serverProtocolVersion int32
 	serverProxyMemberID   int32
@@ -92,7 +95,7 @@ func newStreamManagerV1(session *Session, proxyProtocol V1ProxyProtocol) (*strea
 	manager := streamManagerV1{
 		session:       session,
 		proxyProtocol: proxyProtocol,
-		requests:      make(map[int64]namedCacheRequest, 0),
+		requests:      make(map[int64]proxyRequestChannel, 0),
 		serializer:    NewSerializer[any](session.sessOpts.Format),
 	}
 
@@ -194,30 +197,41 @@ func (m *streamManagerV1) ensureStream() (*eventStreamV1, error) {
 						resp.message = msg
 					}
 
-					// unpack the type of response message
-					if resp.message != nil {
-						var message proto.Message //nolint:gosimple
-						message = &pb1.NamedCacheResponse{}
-						if err1 = resp.message.UnmarshalTo(message); err1 != nil {
-							logMessage(WARNING, "%v", getUnmarshallError("namedCacheResponse", err1))
-						} else {
-							// determine the type of message
-							switch responseMsg := message.(type) {
-							case *pb1.NamedCacheResponse:
-								resp.namedCacheResponse = responseMsg
-							}
-						}
-					}
-
-					// process the incoming message and generate a response to the chanel
-					// of the listening client waiting for the events
-					m.processNamedCacheResponse(id, &resp)
+					m.processResponseMessage(id, &resp)
 				}
 			}
 		}(m)
 	}
 
 	return m.eventStream, nil
+}
+
+func (m *streamManagerV1) processResponseMessage(id int64, resp *responseMessage) {
+	if resp.message != nil {
+		// Use TypeUrl to determine the message type and unmarshal accordingly
+		switch resp.message.TypeUrl {
+		case namedCacheResponseTypeURL:
+			var namedCacheResponse pb1.NamedCacheResponse
+			if err := resp.message.UnmarshalTo(&namedCacheResponse); err != nil {
+				logMessage(WARNING, "%v", getUnmarshallError("namedCacheResponse", err))
+				return
+			}
+			resp.namedCacheResponse = &namedCacheResponse
+		case namedQueueResponseTypeURL:
+			var namedQueueResponse pb1.NamedQueueResponse
+			if err := resp.message.UnmarshalTo(&namedQueueResponse); err != nil {
+				logMessage(WARNING, "%v", getUnmarshallError("namedQueueResponse", err))
+				return
+			}
+			resp.namedQueueResponse = &namedQueueResponse
+
+		default:
+			logMessage(WARNING, "Unknown message type: %v", resp.message.TypeUrl)
+			return
+		}
+	}
+
+	m.processResponse(id, resp)
 }
 
 func logMessage(level logLevel, format string, args ...any) {
@@ -238,9 +252,9 @@ func (m *streamManagerV1) String() string {
 	return fmt.Sprintf("Coherence version: %s, serverProtocolVersion: %d, proxyMemberId: %d", m.serverVersion, m.serverProtocolVersion, m.serverProxyMemberID)
 }
 
-func (m *streamManagerV1) processNamedCacheResponse(reqID int64, resp *responseMessage) {
-	if reqID == 0 {
-		// this is a map event or cache lifecycle event so dispatch it
+func (m *streamManagerV1) processResponse(reqID int64, resp *responseMessage) {
+	if reqID == 0 && resp.namedCacheResponse != nil {
+		// this is a map event or cache lifecycle event for named cache so dispatch it
 		m.session.debugConnection("Event, CacheId: %v, Type %v", resp.namedCacheResponse.CacheId, resp.namedCacheResponse.Type)
 
 		// for a map event we must get the cache name and then looking the base client, so
@@ -287,9 +301,31 @@ func (m *streamManagerV1) processNamedCacheResponse(reqID int64, resp *responseM
 		return
 	}
 
-	m.session.debugConnection("id: %v namedCacheResponse: %v", reqID, resp)
+	// process queue event
+	if reqID == 0 && resp.namedQueueResponse != nil {
 
-	// received a named cache response, so write the response to the channel for the originating request
+		// find the queueName from the queueID
+		queueName := m.session.queueIDMap.KeyFromValue(resp.namedQueueResponse.QueueId)
+		if queueName == nil {
+			m.session.debugConnection("cannot find queue for queue id %v", queueName)
+		} else {
+			if existingQueue, ok := m.session.queues[*queueName]; ok {
+				if queueEventSubmitter, ok2 := existingQueue.(QueueEventSubmitter); ok2 {
+					switch resp.namedQueueResponse.Type {
+					case pb1.NamedQueueResponseType_Destroyed:
+						queueEventSubmitter.generateQueueLifecycleEvent(existingQueue, QueueDestroyed)
+					case pb1.NamedQueueResponseType_Truncated:
+						queueEventSubmitter.generateQueueLifecycleEvent(existingQueue, QueueTruncated)
+					}
+				}
+			}
+		}
+		return
+	}
+
+	m.session.debugConnection("id: %v Response: %v", reqID, resp)
+
+	// received a named cache or queue response, so write the response to the channel for the originating request
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
@@ -297,40 +333,60 @@ func (m *streamManagerV1) processNamedCacheResponse(reqID int64, resp *responseM
 		// request exists
 		e.ch <- *resp
 	} else {
-		logMessage(WARNING, "found request %v (%v) in response but no request exists", *resp, reqID)
+		m.session.debugConnection("found request %v (%v) in response but no request exists", *resp, reqID)
 	}
 }
 
 // submitRequest submits a request to the stream manager and returns named cache request.
-func (m *streamManagerV1) submitRequest(req *pb1.ProxyRequest, requestType pb1.NamedCacheRequestType) (namedCacheRequest, error) {
+func (m *streamManagerV1) submitRequest(req *pb1.ProxyRequest, requestType pb1.NamedCacheRequestType) (proxyRequestChannel, error) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
 	// create a channel for the response
 	ch := make(chan responseMessage)
 
-	r := namedCacheRequest{ch: ch, requestType: requestType}
+	r := proxyRequestChannel{ch: ch}
 
 	// save the request in the map keyed by request id
 	m.requests[req.Id] = r
 
-	m.session.debugConnection("id: %v submit request: %v %v", req.Id, r.requestType, req)
+	m.session.debugConnection("id: %v submit request: %v %v", req.Id, requestType, req)
 
 	return r, m.eventStream.grpcStream.Send(req)
 }
 
-// ensureCache issues the ensure cache request. This must be done before any requests to access caches can be issues.
+// ensureCache issues the ensure cache request. This must be done before any requests to access caches can be issued.
 func (m *streamManagerV1) ensureCache(ctx context.Context, cache string) (*int32, error) {
+	return m.ensure(ctx, cache, m.session.cacheIDMap /** -1 signifies cache **/, -1)
+}
+
+// ensure ensures a queue or cache.
+func (m *streamManagerV1) ensure(ctx context.Context, name string, IDMap safeMap[string, int32], queueType NamedQueueType) (*int32, error) {
 	var (
-		cacheID *int32
-		err     error
+		ID          *int32
+		err         error
+		req         *v1.ProxyRequest
+		isQueue     = queueType >= 0
+		requestType proxyRequestChannel
 	)
-	req, err := m.newEnsureCacheRequest(cache)
+
+	if isQueue {
+		req, err = m.newEnsureQueueRequest(name, queueType)
+	} else {
+		// cache
+		req, err = m.newEnsureCacheRequest(name)
+	}
+
 	if err != nil {
 		return nil, err
 	}
 
-	requestType, err := m.submitRequest(req, pb1.NamedCacheRequestType_EnsureCache)
+	if isQueue {
+		requestType, err = m.submitQueueRequest(req, pb1.NamedQueueRequestType_EnsureQueue)
+	} else {
+		requestType, err = m.submitRequest(req, pb1.NamedCacheRequestType_EnsureCache)
+	}
+
 	if err != nil {
 		return nil, err
 	}
@@ -349,15 +405,15 @@ func (m *streamManagerV1) ensureCache(ctx context.Context, cache string) (*int32
 
 	var message = &wrapperspb.Int32Value{}
 	if err = result.UnmarshalTo(message); err != nil {
-		err = getUnmarshallError("ensureCache response", err)
+		err = getUnmarshallError("ensure response", err)
 		return nil, err
 	}
 
 	// store the cache id in the session , no lock required as already locked
-	cacheID = &message.Value
-	m.session.cacheIDMap[cache] = *cacheID
+	ID = &message.Value
+	IDMap.Add(name, *ID)
 
-	return cacheID, nil
+	return ID, nil
 }
 
 // clearCache issues a truncate cache request.
@@ -379,9 +435,7 @@ func (m *streamManagerV1) destroyCache(ctx context.Context, cache string) error 
 	}
 
 	// remove the cache from the map
-	m.session.cacheIDMapMutex.Lock()
-	delete(m.session.cacheIDMap, cache)
-	m.session.cacheIDMapMutex.Unlock()
+	m.session.cacheIDMap.Remove(cache)
 
 	return nil
 }
@@ -425,10 +479,6 @@ func (m *streamManagerV1) genericCacheRequest(ctx context.Context, reqType pb1.N
 
 // size returns the size of a cache
 func (m *streamManagerV1) size(ctx context.Context, cache string) (int32, error) {
-	var (
-		err   error
-		value int32
-	)
 	req, err := m.newGenericNamedCacheRequest(cache, pb1.NamedCacheRequestType_Size)
 	if err != nil {
 		return 0, err
@@ -447,18 +497,7 @@ func (m *streamManagerV1) size(ctx context.Context, cache string) (int32, error)
 	// remove the entry from the channel
 	defer m.cleanupRequest(req.Id)
 
-	result, err1 := waitForResponse(newCtx, requestType.ch)
-	if err1 != nil {
-		return value, err1
-	}
-
-	var message = &wrapperspb.Int32Value{}
-	if err = result.UnmarshalTo(message); err != nil {
-		err = getUnmarshallError("sizeResponse", err)
-		return value, err
-	}
-
-	return message.Value, nil
+	return m.returnSizeRequest(newCtx, requestType.ch)
 }
 
 func (m *streamManagerV1) isEmpty(ctx context.Context, cache string) (bool, error) {
@@ -471,18 +510,14 @@ func (m *streamManagerV1) isReady(ctx context.Context, cache string) (bool, erro
 
 // genericBoolValue returns a boolean value based upon a request type.
 func (m *streamManagerV1) genericBoolValue(ctx context.Context, reqType pb1.NamedCacheRequestType, cache string) (bool, error) {
-	var (
-		err   error
-		value bool
-	)
 	req, err := m.newGenericNamedCacheRequest(cache, reqType)
 	if err != nil {
-		return value, err
+		return false, err
 	}
 
 	requestType, err := m.submitRequest(req, reqType)
 	if err != nil {
-		return value, err
+		return false, err
 	}
 
 	newCtx, cancel := m.session.ensureContext(ctx)
@@ -494,7 +529,7 @@ func (m *streamManagerV1) genericBoolValue(ctx context.Context, reqType pb1.Name
 
 	result, err1 := waitForResponse(newCtx, requestType.ch)
 	if err1 != nil {
-		return value, err1
+		return false, err1
 	}
 
 	return unwrapBool(result)
@@ -925,7 +960,7 @@ func (m *streamManagerV1) valuesFilter(ctx context.Context, cache string, filter
 	return m.getStreamingResponseValue(ctx, requestType, req.Id)
 }
 
-func (m *streamManagerV1) getStreamingResponseKeyAndValue(ctx context.Context, requestType namedCacheRequest, reqID int64, paged ...bool) (<-chan BinaryKeyAndValue, error) {
+func (m *streamManagerV1) getStreamingResponseKeyAndValue(ctx context.Context, requestType proxyRequestChannel, reqID int64, paged ...bool) (<-chan BinaryKeyAndValue, error) {
 	isPaged := false
 	if len(paged) == 1 {
 		// if paged is true the first response will always be the cookie
@@ -1000,7 +1035,7 @@ func (m *streamManagerV1) getStreamingResponseKeyAndValue(ctx context.Context, r
 	return ch, nil
 }
 
-func (m *streamManagerV1) getStreamingResponseValue(ctx context.Context, requestType namedCacheRequest, reqID int64, paged ...bool) (<-chan BinaryValue, error) {
+func (m *streamManagerV1) getStreamingResponseValue(ctx context.Context, requestType proxyRequestChannel, reqID int64, paged ...bool) (<-chan BinaryValue, error) {
 	isPaged := false
 	if len(paged) == 1 {
 		// if paged is true the first response will always be the cookie
@@ -1073,7 +1108,7 @@ func (m *streamManagerV1) getStreamingResponseValue(ctx context.Context, request
 	return ch, nil
 }
 
-func (m *streamManagerV1) getStreamingResponseKey(ctx context.Context, requestType namedCacheRequest, reqID int64, paged ...bool) (<-chan BinaryKey, error) {
+func (m *streamManagerV1) getStreamingResponseKey(ctx context.Context, requestType proxyRequestChannel, reqID int64, paged ...bool) (<-chan BinaryKey, error) {
 	isPaged := false
 	if len(paged) == 1 {
 		// if paged is true the first response will always be the cookie
@@ -1161,15 +1196,18 @@ var defaultFunction = func(resp responseMessage) *anypb.Any {
 	if resp.namedCacheResponse != nil && resp.namedCacheResponse.Message != nil {
 		return resp.namedCacheResponse.Message
 	}
+	if resp.namedQueueResponse != nil && resp.namedQueueResponse.Message != nil {
+		return resp.namedQueueResponse.Message
+	}
 	return nil
 }
 
 // waitForResponse waits for a response to a request and returns the proto message and any error.
-func waitForResponse(newCtx context.Context, ch chan responseMessage, ensureCache ...bool) (*anypb.Any, error) {
+func waitForResponse(newCtx context.Context, ch chan responseMessage, ensure ...bool) (*anypb.Any, error) {
 	var (
-		err           error
-		result        *anypb.Any
-		isEnsureCache = len(ensureCache) != 0
+		err      error
+		result   *anypb.Any
+		isEnsure = len(ensure) != 0
 	)
 
 	// wait until we get a complete request, or we time out
@@ -1184,14 +1222,18 @@ func waitForResponse(newCtx context.Context, ch chan responseMessage, ensureCach
 				resp.complete = true
 			}
 
-			if resp.namedCacheResponse != nil {
+			if resp.namedCacheResponse != nil || resp.namedQueueResponse != nil {
 				// unpack the result message if we have valid named cache response
-				if !isEnsureCache {
-					// standard case where we want to return the names cache result message
+				if !isEnsure {
+					// standard case where we want to return the named cache/queue result message
 					result = defaultFunction(resp)
 				} else {
-					// special case for ensureCache, return the cache id, and it will be handled by ensureCache
-					result, err = anypb.New(wrapperspb.Int32(resp.namedCacheResponse.CacheId))
+					// special case for ensure, return the cache id or queue id, and it will be handled by ensure
+					if resp.namedCacheResponse != nil {
+						result, err = anypb.New(wrapperspb.Int32(resp.namedCacheResponse.CacheId))
+					} else {
+						result, err = anypb.New(wrapperspb.Int32(resp.namedQueueResponse.QueueId))
+					}
 				}
 			}
 
@@ -1332,6 +1374,10 @@ func getInitDescription(r *pb1.InitResponse) string {
 
 func getCacheIDMessage(cache string) error {
 	return fmt.Errorf("unable to find cache id for cache named [%s]", cache)
+}
+
+func getQueueIDMessage(cache string) error {
+	return fmt.Errorf("unable to find queue id for queue named [%s]", cache)
 }
 
 func getUnmarshallError(message string, err error) error {

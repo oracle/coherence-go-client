@@ -50,8 +50,36 @@ func (m *streamManagerV1) newEnsureCacheRequest(cache string) (*pb1.ProxyRequest
 	return m.newWrapperProxyRequest("", pb1.NamedCacheRequestType_EnsureCache, anyReq)
 }
 
+func (m *streamManagerV1) newEnsureQueueRequest(queue string, queueType NamedQueueType) (*pb1.ProxyRequest, error) {
+	req := &pb1.EnsureQueueRequest{
+		Queue: queue,
+		Type:  getQueueType(queueType),
+	}
+
+	anyReq, err := anypb.New(req)
+	if err != nil {
+		return nil, err
+	}
+
+	return m.newWrapperProxyQueueRequest("", pb1.NamedQueueRequestType_EnsureQueue, anyReq)
+}
+
+func getQueueType(queueType NamedQueueType) pb1.NamedQueueType {
+	if queueType == Queue {
+		return pb1.NamedQueueType_Queue
+	}
+	if queueType == PagedQueue {
+		return pb1.NamedQueueType_PagedQueue
+	}
+	return pb1.NamedQueueType_Deque
+}
+
 func (m *streamManagerV1) newGenericNamedCacheRequest(cache string, requestType pb1.NamedCacheRequestType) (*pb1.ProxyRequest, error) {
 	return m.newWrapperProxyRequest(cache, requestType, nil)
+}
+
+func (m *streamManagerV1) newGenericNamedQueueRequest(cache string, requestType pb1.NamedQueueRequestType) (*pb1.ProxyRequest, error) {
+	return m.newWrapperProxyQueueRequest(cache, requestType, nil)
 }
 
 func (m *streamManagerV1) newGetRequest(cache string, key []byte) (*pb1.ProxyRequest, error) {
@@ -314,6 +342,20 @@ func newNamedCacheRequest(cacheID *int32, reqType pb1.NamedCacheRequestType, mes
 	return anyReq, nil
 }
 
+func newNamedQueueRequest(queueID *int32, reqType pb1.NamedQueueRequestType, message *anypb.Any) (*anypb.Any, error) {
+	req := &pb1.NamedQueueRequest{
+		Type:    reqType,
+		QueueId: queueID,
+		Message: message,
+	}
+
+	anyReq, err := anypb.New(req)
+	if err != nil {
+		return nil, err
+	}
+	return anyReq, nil
+}
+
 func (m *streamManagerV1) newWrapperProxyRequest(cache string, requestType pb1.NamedCacheRequestType, message *anypb.Any) (*pb1.ProxyRequest, error) {
 	var cacheID *int32
 
@@ -326,6 +368,26 @@ func (m *streamManagerV1) newWrapperProxyRequest(cache string, requestType pb1.N
 	}
 
 	ncRequest, err := newNamedCacheRequest(cacheID, requestType, message)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return m.newProxyRequest(ncRequest), nil
+}
+
+func (m *streamManagerV1) newWrapperProxyQueueRequest(queue string, requestType pb1.NamedQueueRequestType, message *anypb.Any) (*pb1.ProxyRequest, error) {
+	var queueID *int32
+
+	// validate the queue ID if it is not an ensure queue request
+	if queue != "" {
+		queueID = m.session.getQueueID(queue)
+		if queueID == nil {
+			return nil, getQueueIDMessage(queue)
+		}
+	}
+
+	ncRequest, err := newNamedQueueRequest(queueID, requestType, message)
 
 	if err != nil {
 		return nil, err
