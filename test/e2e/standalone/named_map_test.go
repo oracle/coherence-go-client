@@ -17,6 +17,7 @@ import (
 	"github.com/oracle/coherence-go-client/test/utils"
 	"log"
 	"os"
+	"sync"
 	"testing"
 	"time"
 )
@@ -173,7 +174,6 @@ func TestInvocationTimeout(t *testing.T) {
 		session *coherence.Session
 	)
 
-	//t.Skip("Skip until issue sorted out")
 	session, err = utils.GetSession()
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	defer session.Close()
@@ -370,7 +370,7 @@ func RunTestBasicCrudOperations(t *testing.T, namedMap coherence.NamedMap[int, u
 	utils.AssertPersonResult(g, *oldValue, person1)
 }
 
-func TestTestMultipleCallsToNamedMap(t *testing.T) {
+func TestMultipleCallsToNamedMap(t *testing.T) {
 	var (
 		g            = gomega.NewWithT(t)
 		err          error
@@ -415,6 +415,52 @@ func TestTestMultipleCallsToNamedMap(t *testing.T) {
 	// try and retrieve a NamedMap that is for the same cache but different type, this should cause error
 	_, err = coherence.GetNamedMap[int, string](session, "map-2")
 	g.Expect(err).To(gomega.HaveOccurred())
+}
+
+func TestMultipleGoRoutines(t *testing.T) {
+	var (
+		g   = gomega.NewWithT(t)
+		err error
+		wg  sync.WaitGroup
+	)
+
+	const (
+		goRoutines  = 20
+		insertCount = 1000
+	)
+
+	session, err := utils.GetSession()
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	defer session.Close()
+
+	namedMap, err := coherence.GetNamedMap[int, int](session, "multiple-go-routines")
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+
+	g.Expect(namedMap.Clear(ctx)).ShouldNot(gomega.HaveOccurred())
+
+	// run "goRoutines" routines
+	wg.Add(goRoutines)
+
+	for i := 1; i <= goRoutines; i++ {
+		go func(start int) {
+			defer wg.Done()
+			var err1 error
+
+			for j := start; j < insertCount+start; j++ {
+				_, err1 = namedMap.Put(ctx, j, j)
+				g.Expect(err1).ShouldNot(gomega.HaveOccurred())
+			}
+		}(i * 10000)
+	}
+
+	wg.Wait()
+
+	size, err := namedMap.Size(ctx)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	g.Expect(size).To(gomega.Equal(goRoutines * insertCount))
+
+	err = namedMap.Destroy(ctx)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 }
 
 func RunTestGetOrDefault(t *testing.T, namedMap coherence.NamedMap[int, utils.Person]) {
