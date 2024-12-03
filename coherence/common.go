@@ -86,7 +86,7 @@ type baseClient[K comparable, V any] struct {
 	mutex                      *sync.RWMutex
 	nearCache                  *localCacheImpl[K, V]
 	nearCacheListener          *namedCacheNearCacheListener[K, V]
-	nearCacheLifecycleListener *namedCacheNearLifecyleListener[K, V]
+	nearCacheLifecycleListener *namedCacheNearLifestyleListener[K, V]
 
 	// gRPC v1 listeners registered
 	keyListenersV1       map[K]*listenerGroupV1[K, V]
@@ -134,6 +134,7 @@ func executeClear[K comparable, V any](ctx context.Context, bc *baseClient[K, V]
 		err       = bc.ensureClientConnection()
 		nearCache = bc.nearCache
 	)
+
 	if err != nil {
 		return err
 	}
@@ -152,7 +153,7 @@ func executeClear[K comparable, V any](ctx context.Context, bc *baseClient[K, V]
 	}
 
 	// clear the near cache
-	if nearCache != nil {
+	if bc.session.GetProtocolVersion() == 0 && nearCache != nil {
 		nearCache.Clear()
 	}
 
@@ -272,7 +273,7 @@ func executeTruncate[K comparable, V any](ctx context.Context, bc *baseClient[K,
 		_, err = bc.client.Truncate(newCtx, &request)
 	}
 
-	// clear the near cache
+	// clear the near cache as the lifecycle listeners are not synchronous
 	if nearCache != nil {
 		nearCache.Clear()
 	}
@@ -1396,8 +1397,8 @@ func executePutAll[K comparable, V any](ctx context.Context, bc *baseClient[K, V
 		}
 	}
 
-	// if we have near cache and the entry exists then update
-	if nearCache != nil {
+	// if we have near cache and the entry exists then update (gRPC v0)
+	if bc.session.GetProtocolVersion() == 0 && nearCache != nil {
 		for k, v := range entries {
 			if oldVal := nearCache.Get(k); oldVal != nil {
 				nearCache.Put(k, v)
@@ -1510,8 +1511,8 @@ func executePutWithExpiry[K comparable, V any](ctx context.Context, bc *baseClie
 	}
 
 	// if we have near cache and the entry exists then update this as well because we do
-	// not use synchronous listener like we do on Java
-	if nearCache != nil {
+	// not use synchronous listener in gRPC v0
+	if bc.session.GetProtocolVersion() == 0 && nearCache != nil {
 		if oldValue := nearCache.Get(key); oldValue != nil {
 			nearCache.Put(key, value)
 		}
@@ -1580,7 +1581,7 @@ func executeRemove[K comparable, V any](ctx context.Context, bc *baseClient[K, V
 		}
 	}
 
-	if nearCache != nil {
+	if bc.session.GetProtocolVersion() == 0 && nearCache != nil {
 		nearCache.Remove(key)
 	}
 
@@ -1632,7 +1633,7 @@ func executeRemoveMapping[K comparable, V any](ctx context.Context, bc *baseClie
 		}
 	}
 
-	if result.Value && nearCache != nil {
+	if bc.session.GetProtocolVersion() == 0 && result.Value && nearCache != nil {
 		nearCache.Remove(key)
 	}
 
@@ -1738,7 +1739,7 @@ func executeReplaceMapping[K comparable, V any](ctx context.Context, bc *baseCli
 		}
 	}
 
-	if nearCache != nil && result.Value {
+	if bc.session.GetProtocolVersion() == 0 && nearCache != nil && result.Value {
 		if old := nearCache.Get(key); old != nil {
 			nearCache.Put(key, newValue)
 		}

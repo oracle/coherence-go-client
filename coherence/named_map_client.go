@@ -1043,6 +1043,9 @@ func newNearNamedMapMapLister[K comparable, V any](nc NamedMapClient[K, V], cach
 		nearCache: cache,
 	}
 
+	// ensure this is a synchronous MapListener, so we receive events before the result of mutations
+	listener.listener.SetSynchronous()
+
 	listener.listener.OnAny(func(e MapEvent[K, V]) {
 		err := processNearCacheEvent(nc.baseClient.nearCache, e)
 		if err != nil {
@@ -1053,8 +1056,8 @@ func newNearNamedMapMapLister[K comparable, V any](nc NamedMapClient[K, V], cach
 	return &listener
 }
 
-func newNamedMapNearLifecycleListener[K comparable, V any](nc NamedMapClient[K, V], cache *localCacheImpl[K, V]) *namedCacheNearLifecyleListener[K, V] {
-	listener := namedCacheNearLifecyleListener[K, V]{
+func newNamedMapNearLifecycleListener[K comparable, V any](nc NamedMapClient[K, V], cache *localCacheImpl[K, V]) *namedCacheNearLifestyleListener[K, V] {
+	listener := namedCacheNearLifestyleListener[K, V]{
 		listener:  NewMapLifecycleListener[K, V](),
 		nearCache: cache,
 	}

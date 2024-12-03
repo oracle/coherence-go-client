@@ -740,8 +740,8 @@ type namedCacheNearCacheListener[K comparable, V any] struct {
 	nearCache *localCacheImpl[K, V]
 }
 
-// namedCacheNearLifecyleListener is a [MapLifecycleListener] to be called when truncate events are received for a near cache.
-type namedCacheNearLifecyleListener[K comparable, V any] struct {
+// namedCacheNearLifecycleListener is a [MapLifecycleListener] to be called when truncate events are received for a near cache.
+type namedCacheNearLifestyleListener[K comparable, V any] struct {
 	listener  MapLifecycleListener[K, V]
 	nearCache *localCacheImpl[K, V]
 }
@@ -751,6 +751,9 @@ func newNearNamedCacheMapLister[K comparable, V any](nc NamedCacheClient[K, V], 
 		listener:  NewMapListener[K, V](),
 		nearCache: cache,
 	}
+
+	// ensure this is a synchronous MapListener, so we receive events before the result of mutations
+	listener.listener.SetSynchronous()
 
 	listener.listener.OnAny(func(e MapEvent[K, V]) {
 		err := processNearCacheEvent(nc.baseClient.nearCache, e)
@@ -762,8 +765,8 @@ func newNearNamedCacheMapLister[K comparable, V any](nc NamedCacheClient[K, V], 
 	return &listener
 }
 
-func newNamedCacheNearLifecycleListener[K comparable, V any](nc NamedCacheClient[K, V], cache *localCacheImpl[K, V]) *namedCacheNearLifecyleListener[K, V] {
-	listener := namedCacheNearLifecyleListener[K, V]{
+func newNamedCacheNearLifecycleListener[K comparable, V any](nc NamedCacheClient[K, V], cache *localCacheImpl[K, V]) *namedCacheNearLifestyleListener[K, V] {
+	listener := namedCacheNearLifestyleListener[K, V]{
 		listener:  NewMapLifecycleListener[K, V](),
 		nearCache: cache,
 	}
