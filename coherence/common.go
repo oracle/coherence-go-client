@@ -103,15 +103,26 @@ type CacheOptions struct {
 
 // NearCacheOptions defines options when creating a near cache.
 type NearCacheOptions struct {
-	TTL                  time.Duration
-	HighUnits            int64
-	HighUnitsMemory      int64
+	// TTL is the maximum time to keep the entry in the near cache. When this time has been reached it will be expired.
+	TTL time.Duration
+
+	// HighUnits is the maximum number of cache entries to keep in the near cache.
+	HighUnits int64
+
+	// HighUnitsMemory is the maximum amount of memory to use for entries in the near cache.
+	HighUnitsMemory int64
+
 	InvalidationStrategy InvalidationStrategyType // currently only supports ListenAll
+
+	// PruneFactor indicates the percentage of the total number of units that will remain
+	// after the cache manager prunes the near cache(i.e. this is the "low watermark" value)
+	// this value is in the range 0.1 to 1.0 and the default is 0.8 or 80%.
+	PruneFactor float32
 }
 
 func (n NearCacheOptions) String() string {
-	return fmt.Sprintf("NearCacheOptions{TTL=%v, HighUnits=%v, HighUnitsMemory=%v, invalidationStrategy=%v}",
-		n.TTL, n.HighUnits, n.HighUnitsMemory, getInvalidationStrategyString(n.InvalidationStrategy))
+	return fmt.Sprintf("NearCacheOptions{TTL=%v, HighUnits=%v, HighUnitsMemory=%v, PruneFactor=%.2f, invalidationStrategy=%v}",
+		n.TTL, n.HighUnits, n.HighUnitsMemory, n.PruneFactor, getInvalidationStrategyString(n.InvalidationStrategy))
 }
 
 // WithExpiry returns a function to set the default expiry for a [NamedCache]. This option is not valid on [NamedMap].

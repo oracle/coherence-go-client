@@ -1030,6 +1030,14 @@ func newBaseClient[K comparable, V any](session *Session, name string, format st
 		if bc.cacheOpts.NearCacheOptions.HighUnitsMemory != 0 {
 			options = append(options, withLocalCacheHighUnitsMemory(bc.cacheOpts.NearCacheOptions.HighUnitsMemory))
 		}
+
+		// default prune to defaultPruneFactor (80%) if not set
+		if bc.cacheOpts.NearCacheOptions.PruneFactor == 0 {
+			bc.cacheOpts.NearCacheOptions.PruneFactor = defaultPruneFactor
+		}
+
+		options = append(options, withPruneFactor(bc.cacheOpts.NearCacheOptions.PruneFactor))
+
 		nearCache := newLocalCache[K, V](bc.name, options...)
 		bc.nearCache = nearCache
 	}

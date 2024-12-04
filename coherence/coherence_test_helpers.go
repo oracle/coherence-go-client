@@ -122,6 +122,15 @@ func GetSessionQueueID(session *Session, queue string) *int32 {
 	return session.getQueueID(queue)
 }
 
+func GetNearCachePruneFactor[K comparable, V any](namedMap NamedMap[K, V]) float32 {
+	ncOptions := namedMap.getBaseClient().cacheOpts.NearCacheOptions
+	if ncOptions == nil {
+		return 0.0
+	}
+
+	return ncOptions.PruneFactor
+}
+
 // revive:disable:unexported-return
 func GetKeyListenerGroupMap[K comparable, V any](namedMap NamedMap[K, V]) map[K]*listenerGroupV1[K, V] {
 	return namedMap.getBaseClient().keyListenersV1

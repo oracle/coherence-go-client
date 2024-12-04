@@ -839,6 +839,10 @@ func validateNearCacheOptions(options *NearCacheOptions) error {
 		return ErrNegativeNearCacheOptions
 	}
 
+	if options.PruneFactor != 0 && options.PruneFactor < 0.1 || options.PruneFactor > 1 {
+		return ErrInvalidPruneFactor
+	}
+
 	if options.TTL == 0 && options.HighUnits == 0 && options.HighUnitsMemory == 0 {
 		return ErrInvalidNearCache
 	}

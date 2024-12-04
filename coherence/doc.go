@@ -774,8 +774,12 @@ The following example shows how to get a named cache that will cache entries fro
 2. Creating a Near Cache specifying maximum number of entries to store
 
 The following example shows how to get a named cache that will cache up to 100 entries from Get() or GetAll().
-When the threshold of HighUnits is reached, the near cache is pruned to 80% of its size and evicts least recently
+When the threshold of HighUnits is reached, the near cache is pruned to the default of 80% of its size and evicts least recently
 accessed and created entries.
+
+Note: The default prune percentage is 0.8 (80%) which indicates the percentage of the total number of
+units that will remain after the cache manager prunes the near cache( i.e. this is the "low watermark" value).
+This can be changed by setting the PruneFactory to a value in the range 0.1 to 1.0 in [NearCacheOptions].
 
 	// specify HighUnits of 1000
 	nearCacheOptions := coherence.NearCacheOptions{HighUnits: 1000}
@@ -827,8 +831,8 @@ accessed and created entries.
 
 	// print the near cache stats via String()
 	fmt.Println(namedMap.GetNearCacheStats())
-	// localCache{name=customers options=localCacheOptions{ttl=0s, highUnits=0, highUnitsMemory=10.0KB, invalidation=ListenAll},
-	// stats=CacheStats{puts=5000, gets=5000, hits=0, misses=5000, missesDuration=4.95257111s, hitRate=0, prunes=7, prunesDuration=196.498µs, size=398, memoryUsed=9.3KB}}
+	// localCache{name=my-near-cache-high-units, options=localCacheOptions{ttl=0s, highUnits=1000, highUnitsMemory=0B, pruneFactor=0.80, invalidation=ListenAll}, stats=CacheStats{puts=1001, gets=1002, hits=1, misses=1001, missesDuration=4.628931138s,
+	// hitRate=0.0998004, prunes=1, prunesDuration=181.533µs, expires=0, expiresDuration=0s, size=200, memoryUsed=53.2KB}}
 
 [Coherence Documentation]: https://docs.oracle.com/en/middleware/standalone/coherence/14.1.1.2206/develop-applications/introduction-coherence-caches.html
 [examples]: https://github.com/oracle/coherence-go-client/tree/main/examples

@@ -36,6 +36,7 @@ var (
 	ErrInvalidNearCacheWithTTL   = errors.New("when using TTL for near cache you can only specify highUnits or highUnitsMemory")
 	ErrInvalidNearCacheWithNoTTL = errors.New("you can only specify highUnits or highUnitsMemory, not both")
 	ErrNegativeNearCacheOptions  = errors.New("you cannot specify negative values for near cache options")
+	ErrInvalidPruneFactor        = errors.New("prune factory must be between 0 and 1.0")
 )
 
 const (

@@ -8,6 +8,7 @@ package coherence
 import (
 	"fmt"
 	"github.com/onsi/gomega"
+	"math"
 	"sync"
 	"testing"
 	"time"
@@ -148,7 +149,9 @@ func TestLocalCacheWithHighUnitsOnly(t *testing.T) {
 	// put a new entry which should cause prune of 20 entries
 	cache.Put(100, "one hundred")
 
-	g.Expect(cache.Size()).To(gomega.Equal(80))
+	expectedSize := int(math.Round(float64(float32(100) * cache.options.PruneFactor)))
+
+	g.Expect(cache.Size()).To(gomega.Equal(expectedSize))
 	g.Expect(cache.GetCachePrunes()).To(gomega.Equal(int64(1)))
 	fmt.Println(cache)
 }
@@ -189,7 +192,9 @@ func TestLocalCacheWithHighUnitsOnlyAccessTime(t *testing.T) {
 	// put a new entry which should cause prune of 20 entries
 	cache.Put(100, "one hundred")
 
-	g.Expect(cache.Size()).To(gomega.Equal(80))
+	expectedSize := int(math.Round(float64(float32(100) * cache.options.PruneFactor)))
+
+	g.Expect(cache.Size()).To(gomega.Equal(expectedSize))
 	g.Expect(cache.GetCachePrunes()).To(gomega.Equal(int64(1)))
 
 	// entries 1, 2 and three should not be removed as they were accessed

@@ -24,10 +24,10 @@ var (
 )
 
 const (
-	KB           = 1024
-	MB           = KB * KB
-	GB           = MB * KB
-	prunePercent = 20
+	KB                         = 1024
+	MB                         = KB * KB
+	GB                         = MB * KB
+	defaultPruneFactor float32 = 0.8 // prune to 80%
 )
 
 // localCache implements a local cache of values.
@@ -271,9 +271,9 @@ func (l *localCacheImpl[K, V]) pruneEntries() {
 			l.registerPruneNanos(time.Since(start).Nanoseconds())
 		}()
 
-		entriesToDelete := int(math.Round(float64(currentCacheSize * prunePercent / 100.0)))
+		entriesToDelete := int(math.Round(float64(float32(currentCacheSize) * (1 - l.options.PruneFactor))))
 
-		// prune to default of 80% of the cache size.
+		// prune to default of l.options.PruneFactor % of the cache size.
 		// we first sort the map by lastAccess time / then insert time, so we remove all
 		// entries firstly that have never been accessed.
 		index := 0
@@ -329,6 +329,10 @@ func newLocalCache[K comparable, V any](name string, options ...func(localCache 
 		f(cache.options)
 	}
 
+	if cache.options.PruneFactor == 0 {
+		cache.options.PruneFactor = defaultPruneFactor
+	}
+
 	return cache
 }
 
@@ -338,11 +342,12 @@ type localCacheOptions struct {
 	HighUnits            int64
 	HighUnitsMemory      int64
 	InvalidationStrategy InvalidationStrategyType
+	PruneFactor          float32
 }
 
 func (o *localCacheOptions) String() string {
-	return fmt.Sprintf("localCacheOptions{ttl=%v, highUnits=%v, highUnitsMemory=%v, invalidation=%v}",
-		o.TTL, o.HighUnits, formatMemory(o.HighUnitsMemory), getInvalidationStrategyString(o.InvalidationStrategy))
+	return fmt.Sprintf("localCacheOptions{ttl=%v, highUnits=%v, highUnitsMemory=%v, pruneFactor=%.2f, invalidation=%v}",
+		o.TTL, o.HighUnits, formatMemory(o.HighUnitsMemory), o.PruneFactor, getInvalidationStrategyString(o.InvalidationStrategy))
 }
 
 // withLocalCacheExpiry returns a function to set the expiry time for a local cache.
@@ -370,6 +375,13 @@ func withLocalCacheHighUnits(highUnits int64) func(options *localCacheOptions) {
 func withLocalCacheHighUnitsMemory(highUnitsMemory int64) func(options *localCacheOptions) {
 	return func(o *localCacheOptions) {
 		o.HighUnitsMemory = highUnitsMemory
+	}
+}
+
+// withPruneFactor returns a function to set the prune factor for a local cache.
+func withPruneFactor(pruneFactor float32) func(options *localCacheOptions) {
+	return func(o *localCacheOptions) {
+		o.PruneFactor = pruneFactor
 	}
 }
 
