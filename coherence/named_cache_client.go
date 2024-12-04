@@ -884,6 +884,5 @@ func isNearCacheEqual[K comparable, V any](existing *localCacheImpl[K, V], cache
 	if existingOptions.InvalidationStrategy != cacheOptions.InvalidationStrategy {
 		return false
 	}
-
-	return true
+	return existingOptions.PruneFactor == cacheOptions.PruneFactor
 }

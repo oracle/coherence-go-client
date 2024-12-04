@@ -16,11 +16,12 @@ import (
 func TestIsNearCacheEqual(t *testing.T) {
 	var (
 		g                 = gomega.NewWithT(t)
-		nearCacheOptions1 = NearCacheOptions{TTL: time.Duration(10) * time.Second}
-		nearCacheOptions2 = NearCacheOptions{TTL: time.Duration(8) * time.Second}
-		nearCacheOptions3 = NearCacheOptions{HighUnits: 100}
-		nearCacheOptions4 = NearCacheOptions{HighUnitsMemory: 10_000}
-		nearCacheOptions5 = NearCacheOptions{InvalidationStrategy: ListenAll}
+		nearCacheOptions1 = NearCacheOptions{TTL: time.Duration(10) * time.Second, PruneFactor: 0.8}
+		nearCacheOptions2 = NearCacheOptions{TTL: time.Duration(8) * time.Second, PruneFactor: 0.8}
+		nearCacheOptions3 = NearCacheOptions{HighUnits: 100, PruneFactor: 0.8}
+		nearCacheOptions4 = NearCacheOptions{HighUnitsMemory: 10_000, PruneFactor: 0.8}
+		nearCacheOptions5 = NearCacheOptions{InvalidationStrategy: ListenAll, PruneFactor: 0.8}
+		nearCacheOptions6 = NearCacheOptions{HighUnitsMemory: 10_000, PruneFactor: 0.7}
 	)
 
 	localCache1 := newLocalCache[int, string]("test", withLocalCacheExpiry(time.Duration(10)*time.Second))
@@ -37,6 +38,7 @@ func TestIsNearCacheEqual(t *testing.T) {
 	g.Expect(isNearCacheEqual[int, string](localCache3, &nearCacheOptions4)).To(gomega.Equal(true))
 	g.Expect(isNearCacheEqual[int, string](localCache4, &nearCacheOptions4)).To(gomega.Equal(false))
 	g.Expect(isNearCacheEqual[int, string](localCache4, &nearCacheOptions5)).To(gomega.Equal(true))
+	g.Expect(isNearCacheEqual[int, string](localCache3, &nearCacheOptions6)).To(gomega.Equal(false))
 }
 
 // TestInvalidNearCacheOptions tests various edge cases for near cache options
