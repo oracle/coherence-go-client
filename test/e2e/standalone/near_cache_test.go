@@ -598,7 +598,7 @@ func TestNearCacheComparison(t *testing.T) {
 	namedCache, err := coherence.GetNamedCache[string, string](session, "no-near-cache")
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
-	namedCacheNear, err := coherence.GetNamedCache[string, string](session, "near-cache", coherence.WithNearCache(nearCacheOptions))
+	namedCacheNear, err := coherence.GetNamedCache[string, string](session, nearCacheName, coherence.WithNearCache(nearCacheOptions))
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 	g.Expect(namedCache.Clear(ctx)).ShouldNot(gomega.HaveOccurred())
@@ -640,6 +640,9 @@ func TestNearCacheComparison(t *testing.T) {
 	}
 
 	log.Println(namedCacheNear.GetNearCacheStats())
+
+	g.Expect(namedCacheNear.Destroy(ctx)).ShouldNot(gomega.HaveOccurred())
+	g.Expect(namedCache.Destroy(ctx)).ShouldNot(gomega.HaveOccurred())
 }
 
 // TestInvalidNearCacheOptions runs tests to ensure that we can't create a named cache/map with invalid options.
