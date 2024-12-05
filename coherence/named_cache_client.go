@@ -638,7 +638,7 @@ func getNamedCache[K comparable, V any](session *Session, name string, sOpts *Se
 		f(cacheOptions)
 	}
 
-	err := validateNearCacheOptions(cacheOptions.NearCacheOptions)
+	err := ensureNearCacheOptions(cacheOptions.NearCacheOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -819,7 +819,7 @@ func convertNamedCacheClient[K comparable, V any](client *NamedCacheClient[K, V]
 	return client
 }
 
-func validateNearCacheOptions(options *NearCacheOptions) error {
+func ensureNearCacheOptions(options *NearCacheOptions) error {
 	if options == nil {
 		return nil
 	}
@@ -853,6 +853,11 @@ func validateNearCacheOptions(options *NearCacheOptions) error {
 
 	if options.TTL == 0 && options.HighUnits != 0 && options.HighUnitsMemory != 0 {
 		return ErrInvalidNearCacheWithNoTTL
+	}
+
+	// ensure the default prune factor is set if it is zero
+	if options.PruneFactor == 0 {
+		options.PruneFactor = defaultPruneFactor
 	}
 
 	return nil

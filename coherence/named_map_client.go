@@ -902,7 +902,7 @@ func getNamedMap[K comparable, V any](session *Session, name string, sOpts *Sess
 		f(cacheOptions)
 	}
 
-	err := validateNearCacheOptions(cacheOptions.NearCacheOptions)
+	err := ensureNearCacheOptions(cacheOptions.NearCacheOptions)
 	if err != nil {
 		return nil, err
 	}

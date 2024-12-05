@@ -169,7 +169,7 @@ func TestEventDisconnectWithReadyTimeoutDelay(t *testing.T) {
 	fmt.Println("Issue stop of $GRPC:GrpcProxy")
 	_, err := utils.IssuePostRequest("http://127.0.0.1:30000/management/coherence/cluster/services/$GRPC:GrpcProxy/members/1/stop")
 	if err != nil {
-		t.Error("Unable to issue post request to stop gRPC proxy")
+		t.Error("Unable to issue post request to stop gRPC proxy", err)
 	}
 
 	utils.Sleep(5)

@@ -52,18 +52,18 @@ func TestInvalidNearCacheOptions(t *testing.T) {
 		nearCacheOptions5 = NearCacheOptions{}
 	)
 
-	err := validateNearCacheOptions(&nearCacheOptions1)
+	err := ensureNearCacheOptions(&nearCacheOptions1)
 	g.Expect(err).To(gomega.Equal(ErrNegativeNearCacheOptions))
 
-	err = validateNearCacheOptions(&nearCacheOptions2)
+	err = ensureNearCacheOptions(&nearCacheOptions2)
 	g.Expect(err).To(gomega.Equal(ErrNegativeNearCacheOptions))
 
-	err = validateNearCacheOptions(&nearCacheOptions3)
+	err = ensureNearCacheOptions(&nearCacheOptions3)
 	g.Expect(err).To(gomega.Equal(ErrInvalidNearCacheWithNoTTL))
 
-	err = validateNearCacheOptions(&nearCacheOptions4)
+	err = ensureNearCacheOptions(&nearCacheOptions4)
 	g.Expect(err).To(gomega.Equal(ErrInvalidNearCacheWithTTL))
 
-	err = validateNearCacheOptions(&nearCacheOptions5)
+	err = ensureNearCacheOptions(&nearCacheOptions5)
 	g.Expect(err).To(gomega.Equal(ErrInvalidNearCache))
 }
