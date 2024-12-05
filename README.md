@@ -50,11 +50,12 @@ docker run -d -p 1408:1408 -p 30000:30000 ghcr.io/oracle/coherence-ce:24.09
 ```bash
 go get github.com/oracle/coherence-go-client@latest
 ````
-After executing this command coherence-go-client is ready to use, and it's source will be in:
+
+> Note: If you wish to use the latest v2.0.0-rc1, please use the following:
 
 ```bash
-$GOPATH/pkg/mod/github.com/oracle/coherence-go-client@version
-```
+go get github.com/oracle/coherence-go-client/v2@v2.0.0-rc1
+````
 
 ## <a name="doc"></a>Documentation
 
@@ -71,6 +72,8 @@ port of 1408, creates a new `NamedMap` with key `int` and value of a `string` an
 issues `Put()`, `Get()` and `Size()` operations.
 
 > Note: Keys and values can also be Go `structs`. See detailed examples [here](examples#basic).
+
+> Note: for v2.0.0-rc1, please import `github.com/oracle/coherence-go-client/v2/coherence`
 
 ```go
 package main
