@@ -843,6 +843,7 @@ func (m *streamManagerV1) putGenericRequest(ctx context.Context, reqType pb1.Nam
 	return unwrapBytes(result)
 }
 
+// BinaryKeyAndValue is an internal type exported only for serialization.
 type BinaryKeyAndValue struct {
 	Key    []byte
 	Value  []byte
@@ -850,12 +851,14 @@ type BinaryKeyAndValue struct {
 	Cookie []byte
 }
 
+// BinaryKey is an internal type exported only for serialization.
 type BinaryKey struct {
 	Key    []byte
 	Err    error
 	Cookie []byte
 }
 
+// BinaryValue is an internal type exported only for serialization.
 type BinaryValue struct {
 	Value  []byte
 	Err    error

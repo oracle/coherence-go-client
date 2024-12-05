@@ -244,7 +244,7 @@ generate-proto-v1: $(TOOLS_BIN)/protoc ## Generate Proto Files v1
 # ----------------------------------------------------------------------------------------------------------------------
 .PHONY: show-docs
 show-docs:   ## Show the Documentation
-	@echo "Serving documentation on http://localhost:6060/pkg/github.com/oracle/coherence-go-client/"
+	@echo "Serving documentation on http://localhost:6060/pkg/github.com/oracle/coherence-go-client/v2"
 	go install golang.org/x/tools/cmd/godoc@latest
 	godoc -goroot $(GOROOT)	-http=:6060
 
@@ -421,7 +421,7 @@ getcopyright: ## Download copyright jar locally if necessary.
 $(TOOLS_BIN)/protoc:
 	@mkdir -p $(TOOLS_BIN)
 	./scripts/download-protoc.sh $(TOOLS_DIRECTORY)
-	go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.30.0
+	go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.33.0
 	go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.3.0
 
 

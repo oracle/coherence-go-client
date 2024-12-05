@@ -13,7 +13,9 @@ import (
 	"github.com/oracle/coherence-go-client/v2/coherence/filters"
 	"github.com/oracle/coherence-go-client/v2/coherence/processors"
 	"github.com/oracle/coherence-go-client/v2/test/utils"
+	"log"
 	"math"
+	"strconv"
 	"testing"
 	"time"
 )
@@ -581,6 +583,63 @@ func TestNearCachePruneFactor(t *testing.T) {
 	namedCache, err = coherence.GetNamedCache[int, string](session, nearCacheName, coherence.WithNearCache(&nearCacheOptions2))
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	g.Expect(coherence.GetNearCachePruneFactor[int, string](namedCache)).To(gomega.Equal(float32(0.8)))
+}
+
+// TestNearCacheComparison runs tests to compare near and normal cache and outputs size and memory usage.
+func TestNearCacheComparison(t *testing.T) {
+	g := gomega.NewWithT(t)
+	session, err := utils.GetSession()
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	defer session.Close()
+
+	const maxValues = 2_000
+
+	nearCacheOptions := &coherence.NearCacheOptions{HighUnits: maxValues * 2}
+	namedCache, err := coherence.GetNamedCache[string, string](session, "no-near-cache")
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+
+	namedCacheNear, err := coherence.GetNamedCache[string, string](session, "near-cache", coherence.WithNearCache(nearCacheOptions))
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+
+	g.Expect(namedCache.Clear(ctx)).ShouldNot(gomega.HaveOccurred())
+	g.Expect(namedCacheNear.Clear(ctx)).ShouldNot(gomega.HaveOccurred())
+
+	values := make(map[string]string, 0)
+
+	// populate the map
+	for i := 1; i <= maxValues; i++ {
+		kv := strconv.Itoa(i)
+		values[kv] = kv
+	}
+
+	log.Printf("Insert %v entries into caches", maxValues)
+
+	g.Expect(namedCache.PutAll(ctx, values)).ShouldNot(gomega.HaveOccurred())
+	g.Expect(namedCacheNear.PutAll(ctx, values)).ShouldNot(gomega.HaveOccurred())
+
+	log.Println("Start", maxValues, "gets on normal cache")
+	start := time.Now()
+	for i := 1; i <= maxValues; i++ {
+		kv := strconv.Itoa(i)
+		_, err = namedCache.Get(ctx, kv)
+		g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	}
+
+	log.Printf("Time to get %v from normal cache is %v", maxValues, time.Since(start))
+
+	for j := 1; j <= 2; j++ {
+		log.Printf("Run %v of get %v gets on near cache", j, maxValues)
+		start = time.Now()
+		for i := 1; i <= maxValues; i++ {
+			kv := strconv.Itoa(i)
+			_, err = namedCacheNear.Get(ctx, kv)
+			g.Expect(err).ShouldNot(gomega.HaveOccurred())
+		}
+
+		log.Printf("Run: %v time to get %v from near cache is %v", j, maxValues, time.Since(start))
+	}
+
+	log.Println(namedCacheNear.GetNearCacheStats())
 }
 
 // TestInvalidNearCacheOptions runs tests to ensure that we can't create a named cache/map with invalid options.

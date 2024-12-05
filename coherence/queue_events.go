@@ -57,9 +57,16 @@ func (l *queueLifecycleEvent[V]) String() string {
 // QueueLifecycleListener allows registering callbacks to be notified when lifecycle events
 // (truncated, released or destroyed) occur against a [NamedQueue].
 type QueueLifecycleListener[V any] interface {
+	// OnAny registers a callback that will be notified when any [NamedQueue] event occurs.
 	OnAny(callback func(QueueLifecycleEvent[V])) QueueLifecycleListener[V]
+
+	// OnDestroyed registers a callback that will be notified when a [NamedQueue] is destroyed.
 	OnDestroyed(callback func(QueueLifecycleEvent[V])) QueueLifecycleListener[V]
+
+	// OnTruncated registers a callback that will be notified when a [Queue] is truncated.
 	OnTruncated(callback func(QueueLifecycleEvent[V])) QueueLifecycleListener[V]
+
+	// OnReleased registers a callback that will be notified when a [NamedQueue] is released.
 	OnReleased(callback func(QueueLifecycleEvent[V])) QueueLifecycleListener[V]
 	getEmitter() *eventEmitter[QueueLifecycleEventType, QueueLifecycleEvent[V]]
 }
@@ -89,7 +96,7 @@ func (q *queueLifecycleListener[V]) OnReleased(callback func(QueueLifecycleEvent
 	return q.on(QueueReleased, callback)
 }
 
-// OnTruncated registers a callback that will be notified when a [NamedMap] is truncated.
+// OnTruncated registers a callback that will be notified when a [Queue] is truncated.
 func (q *queueLifecycleListener[V]) OnTruncated(callback func(QueueLifecycleEvent[V])) QueueLifecycleListener[V] {
 	return q.on(QueueTruncated, callback)
 }
@@ -98,7 +105,7 @@ func (q *queueLifecycleListener[V]) getEmitter() *eventEmitter[QueueLifecycleEve
 	return q.emitter
 }
 
-// OnAny registers a callback that will be notified when any [NamedMap] event occurs.
+// OnAny registers a callback that will be notified when any [NamedQueue] event occurs.
 func (q *queueLifecycleListener[V]) OnAny(callback func(QueueLifecycleEvent[V])) QueueLifecycleListener[V] {
 	return q.OnTruncated(callback).OnDestroyed(callback).OnReleased(callback)
 }
