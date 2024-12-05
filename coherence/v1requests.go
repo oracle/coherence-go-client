@@ -7,7 +7,7 @@
 package coherence
 
 import (
-	pb1 "github.com/oracle/coherence-go-client/proto/v1"
+	pb1 "github.com/oracle/coherence-go-client/v2/proto/v1"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	"time"

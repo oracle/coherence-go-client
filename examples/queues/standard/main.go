@@ -12,7 +12,7 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/oracle/coherence-go-client/coherence"
+	"github.com/oracle/coherence-go-client/v2/coherence"
 	"log"
 )
 

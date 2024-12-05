@@ -9,7 +9,7 @@ package coherence
 import (
 	"errors"
 	"fmt"
-	"github.com/oracle/coherence-go-client/coherence/discovery"
+	"github.com/oracle/coherence-go-client/v2/coherence/discovery"
 	"google.golang.org/grpc/resolver"
 	"math/rand"
 	"strings"

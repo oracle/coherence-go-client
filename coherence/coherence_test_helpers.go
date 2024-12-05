@@ -8,8 +8,8 @@ package coherence
 
 import (
 	"context"
-	"github.com/oracle/coherence-go-client/coherence/filters"
-	pb1 "github.com/oracle/coherence-go-client/proto/v1"
+	"github.com/oracle/coherence-go-client/v2/coherence/filters"
+	pb1 "github.com/oracle/coherence-go-client/v2/proto/v1"
 	"time"
 )
 

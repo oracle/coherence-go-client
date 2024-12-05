@@ -7,8 +7,8 @@
 package processors
 
 import (
-	"github.com/oracle/coherence-go-client/coherence/extractors"
-	"github.com/oracle/coherence-go-client/coherence/filters"
+	"github.com/oracle/coherence-go-client/v2/coherence/extractors"
+	"github.com/oracle/coherence-go-client/v2/coherence/filters"
 	"math/big"
 )
 

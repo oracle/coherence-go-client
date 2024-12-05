@@ -3,7 +3,7 @@
 // Licensed under the Universal Permissive License v 1.0 as shown at
 // https://oss.oracle.com/licenses/upl.
 //
-module github.com/oracle/coherence-go-client
+module github.com/oracle/coherence-go-client/v2
 
 go 1.19
 
@@ -17,11 +17,9 @@ require (
 
 require (
 	github.com/golang/protobuf v1.5.3 // indirect
-	github.com/kr/pretty v0.1.0 // indirect
-	github.com/onsi/ginkgo/v2 v2.1.1 // indirect
+	github.com/kr/text v0.1.0 // indirect
 	golang.org/x/net v0.23.0 // indirect
 	golang.org/x/sys v0.18.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20230711160842-782d3b101e98 // indirect
-	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
