@@ -191,13 +191,13 @@ func (lg *listenerGroupV1[K, V]) addListener(ctx context.Context, listener MapLi
 
 		if size > 1 {
 			// unsubscribe the key and then re-subscribe
-			err := lg.streamManager.mapListenerRequest(ctx, lg.baseClient.name, false, keyOrFilter, lite, false, false, lg.filterID)
+			err := lg.streamManager.mapListenerRequest(ctx, lg.baseClient.name, false, keyOrFilter, lite, listener.IsSynchronous(), listener.IsPriming(), lg.filterID)
 			if err != nil {
 				return err
 			}
 		}
 
-		err := lg.streamManager.mapListenerRequest(ctx, lg.baseClient.name, true, keyOrFilter, lite, false, false, lg.filterID)
+		err := lg.streamManager.mapListenerRequest(ctx, lg.baseClient.name, true, keyOrFilter, lite, listener.IsSynchronous(), listener.IsPriming(), lg.filterID)
 		if err != nil {
 			return err
 		}

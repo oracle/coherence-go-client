@@ -638,7 +638,7 @@ func getNamedCache[K comparable, V any](session *Session, name string, sOpts *Se
 		f(cacheOptions)
 	}
 
-	err := validateNearCacheOptions(cacheOptions.NearCacheOptions)
+	err := ensureNearCacheOptions(cacheOptions.NearCacheOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -740,8 +740,8 @@ type namedCacheNearCacheListener[K comparable, V any] struct {
 	nearCache *localCacheImpl[K, V]
 }
 
-// namedCacheNearLifecyleListener is a [MapLifecycleListener] to be called when truncate events are received for a near cache.
-type namedCacheNearLifecyleListener[K comparable, V any] struct {
+// namedCacheNearLifecycleListener is a [MapLifecycleListener] to be called when truncate events are received for a near cache.
+type namedCacheNearLifestyleListener[K comparable, V any] struct {
 	listener  MapLifecycleListener[K, V]
 	nearCache *localCacheImpl[K, V]
 }
@@ -751,6 +751,9 @@ func newNearNamedCacheMapLister[K comparable, V any](nc NamedCacheClient[K, V], 
 		listener:  NewMapListener[K, V](),
 		nearCache: cache,
 	}
+
+	// ensure this is a synchronous MapListener, so we receive events before the result of mutations
+	listener.listener.SetSynchronous()
 
 	listener.listener.OnAny(func(e MapEvent[K, V]) {
 		err := processNearCacheEvent(nc.baseClient.nearCache, e)
@@ -762,8 +765,8 @@ func newNearNamedCacheMapLister[K comparable, V any](nc NamedCacheClient[K, V], 
 	return &listener
 }
 
-func newNamedCacheNearLifecycleListener[K comparable, V any](nc NamedCacheClient[K, V], cache *localCacheImpl[K, V]) *namedCacheNearLifecyleListener[K, V] {
-	listener := namedCacheNearLifecyleListener[K, V]{
+func newNamedCacheNearLifecycleListener[K comparable, V any](nc NamedCacheClient[K, V], cache *localCacheImpl[K, V]) *namedCacheNearLifestyleListener[K, V] {
+	listener := namedCacheNearLifestyleListener[K, V]{
 		listener:  NewMapLifecycleListener[K, V](),
 		nearCache: cache,
 	}
@@ -816,7 +819,7 @@ func convertNamedCacheClient[K comparable, V any](client *NamedCacheClient[K, V]
 	return client
 }
 
-func validateNearCacheOptions(options *NearCacheOptions) error {
+func ensureNearCacheOptions(options *NearCacheOptions) error {
 	if options == nil {
 		return nil
 	}
@@ -836,6 +839,10 @@ func validateNearCacheOptions(options *NearCacheOptions) error {
 		return ErrNegativeNearCacheOptions
 	}
 
+	if options.PruneFactor != 0 && options.PruneFactor < 0.1 || options.PruneFactor > 1 {
+		return ErrInvalidPruneFactor
+	}
+
 	if options.TTL == 0 && options.HighUnits == 0 && options.HighUnitsMemory == 0 {
 		return ErrInvalidNearCache
 	}
@@ -846,6 +853,11 @@ func validateNearCacheOptions(options *NearCacheOptions) error {
 
 	if options.TTL == 0 && options.HighUnits != 0 && options.HighUnitsMemory != 0 {
 		return ErrInvalidNearCacheWithNoTTL
+	}
+
+	// ensure the default prune factor is set if it is zero
+	if options.PruneFactor == 0 {
+		options.PruneFactor = defaultPruneFactor
 	}
 
 	return nil
@@ -877,6 +889,5 @@ func isNearCacheEqual[K comparable, V any](existing *localCacheImpl[K, V], cache
 	if existingOptions.InvalidationStrategy != cacheOptions.InvalidationStrategy {
 		return false
 	}
-
-	return true
+	return existingOptions.PruneFactor == cacheOptions.PruneFactor
 }

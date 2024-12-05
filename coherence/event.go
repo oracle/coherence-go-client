@@ -471,21 +471,42 @@ func (l *mapLifecycleListener[K, V]) OnAny(callback func(MapLifecycleEvent[K, V]
 // MapListener allows registering callbacks to be notified when mutations events
 // occur within a [NamedMap] or [NamedCache].
 type MapListener[K comparable, V any] interface {
+	// OnInserted registers a callback that will be notified when an entry is inserted.
 	OnInserted(callback func(MapEvent[K, V])) MapListener[K, V]
+
+	// OnUpdated registers a callback that will be notified when an entry is updated.
 	OnUpdated(callback func(MapEvent[K, V])) MapListener[K, V]
+
+	// OnDeleted registers a callback that will be notified when an entry is deleted.
 	OnDeleted(callback func(MapEvent[K, V])) MapListener[K, V]
+
+	// OnAny registers a callback that will be notified when any entry mutation has occurred.
 	OnAny(callback func(MapEvent[K, V])) MapListener[K, V]
 	dispatch(event MapEvent[K, V])
+
+	// SetSynchronous sets this [MapListener] as synchronous.
+	SetSynchronous()
+
+	// SetPriming sets this [MapListener] as priming.
+	SetPriming()
+
+	// IsSynchronous indicates this [MapListener] is synchronous.
+	IsSynchronous() bool
+
+	// IsPriming indicates this [MapListener] is priming.
+	IsPriming() bool
 }
 
 // mapListener struct containing data members to satisfy the [MapListener] contract.
 type mapListener[K comparable, V any] struct {
-	emitter *eventEmitter[MapEventType, MapEvent[K, V]]
+	emitter     *eventEmitter[MapEventType, MapEvent[K, V]]
+	synchronous bool
+	priming     bool
 }
 
 // NewMapListener creates and returns a pointer to a new [MapListener] instance.
 func NewMapListener[K comparable, V any]() MapListener[K, V] {
-	return &mapListener[K, V]{newEventEmitter[MapEventType, MapEvent[K, V]]()}
+	return &mapListener[K, V]{emitter: newEventEmitter[MapEventType, MapEvent[K, V]]()}
 }
 
 // dispatch dispatches the specified event to the appropriate group of listeners.
@@ -497,6 +518,26 @@ func (l *mapListener[K, V]) dispatch(event MapEvent[K, V]) { //nolint
 func (l *mapListener[K, V]) on(event MapEventType, callback func(MapEvent[K, V])) MapListener[K, V] {
 	l.emitter.on(event, callback)
 	return l
+}
+
+// SetSynchronous sets this listener to be synchronous.
+func (l *mapListener[K, V]) SetSynchronous() {
+	l.synchronous = true
+}
+
+// SetPriming sets this listener to be a priming listener.
+func (l *mapListener[K, V]) SetPriming() {
+	l.priming = true
+}
+
+// IsSynchronous indicates if this listener is synchronous.
+func (l *mapListener[K, V]) IsSynchronous() bool {
+	return l.synchronous
+}
+
+// IsPriming indicates if this listener is a priming listener.
+func (l *mapListener[K, V]) IsPriming() bool {
+	return l.priming
 }
 
 // OnInserted registers a callback that will be notified when an entry is inserted.

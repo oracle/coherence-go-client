@@ -30,10 +30,38 @@
       <artifactId>coherence</artifactId>
       <version>${coherence.version}</version>
     </dependency>
-    <dependency>
-      <groupId>com.oracle.coherence.go</groupId>
-      <artifactId>coherence-go-client-data-jakarta</artifactId>
-      <version>1.0.0</version>
-    </dependency>
   </dependencies>
+
+  <profiles>
+    <profile>
+      <id>jakarta</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <dependencies>
+        <dependency>
+          <groupId>com.oracle.coherence.go</groupId>
+          <artifactId>coherence-go-client-data-jakarta</artifactId>
+          <version>1.0.0</version>
+        </dependency>
+      </dependencies>
+    </profile>
+
+    <profile>
+      <id>javax</id>
+      <activation>
+        <!-- This is a work-around for the fact that activeByDefault does not do what you'd think it should -->
+        <file>
+          <exists>.</exists>
+        </file>
+      </activation>
+      <dependencies>
+        <dependency>
+          <groupId>com.oracle.coherence.go</groupId>
+          <artifactId>coherence-go-client-data-javax</artifactId>
+          <version>1.0.0</version>
+        </dependency>
+      </dependencies>
+    </profile>
+  </profiles>
 </project>

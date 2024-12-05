@@ -902,7 +902,7 @@ func getNamedMap[K comparable, V any](session *Session, name string, sOpts *Sess
 		f(cacheOptions)
 	}
 
-	err := validateNearCacheOptions(cacheOptions.NearCacheOptions)
+	err := ensureNearCacheOptions(cacheOptions.NearCacheOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -1030,6 +1030,14 @@ func newBaseClient[K comparable, V any](session *Session, name string, format st
 		if bc.cacheOpts.NearCacheOptions.HighUnitsMemory != 0 {
 			options = append(options, withLocalCacheHighUnitsMemory(bc.cacheOpts.NearCacheOptions.HighUnitsMemory))
 		}
+
+		// default prune to defaultPruneFactor (80%) if not set
+		if bc.cacheOpts.NearCacheOptions.PruneFactor == 0 {
+			bc.cacheOpts.NearCacheOptions.PruneFactor = defaultPruneFactor
+		}
+
+		options = append(options, withPruneFactor(bc.cacheOpts.NearCacheOptions.PruneFactor))
+
 		nearCache := newLocalCache[K, V](bc.name, options...)
 		bc.nearCache = nearCache
 	}
@@ -1043,6 +1051,9 @@ func newNearNamedMapMapLister[K comparable, V any](nc NamedMapClient[K, V], cach
 		nearCache: cache,
 	}
 
+	// ensure this is a synchronous MapListener, so we receive events before the result of mutations
+	listener.listener.SetSynchronous()
+
 	listener.listener.OnAny(func(e MapEvent[K, V]) {
 		err := processNearCacheEvent(nc.baseClient.nearCache, e)
 		if err != nil {
@@ -1053,8 +1064,8 @@ func newNearNamedMapMapLister[K comparable, V any](nc NamedMapClient[K, V], cach
 	return &listener
 }
 
-func newNamedMapNearLifecycleListener[K comparable, V any](nc NamedMapClient[K, V], cache *localCacheImpl[K, V]) *namedCacheNearLifecyleListener[K, V] {
-	listener := namedCacheNearLifecyleListener[K, V]{
+func newNamedMapNearLifecycleListener[K comparable, V any](nc NamedMapClient[K, V], cache *localCacheImpl[K, V]) *namedCacheNearLifestyleListener[K, V] {
+	listener := namedCacheNearLifestyleListener[K, V]{
 		listener:  NewMapLifecycleListener[K, V](),
 		nearCache: cache,
 	}
