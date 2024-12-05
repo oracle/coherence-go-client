@@ -8,7 +8,7 @@
 # ----------------------------------------------------------------------------------------------------------------------
 
 # This is the version of the coherence-go-client
-VERSION ?=2.0.0
+VERSION ?=2.0.0-rc1
 CURRDIR := $(shell pwd)
 USER_ID := $(shell echo "`id -u`:`id -g`")
 
@@ -271,7 +271,7 @@ trivy-scan: gettrivy ## Scan the CLI using trivy
 test: test-clean gotestsum $(BUILD_PROPS) ## Run the unit tests
 	CGO_ENABLED=0 $(GOTESTSUM) --format testname --junitfile $(TEST_LOGS_DIR)/coherence-test.xml \
 	  -- $(GO_TEST_FLAGS) -v -coverprofile=$(COVERAGE_DIR)/cover-unit.out ./coherence/...
-	go tool cover -html=$(COVERAGE_DIR)/cover-unit.out -o $(COVERAGE_DIR)/cover-unit.html
+	go tool cover -func=$(COVERAGE_DIR)/cover-unit.out | grep -v '0.0%'
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -280,11 +280,8 @@ test: test-clean gotestsum $(BUILD_PROPS) ## Run the unit tests
 .PHONY: test-e2e-standalone
 test-e2e-standalone: test-clean test gotestsum $(BUILD_PROPS) ## Run e2e tests with Coherence
 	CGO_ENABLED=0 $(GOTESTSUM) --format testname --junitfile $(TEST_LOGS_DIR)/go-client-test.xml \
-	  -- $(GO_TEST_FLAGS) -v -coverprofile=$(COVERAGE_DIR)/cover-functional.out -v ./test/e2e/standalone/... -coverpkg=./coherence/...
-	go tool cover -html=$(COVERAGE_DIR)/cover-functional.out -o $(COVERAGE_DIR)/cover-functional.html
-	@echo
-	@echo "**** CODE COVERAGE ****"
-	@cat $(COVERAGE_DIR)/cover-functional.html | grep 'github.com/oracle/coherence-go-client/coherence' | grep option | sed 's/^.*github/github/' | sed 's,</option.*,,'
+	  -- $(GO_TEST_FLAGS) -v -coverprofile=$(COVERAGE_DIR)/cover-functional.out -v ./test/e2e/standalone/... -coverpkg=github.com/oracle/coherence-go-client/v2/coherence/...
+	go tool cover -func=$(COVERAGE_DIR)/cover-functional.out | grep -v '0.0%'
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Executes the Go end to end tests for standalone Coherence with Scope set
@@ -292,11 +289,8 @@ test-e2e-standalone: test-clean test gotestsum $(BUILD_PROPS) ## Run e2e tests w
 .PHONY: test-e2e-standalone-scope
 test-e2e-standalone-scope: test-clean test gotestsum $(BUILD_PROPS) ## Run e2e tests with Coherence with Scope set
 	CGO_ENABLED=0 $(GOTESTSUM) --format testname --junitfile $(TEST_LOGS_DIR)/go-client-test-scope.xml \
-	  -- $(GO_TEST_FLAGS) -v -coverprofile=$(COVERAGE_DIR)/cover-functional-scope.out -v ./test/e2e/scope/... -coverpkg=./coherence/...
-	go tool cover -html=$(COVERAGE_DIR)/cover-functional-scope.out -o $(COVERAGE_DIR)/cover-functional-scope.html
-	@echo
-	@echo "**** CODE COVERAGE ****"
-	@cat $(COVERAGE_DIR)/cover-functional-scope.html | grep 'github.com/oracle/coherence-go-client/coherence' | grep option | sed 's/^.*github/github/' | sed 's,</option.*,,'
+	  -- $(GO_TEST_FLAGS) -v -coverprofile=$(COVERAGE_DIR)/cover-functional-scope.out -v ./test/e2e/scope/... -coverpkg=github.com/oracle/coherence-go-client/v2/coherence/...
+	go tool cover -func=$(COVERAGE_DIR)/cover-functional-scope.out | grep -v '0.0%'
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Executes the Go end to end tests for standalone Coherence with Queues
@@ -304,11 +298,8 @@ test-e2e-standalone-scope: test-clean test gotestsum $(BUILD_PROPS) ## Run e2e t
 .PHONY: test-e2e-standalone-queues
 test-e2e-standalone-queues: test-clean test gotestsum $(BUILD_PROPS) ## Run e2e tests with Coherence queues
 	CGO_ENABLED=0 $(GOTESTSUM) --format testname --junitfile $(TEST_LOGS_DIR)/go-client-test-queues.xml \
-	  -- $(GO_TEST_FLAGS) -v -coverprofile=$(COVERAGE_DIR)/cover-functional-queues.out -v ./test/e2e/queues/... -coverpkg=./coherence/...
-	go tool cover -html=$(COVERAGE_DIR)/cover-functional-queues.out -o $(COVERAGE_DIR)/cover-functional-queues.html
-	@echo
-	@echo "**** CODE COVERAGE ****"
-	@cat $(COVERAGE_DIR)/cover-functional-queues.html | grep 'github.com/oracle/coherence-go-client/coherence' | grep option | sed 's/^.*github/github/' | sed 's,</option.*,,'
+	  -- $(GO_TEST_FLAGS) -v -coverprofile=$(COVERAGE_DIR)/cover-functional-queues.out -v ./test/e2e/queues/... -coverpkg=github.com/oracle/coherence-go-client/v2/coherence/...
+	go tool cover -func=$(COVERAGE_DIR)/cover-functional-queues.out | grep -v '0.0%'
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Executes the Go end to end tests for gRPC v1 tests
@@ -316,12 +307,8 @@ test-e2e-standalone-queues: test-clean test gotestsum $(BUILD_PROPS) ## Run e2e 
 .PHONY: test-v1-base
 test-v1-base: test-clean test gotestsum $(BUILD_PROPS) ## Run e2e tests with Coherence
 	CGO_ENABLED=0 $(GOTESTSUM) --format testname --junitfile $(TEST_LOGS_DIR)/go-client-test-v1.xml \
-	  -- $(GO_TEST_FLAGS) -v -coverprofile=$(COVERAGE_DIR)/cover-functional-v1.out -v ./test/v1/base/... -coverpkg=./coherence/...
-	go tool cover -html=$(COVERAGE_DIR)/cover-functional-v1.out -o $(COVERAGE_DIR)/cover-functional-v1.html
-	@echo
-	@echo "**** CODE COVERAGE ****"
-	@cat $(COVERAGE_DIR)/cover-functional-v1.html | grep 'github.com/oracle/coherence-go-client/coherence' | grep option | sed 's/^.*github/github/' | sed 's,</option.*,,'
-
+	  -- $(GO_TEST_FLAGS) -v -coverprofile=$(COVERAGE_DIR)/cover-functional-v1.out -v ./test/v1/base/... -coverpkg=github.com/oracle/coherence-go-client/v2/coherence/...
+	go tool cover -func=$(COVERAGE_DIR)/cover-functional-v1.out | grep -v '0.0%'
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Executes the test of the examples
@@ -369,7 +356,7 @@ test-coherence-shutdown: ## shutdown standalone cluster
 .PHONY: gotestsum
 GOTESTSUM = $(TOOLS_BIN)/gotestsum
 gotestsum: ## Download gotestsum locally if necessary.
-	GOBIN=`pwd`/build/tools/bin go install gotest.tools/gotestsum@v1.8.1
+	GOBIN=`pwd`/build/tools/bin go install gotest.tools/gotestsum@v1.12.0
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Cleans the test cache

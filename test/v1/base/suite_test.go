@@ -7,7 +7,7 @@
 package base
 
 import (
-	"github.com/oracle/coherence-go-client/test/utils"
+	"github.com/oracle/coherence-go-client/v2/test/utils"
 	"testing"
 )
 

@@ -9,7 +9,7 @@ package coherence
 import (
 	"context"
 	"fmt"
-	"github.com/oracle/coherence-go-client/coherence/filters"
+	"github.com/oracle/coherence-go-client/v2/coherence/filters"
 	"time"
 )
 

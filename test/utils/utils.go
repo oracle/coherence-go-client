@@ -14,7 +14,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/onsi/gomega"
-	coherence "github.com/oracle/coherence-go-client/coherence"
+	"github.com/oracle/coherence-go-client/v2/coherence"
 	"io"
 	"log"
 	"net/http"

@@ -40,7 +40,7 @@ This API fully supports Go Generics and is only supported for use with Go versio
 Example:
 
 	import (
-	    coherence "github.com/oracle/coherence-go-client/coherence"
+	    coherence "github.com/oracle/coherence-go-client/v2/coherence"
 	)
 
 	...

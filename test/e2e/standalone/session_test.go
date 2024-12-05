@@ -9,8 +9,8 @@ package standalone
 import (
 	"fmt"
 	"github.com/onsi/gomega"
-	"github.com/oracle/coherence-go-client/coherence"
-	"github.com/oracle/coherence-go-client/test/utils"
+	"github.com/oracle/coherence-go-client/v2/coherence"
+	"github.com/oracle/coherence-go-client/v2/test/utils"
 	"sync/atomic"
 	"testing"
 )

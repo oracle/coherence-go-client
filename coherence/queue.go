@@ -10,7 +10,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	pb1 "github.com/oracle/coherence-go-client/proto/v1"
+	pb1 "github.com/oracle/coherence-go-client/v2/proto/v1"
 	"strings"
 	"sync"
 )
