@@ -555,7 +555,7 @@ func (s *Session) ensureConnection() error {
 				return
 			}
 
-			if newState == connectivity.Ready { //|| newState == connectivity.Idle {
+			if newState == connectivity.Ready {
 				if !firstConnect && !connected {
 					// Reconnected
 					disconnectTime = 0
