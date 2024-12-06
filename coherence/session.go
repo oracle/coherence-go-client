@@ -19,6 +19,7 @@ import (
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/resolver"
+	"google.golang.org/grpc/status"
 	"log"
 	"os"
 	"reflect"
@@ -510,7 +511,14 @@ func (s *Session) ensureConnection() error {
 		s.v1StreamManagerCache = manager
 		apiMessage = fmt.Sprintf(" %v", manager)
 	} else {
-		s.debug("error connecting to session via v1, falling back to v0: %v", err1)
+		// check if this is a gRPC status error
+		if sts, ok := status.FromError(err1); ok {
+			if sts.Message() == "Method not found: coherence.proxy.v1.ProxyService/subChannel" {
+				s.debug("error connecting to session via v1, falling back to v0: %v", err1)
+			} else {
+				s.debug("received a different gRPC error: %v", err1)
+			}
+		}
 	}
 
 	logMessage(INFO, "Session [%s] connected to [%s]%s", s.sessionID, s.sessOpts.Address, apiMessage)
@@ -547,14 +555,14 @@ func (s *Session) ensureConnection() error {
 				return
 			}
 
-			if newState == connectivity.Ready || newState == connectivity.Idle {
+			if newState == connectivity.Ready { //|| newState == connectivity.Idle {
 				if !firstConnect && !connected {
-					// Reconnect
+					// Reconnected
 					disconnectTime = 0
 					session.closed = false
 					connected = true
 
-					logMessage(INFO, "Session [%s] re-connected to address %s", session.sessionID, session.sessOpts.Address)
+					logMessage(INFO, "Session [%s] re-connected to address %s (%v)", session.sessionID, session.sessOpts.Address, newState)
 					session.dispatch(Reconnected, func() SessionLifecycleEvent {
 						return newSessionLifecycleEvent(session, Reconnected)
 					})

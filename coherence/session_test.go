@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2022, 2023 Oracle and/or its affiliates.
+* Copyright (c) 2022, 2024 Oracle and/or its affiliates.
 * Licensed under the Universal Permissive License v 1.0 as shown at
 * https://oss.oracle.com/licenses/upl.
  */
@@ -9,6 +9,7 @@ package coherence
 import (
 	"context"
 	"github.com/onsi/gomega"
+	"os"
 	"strconv"
 	"testing"
 	"time"
@@ -20,6 +21,8 @@ func TestSessionValidation(t *testing.T) {
 		err error
 		ctx = context.Background()
 	)
+
+	os.Setenv("COHERENCE_SESSION_DEBUG", "true")
 
 	_, err = NewSession(ctx, WithFormat("not-json"))
 	g.Expect(err).To(gomega.Equal(ErrInvalidFormat))

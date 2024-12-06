@@ -1219,7 +1219,7 @@ func reRegisterListeners[K comparable, V any](ctx context.Context, namedMap *Nam
 			bc.filterListenersV1 = make(map[filters.Filter]*listenerGroupV1[K, V], 0)
 			bc.filterIDToGroupV1 = make(map[int64]*listenerGroupV1[K, V], 0)
 
-			// re-ensure all the caches as the connected has gone and so has the gRPC Proxy
+			// re-ensure all the caches as the connection has gone and so has the gRPC Proxy
 			for _, c := range cacheNames {
 				cacheID, err3 := bc.session.v1StreamManagerCache.ensureCache(context.Background(), c)
 				if err3 != nil {

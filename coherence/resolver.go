@@ -12,13 +12,16 @@ import (
 	"github.com/oracle/coherence-go-client/v2/coherence/discovery"
 	"google.golang.org/grpc/resolver"
 	"math/rand"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 )
 
 const (
-	nsLookupScheme = "coherence"
+	nsLookupScheme       = "coherence"
+	defaultRetries       = 20
+	defaultResolverDelay = 1000 // ms
 )
 
 var (
@@ -42,16 +45,27 @@ func (b *nsLookupResolverBuilder) Build(target resolver.Target, cc resolver.Clie
 	}
 	checkResolverDebug()
 
+	// set the number of resolver retried
+	retries := getStringValueFromEnvVarOrDefault(envResolverRetries, "20")
+	retriesValue, err := strconv.Atoi(retries)
+	if err != nil {
+		retriesValue = defaultRetries
+	}
+
+	resolverDebug("resolver retries=%v", retriesValue)
+	r.resolverRetries = retriesValue
+
 	r.start()
 	return r, nil
 }
 func (*nsLookupResolverBuilder) Scheme() string { return nsLookupScheme }
 
 type nsLookupResolver struct {
-	target    resolver.Target
-	cc        resolver.ClientConn
-	mutex     sync.Mutex
-	addrStore map[string][]string
+	target          resolver.Target
+	cc              resolver.ClientConn
+	mutex           sync.Mutex
+	addrStore       map[string][]string
+	resolverRetries int
 }
 
 func (r *nsLookupResolver) resolve() {
@@ -60,10 +74,10 @@ func (r *nsLookupResolver) resolve() {
 	defer r.mutex.Unlock()
 
 	if len(grpcEndpoints) == 0 {
-		// try 8 times over 2 seconds to get gRPC addresses as we may be in the middle of fail-over
-		for i := 0; i < 8; i++ {
-			resolverDebug("retrying NSLookup attempt", i)
-			time.Sleep(time.Duration(250) * time.Millisecond)
+		// try r.resolverRetries; times over 2 seconds to get gRPC addresses as we may be in the middle of fail-over
+		for i := 1; i <= r.resolverRetries; i++ {
+			resolverDebug("retrying NSLookup attempt: %v", i)
+			time.Sleep(time.Duration(defaultResolverDelay) * time.Millisecond)
 			grpcEndpoints = generateNSAddresses(r.target.Endpoint())
 			if len(grpcEndpoints) != 0 {
 				break

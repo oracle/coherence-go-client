@@ -44,6 +44,9 @@ const (
 	// envResolverDebug enables resolver debug messages to be displayed.
 	envResolverDebug = "COHERENCE_RESOLVER_DEBUG"
 
+	// envResolverDebug sets the number of retries when the resolver fails.
+	envResolverRetries = "COHERENCE_RESOLVER_RETRIES"
+
 	// envResolverDebug enables randomization of addresses returned by resolver
 	envResolverRandomize = "COHERENCE_RESOLVER_RANDOMIZE"
 
