@@ -43,7 +43,7 @@ type localCache[K comparable, V any] interface {
 	GetStats() CacheStats
 }
 
-// CacheStats defines various statics for near caches.
+// CacheStats contains various statistics for near caches.
 type CacheStats interface {
 	GetCacheHits() int64                    // the number of entries served from the near cache
 	GetCacheMisses() int64                  // the number of entries that had to be retrieved from the cluster
@@ -479,7 +479,8 @@ func (l *localCacheImpl[K, V]) String() string {
 // updateEntrySize updates the cacheMemory size based upon a local entry. The sign indicates to either remove or add.
 func (l *localCacheImpl[K, V]) updateEntrySize(entry *localCacheEntry[K, V], sign int) {
 	l.updateCacheMemory(int64(sign)*(int64(unsafe.Sizeof(entry.key))+int64(unsafe.Sizeof(entry.value))+
-		(int64(unsafe.Sizeof(entry.ttl)))+(int64(unsafe.Sizeof(entry.insertTime)))) + (int64(unsafe.Sizeof(entry.lastAccess))))
+		(int64(unsafe.Sizeof(entry.ttl)))+(int64(unsafe.Sizeof(entry.insertTime)))) +
+		(int64(unsafe.Sizeof(entry.lastAccess))) + int64(unsafe.Sizeof(entry)))
 }
 
 func formatMemory(bytesValue int64) string {

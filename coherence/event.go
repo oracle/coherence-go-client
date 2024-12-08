@@ -60,7 +60,7 @@ const (
 // MapEventType describes an event raised by a cache mutation.
 type MapEventType string
 
-// MapLifecycleEventType describes an event that may be raised during the lifecycle
+// MapLifecycleEventType describes an event type that may be raised during the lifecycle
 // of a cache.
 type MapLifecycleEventType string
 
@@ -159,8 +159,13 @@ func (se *sessionLifecycleEvent) String() string {
 	return fmt.Sprintf("SessionLifecycleEvent{source=%v, format=%s}", se.Source(), se.Type())
 }
 
+// MapLifecycleEvent describes an event that may be raised during the lifecycle
+// of a cache.
 type MapLifecycleEvent[K comparable, V any] interface {
+	// Source returns the source of this MapLifecycleEvent.
 	Source() NamedMap[K, V]
+
+	// Type returns the MapLifecycleEventType for this MapLifecycleEvent.
 	Type() MapLifecycleEventType
 }
 
@@ -186,22 +191,39 @@ func (l *mapLifecycleEvent[K, V]) Source() NamedMap[K, V] {
 	return l.source
 }
 
-// String returns a string representation of a MapLifecycleEvent.
+// String returns a string representation of a [MapLifecycleEvent].
 func (l *mapLifecycleEvent[K, V]) String() string {
 	return fmt.Sprintf("MapLifecycleEvent{source=%v, type=%s}", l.Source().GetCacheName(), l.Type())
 }
 
-// MapEvent an event which indicates that the content of the NamedMap or
-// NamedCache has changed (i.e., an entry has been added, updated, and/or
+// MapEvent an event which indicates that the content of the [NamedMap] or
+// [NamedCache] has changed (i.e., an entry has been added, updated, and/or
 // removed).
 type MapEvent[K comparable, V any] interface {
+	// Source returns the source of this MapEvent.
 	Source() NamedMap[K, V]
+
+	// Key returns the key of the entry for which this event was raised.
 	Key() (*K, error)
+
+	// OldValue returns the old value, if any, of the entry for which this event
+	// was raised.
 	OldValue() (*V, error)
+
+	// NewValue returns the new value, if any, of the entry for which this event
+	// was raised.
 	NewValue() (*V, error)
+
+	// Type returns the MapEventType for this MapEvent.
 	Type() MapEventType
+
+	// IsExpired returns true if the event was generated from an expiry event. Only valid for gRPC v1 connections.
 	IsExpired() (bool, error)
+
+	// IsPriming returns true if the event is a priming event. Only valid for gRPC v1 connections.
 	IsPriming() (bool, error)
+
+	// IsSynthetic returns true if the event is a synthetic event. Only valid for gRPC v1 connections.
 	IsSynthetic() (bool, error)
 }
 
@@ -1197,7 +1219,7 @@ func reRegisterListeners[K comparable, V any](ctx context.Context, namedMap *Nam
 			bc.filterListenersV1 = make(map[filters.Filter]*listenerGroupV1[K, V], 0)
 			bc.filterIDToGroupV1 = make(map[int64]*listenerGroupV1[K, V], 0)
 
-			// re-ensure all the caches as the connected has gone and so has the gRPC Proxy
+			// re-ensure all the caches as the connection has gone and so has the gRPC Proxy
 			for _, c := range cacheNames {
 				cacheID, err3 := bc.session.v1StreamManagerCache.ensureCache(context.Background(), c)
 				if err3 != nil {

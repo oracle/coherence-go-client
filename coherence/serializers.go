@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2023 Oracle and/or its affiliates.
+ * Copyright (c) 2022, 2024 Oracle and/or its affiliates.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * https://oss.oracle.com/licenses/upl.
  */
@@ -28,8 +28,13 @@ type mathValue[T any] struct {
 
 // Serializer defines how to serialize/ de-serialize objects.
 type Serializer[T any] interface {
+	// Serialize serializes an object of type T and returns the []byte representation.
 	Serialize(object T) ([]byte, error)
+
+	// Deserialize deserialized an object and returns the correct type of T.
 	Deserialize(data []byte) (*T, error)
+
+	// Format returns the format used for the serializer.
 	Format() string
 }
 
@@ -111,6 +116,7 @@ func (s JSONSerializer[T]) Deserialize(data []byte) (*T, error) {
 	return &zeroValue, fmt.Errorf("invalid serialization prefix %v", data[0])
 }
 
+// Format returns the format used for the serializer.
 func (s JSONSerializer[T]) Format() string {
 	return s.format
 }
