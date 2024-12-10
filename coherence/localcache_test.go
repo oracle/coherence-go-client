@@ -264,6 +264,42 @@ func TestLocalCacheGoRoutines(t *testing.T) {
 	fmt.Println(cache.GetStats())
 }
 
+func TestBasicLocalCacheSizeCalculation(t *testing.T) {
+	g := gomega.NewWithT(t)
+	const maxEntries = 10_000
+
+	cache := newLocalCache[int, string]("my-size-calc-size")
+	g.Expect(cache.Size()).To(gomega.Equal(0))
+
+	// add maxEntries entries, this should update the memory
+	for i := 1; i <= maxEntries; i++ {
+		cache.Put(i, fmt.Sprintf("value-%v", i))
+	}
+
+	// we should still have memory used
+	g.Expect(cache.cacheMemory > 0).To(gomega.BeTrue())
+
+	// update maxEntries entries with a bigger value, this should update the memory with the delta of the new-old
+	for i := 1; i <= maxEntries; i++ {
+		cache.Put(i, fmt.Sprintf("new-value-bigger-%v", i))
+	}
+	g.Expect(cache.cacheMemory > 0).To(gomega.BeTrue())
+
+	// update maxEntries entries with a smaller value, this should update the memory with the delta of the new-old
+	for i := 1; i <= maxEntries; i++ {
+		cache.Put(i, fmt.Sprintf("%v", i))
+	}
+	g.Expect(cache.cacheMemory > 0).To(gomega.BeTrue())
+
+	// remove each entry and the local cache size should get back to zero to show that
+	// the memory calculation is working both ways
+	for i := 1; i <= maxEntries; i++ {
+		cache.Remove(i)
+	}
+
+	g.Expect(cache.cacheMemory).Should(gomega.Equal(int64(0)))
+}
+
 func Sleep(seconds int) {
 	time.Sleep(time.Duration(seconds) * time.Second)
 }
