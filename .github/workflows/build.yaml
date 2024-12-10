@@ -71,6 +71,11 @@ jobs:
         go get google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.3.0
         INCLUDE_LONG_RUNNING=true PROFILES=,-jakarta,javax COHERENCE_VERSION=22.06.9 make clean generate-proto build-test-images test-e2e-standalone
 
+    - name: Profile Near Cache
+      shell: bash
+      run: |
+        make profile-near-cache
+
     - uses: actions/upload-artifact@v4
       if: failure()
       with:

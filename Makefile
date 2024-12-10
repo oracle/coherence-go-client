@@ -161,6 +161,7 @@ copyright: getcopyright ## Check copyright headers
 	  -X bin/ \
 	  -X ./test/test/utils.go \
 	  -X dependency-reduced-pom.xml \
+	  -X ./coherence/coherence.test \
 	  -X binaries/ \
 	  -X build/ \
 	  -X proto/ \
@@ -331,6 +332,15 @@ test-cluster-startup: $(BUILD_PROPS) ## Startup any test cluster members using d
 .PHONY: test-cluster-shutdown
 test-cluster-shutdown: ## Shutdown any test cluster members using docker-compose
 	cd test/utils && $(DOCKER_COMPOSE) -f docker-compose-2-members.yaml down || true
+
+# ----------------------------------------------------------------------------------------------------------------------
+# Run Near Cache Profile Tests
+# ----------------------------------------------------------------------------------------------------------------------
+.PHONY: profile-near-cache
+profile-near-cache: ## Run Near Cache Profile Tests
+	cd coherence && go test -run=^TestNearCacheExpiry1 -cpuprofile=$(TEST_LOGS_DIR)/cpu.out -memprofile=$(TEST_LOGS_DIR)/mem.out
+	echo top | go tool pprof $(TEST_LOGS_DIR)/cpu.out
+	echo top | go tool pprof $(TEST_LOGS_DIR)/mem.out
 
 
 # ----------------------------------------------------------------------------------------------------------------------

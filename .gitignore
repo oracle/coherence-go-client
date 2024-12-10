@@ -40,3 +40,4 @@ shared/
 certs/
 release/
 etc/
+coherence/coherence.test
