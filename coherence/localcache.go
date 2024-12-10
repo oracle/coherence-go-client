@@ -470,7 +470,7 @@ func (l *localCacheImpl[K, V]) ResetStats() {
 
 func (l *localCacheImpl[K, V]) String() string {
 	return fmt.Sprintf("localCache{name=%s, options=%v, stats=CacheStats{puts=%v, gets=%v, hits=%v, misses=%v, "+
-		"missesDuration=%v, hitRate=%v, prunes=%v, prunesDuration=%v, expires=%v, expiresDuration=%v, size=%v, memoryUsed=%v}}",
+		"missesDuration=%v, hitRate=%v%%, prunes=%v, prunesDuration=%v, expires=%v, expiresDuration=%v, size=%v, memoryUsed=%v}}",
 		l.Name, l.options, l.GetCachePuts(), l.GetTotalGets(), l.GetCacheHits(), l.GetCacheMisses(),
 		l.GetCacheMissesDuration(), l.GetHitRate()*100, l.GetCachePrunes(), l.GetCachePrunesDuration(),
 		l.GetCacheExpires(), l.GetCacheExpiresDuration(), l.Size(), formatMemory(l.cacheMemory))
@@ -478,9 +478,10 @@ func (l *localCacheImpl[K, V]) String() string {
 
 // updateEntrySize updates the cacheMemory size based upon a local entry. The sign indicates to either remove or add.
 func (l *localCacheImpl[K, V]) updateEntrySize(entry *localCacheEntry[K, V], sign int) {
-	l.updateCacheMemory(int64(sign)*(int64(unsafe.Sizeof(entry.key))+int64(unsafe.Sizeof(entry.value))+
-		(int64(unsafe.Sizeof(entry.ttl)))+(int64(unsafe.Sizeof(entry.insertTime)))) +
-		(int64(unsafe.Sizeof(entry.lastAccess))) + int64(unsafe.Sizeof(entry)))
+	var size = int64(unsafe.Sizeof(entry.key)) + int64(unsafe.Sizeof(entry.value)) +
+		int64(unsafe.Sizeof(entry.lastAccess)) + int64(unsafe.Sizeof(entry.ttl)) +
+		int64(unsafe.Sizeof(entry.insertTime)) + int64(unsafe.Sizeof(entry))
+	l.updateCacheMemory(int64(sign) * size)
 }
 
 func formatMemory(bytesValue int64) string {
