@@ -160,13 +160,14 @@ func (l *localCacheImpl[K, V]) GetAll(keys []K) map[K]*V {
 	l.expireEntries()
 
 	results := make(map[K]*V, 0)
+	now := time.Now()
 
 	for _, key := range keys {
 		v, ok := l.data[key]
 		if ok {
 			// have entry so add to the results
 			results[key] = &v.value
-			v.lastAccess = time.Now()
+			v.lastAccess = now
 		}
 	}
 
