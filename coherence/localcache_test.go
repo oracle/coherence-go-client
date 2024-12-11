@@ -300,6 +300,37 @@ func TestBasicLocalCacheSizeCalculation(t *testing.T) {
 	g.Expect(cache.cacheMemory).Should(gomega.Equal(int64(0)))
 }
 
+type expiryResults struct {
+	ttl          time.Duration
+	expiryTime   time.Duration
+	cacheExpires int64
+}
+
+func TestNearCacheExpiry1(_ *testing.T) {
+	var (
+		results = make([]expiryResults, 0)
+		ttl     int64
+	)
+
+	for ttl = 10; ttl < 1_000; ttl += 25 {
+		results = append(results, localCacheExpiryTest(time.Duration(ttl)*time.Millisecond, 10_000))
+	}
+
+	// output results
+	for _, r := range results {
+		fmt.Printf("ttl=%5v, cache expires=%5v, time spent expiring=%10v\n", r.ttl, r.cacheExpires, r.expiryTime)
+	}
+}
+
+func localCacheExpiryTest(ttl time.Duration, count int) expiryResults {
+	cache := newLocalCache[int, string]("my-cache-high-unit3", withLocalCacheExpiry(ttl))
+	for i := 1; i <= count; i++ {
+		cache.Put(i, fmt.Sprintf("value-%v", i))
+	}
+
+	return expiryResults{ttl: ttl, expiryTime: cache.GetCacheExpiresDuration(), cacheExpires: cache.GetCacheExpires()}
+}
+
 func Sleep(seconds int) {
 	time.Sleep(time.Duration(seconds) * time.Second)
 }
