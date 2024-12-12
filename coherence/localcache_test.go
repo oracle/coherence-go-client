@@ -8,6 +8,7 @@ package coherence
 import (
 	"fmt"
 	"github.com/onsi/gomega"
+	"log"
 	"math"
 	"sync"
 	"testing"
@@ -59,8 +60,8 @@ func TestBasicLocalCacheOperations(t *testing.T) {
 	Sleep(4)
 	g.Expect(cache.Size()).To(gomega.Equal(0))
 
-	cache.PutWithExpiry(1, "one", time.Duration(3)*time.Millisecond)
-	time.Sleep(time.Duration(4) * time.Millisecond)
+	cache.PutWithExpiry(1, "one", time.Duration(257)*time.Millisecond)
+	time.Sleep(time.Duration(258) * time.Millisecond)
 	g.Expect(cache.Size()).To(gomega.Equal(0))
 
 	fmt.Println(cache)
@@ -214,7 +215,7 @@ func TestLocalCacheWithHighUnitsAndTTL(t *testing.T) {
 
 	g.Expect(cache.Size()).To(gomega.Equal(100))
 
-	// sleep for 1 second and add a new entry
+	// sleep for 1 second and add a new entry, entries should not be expired
 	time.Sleep(time.Duration(1) * time.Second)
 
 	cache.Put(100, "one hundred")
@@ -242,7 +243,7 @@ func TestLocalCacheGoRoutines(t *testing.T) {
 	)
 
 	routines := 500
-	iterations := 30
+	iterations := 10_000
 
 	fmt.Println("Start " + time.Now().String())
 	wg.Add(routines)
@@ -309,12 +310,13 @@ type expiryResults struct {
 func TestNearCacheExpiry1(_ *testing.T) {
 	var (
 		results = make([]expiryResults, 0)
-		ttl     int64
+		//ttl     int64
 	)
 
-	for ttl = 10; ttl < 1_000; ttl += 25 {
-		results = append(results, localCacheExpiryTest(time.Duration(ttl)*time.Millisecond, 10_000))
-	}
+	results = append(results, localCacheExpiryTest(time.Duration(1000)*time.Millisecond, 250_000))
+	//for ttl = 300; ttl < 1_000; ttl += 300 {
+	//	results = append(results, localCacheExpiryTest(time.Duration(ttl)*time.Millisecond, 1_000_000))
+	//}
 
 	// output results
 	for _, r := range results {
@@ -322,11 +324,26 @@ func TestNearCacheExpiry1(_ *testing.T) {
 	}
 }
 
+func TestNearCacheBuckets(t *testing.T) {
+	g := gomega.NewWithT(t)
+
+	g.Expect(getMillisBucket(time.Duration(254) * time.Millisecond)).To(gomega.Equal(time.Duration(0) * time.Millisecond))
+	g.Expect(getMillisBucket(time.Duration(257) * time.Millisecond)).To(gomega.Equal(time.Duration(256) * time.Millisecond))
+	g.Expect(getMillisBucket(time.Duration(511) * time.Millisecond)).To(gomega.Equal(time.Duration(256) * time.Millisecond))
+	g.Expect(getMillisBucket(time.Duration(513) * time.Millisecond)).To(gomega.Equal(time.Duration(512) * time.Millisecond))
+	g.Expect(getMillisBucket(time.Duration(800) * time.Millisecond)).To(gomega.Equal(time.Duration(768) * time.Millisecond))
+}
+
 func localCacheExpiryTest(ttl time.Duration, count int) expiryResults {
 	cache := newLocalCache[int, string]("my-cache-high-unit3", withLocalCacheExpiry(ttl))
+
 	for i := 1; i <= count; i++ {
 		cache.Put(i, fmt.Sprintf("value-%v", i))
+		if i%10_000 == 0 {
+			time.Sleep(time.Duration(100) * time.Millisecond)
+		}
 	}
+	log.Println(cache)
 
 	return expiryResults{ttl: ttl, expiryTime: cache.GetCacheExpiresDuration(), cacheExpires: cache.GetCacheExpires()}
 }

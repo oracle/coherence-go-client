@@ -65,6 +65,8 @@ type localCacheImpl[K comparable, V any] struct {
 	options *localCacheOptions
 	sync.Mutex
 	data               map[K]*localCacheEntry[K, V]
+	expiryMap          map[int64]*[]K
+	nextExpiry         time.Time
 	cacheHits          int64
 	cacheMisses        int64
 	cacheMissesNannos  int64
@@ -82,6 +84,7 @@ type localCacheEntry[K comparable, V any] struct {
 	ttl        time.Duration
 	insertTime time.Time
 	lastAccess time.Time
+	expiresAt  time.Time
 }
 
 type pair[K comparable] struct {
@@ -123,6 +126,7 @@ func (l *localCacheImpl[K, V]) PutWithExpiry(key K, value V, ttl time.Duration) 
 	newEntry := newLocalCacheEntry[K, V](key, value, ttl)
 
 	l.updateEntrySize(newEntry, 1)
+	l.registerExpiry(newEntry)
 
 	prev, ok := l.data[key]
 
@@ -219,6 +223,7 @@ func (l *localCacheImpl[K, V]) Clear() {
 	defer l.Unlock()
 
 	l.data = make(map[K]*localCacheEntry[K, V], 0)
+	l.expiryMap = make(map[int64]*[]K, 0)
 	l.updateCacheMemory(0)
 }
 
@@ -232,26 +237,55 @@ func (l *localCacheImpl[K, V]) GetStats() CacheStats {
 }
 
 // expireEntries goes through the map to see if any entries have expired due to ttl.
+// this is done in buckets of 1/4 second as so to be more efficient. this means the
+// min expiry duration is 1/4 of a second.
 func (l *localCacheImpl[K, V]) expireEntries() {
+	if len(l.expiryMap) == 0 {
+		return
+	}
+
 	var (
-		keysToDelete = make([]K, 0)
-		start        = time.Now()
+		bucketsToRemove = make([]int64, 0)
+		expiryKeys      = make([]int64, len(l.expiryMap))
+		start           = time.Now()
+		startUnixMillis = start.UnixMilli()
+		index           = 0
 	)
 
-	// check for cache expiry
-	for k, v := range l.data {
-		if v.ttl > 0 && start.Sub(v.insertTime) > v.ttl {
-			keysToDelete = append(keysToDelete, k)
+	if start.Compare(l.nextExpiry) == -1 {
+		return
+	}
+
+	// get the keys from the map and sort them so we
+	for key := range l.expiryMap {
+		expiryKeys[index] = key
+		index++
+	}
+
+	sort.Slice(expiryKeys, func(p, q int) bool {
+		return p < q
+	})
+
+	for _, expireTime := range expiryKeys {
+		if expireTime < startUnixMillis {
+			// need to expire all entries for the expiry key, retrieve the entry
+			if v, ok := l.expiryMap[expireTime]; ok {
+				bucketsToRemove = append(bucketsToRemove, expireTime)
+				for _, k := range *v {
+					l.updateEntrySize(l.data[k], -1)
+					delete(l.data, k)
+				}
+			}
 		}
 	}
 
-	// delete all the keys that were flagged from the expiry, this may be enough to free up space
-	for _, k := range keysToDelete {
-		l.updateEntrySize(l.data[k], -1)
-		delete(l.data, k)
-	}
+	if len(bucketsToRemove) > 0 {
+		l.nextExpiry = time.Now().Add(time.Duration(256) * time.Millisecond)
 
-	if len(keysToDelete) > 0 {
+		for _, b := range bucketsToRemove {
+			delete(l.expiryMap, b)
+		}
+
 		l.registerExpireNanos(time.Since(start).Nanoseconds())
 	}
 }
@@ -306,18 +340,27 @@ func (l *localCacheImpl[K, V]) pruneEntries() {
 }
 
 func newLocalCacheEntry[K comparable, V any](key K, value V, ttl time.Duration) *localCacheEntry[K, V] {
-	return &localCacheEntry[K, V]{
+	now := time.Now()
+	entry := &localCacheEntry[K, V]{
 		key:        key,
 		value:      value,
 		ttl:        ttl,
-		insertTime: time.Now(),
+		insertTime: now,
 	}
+	if ttl > 0 {
+		// granularity of expiry is minimum of 250ms
+		entry.expiresAt = now.Add(getMillisBucket(ttl))
+	}
+
+	return entry
 }
 
 func newLocalCache[K comparable, V any](name string, options ...func(localCache *localCacheOptions)) *localCacheImpl[K, V] {
 	cache := &localCacheImpl[K, V]{
-		Name: name,
-		data: make(map[K]*localCacheEntry[K, V], 0),
+		Name:       name,
+		data:       make(map[K]*localCacheEntry[K, V], 0),
+		expiryMap:  make(map[int64]*[]K, 0),
+		nextExpiry: time.Now().Add(time.Duration(256) * time.Millisecond),
 		options: &localCacheOptions{
 			TTL:             0,
 			HighUnits:       0,
@@ -497,4 +540,27 @@ func formatMemory(bytesValue int64) string {
 		return printer.Sprintf("%-.1fMB", float64(bytesValue)/1024/1024)
 	}
 	return printer.Sprintf("%-.1fGB", float64(bytesValue)/1024/1024/1024)
+}
+
+func (l *localCacheImpl[K, V]) registerExpiry(entry *localCacheEntry[K, V]) {
+	if entry.ttl > 0 {
+		// get the expires millis in unix millis and key on this
+		expiresAtMillis := entry.expiresAt.UnixMilli()
+
+		// see if we can find an entry for the expires time as millis
+		v, ok := l.expiryMap[expiresAtMillis]
+		if !ok {
+			// create a new map entry
+			newSlice := []K{entry.key}
+			l.expiryMap[expiresAtMillis] = &newSlice
+		} else {
+			// append to the existing one
+			*v = append(*v, entry.key)
+		}
+	}
+}
+
+// getMillisBucket returns the ttl in buckets of 256ms for expiry.
+func getMillisBucket(ttl time.Duration) time.Duration {
+	return time.Duration(ttl.Milliseconds() & ^0xFF) * time.Millisecond
 }
