@@ -233,6 +233,8 @@ func TestLocalCacheWithHighUnitsAndTTL(t *testing.T) {
 	}
 
 	g.Expect(cache.Size()).To(gomega.Equal(20))
+
+	fmt.Println(cache)
 }
 
 func TestLocalCacheGoRoutines(t *testing.T) {
@@ -308,10 +310,7 @@ type expiryResults struct {
 }
 
 func TestNearCacheExpiry1(_ *testing.T) {
-	var (
-		results = make([]expiryResults, 0)
-		//ttl     int64
-	)
+	var results = make([]expiryResults, 0)
 
 	results = append(results, localCacheExpiryTest(time.Duration(1000)*time.Millisecond, 250_000))
 	//for ttl = 300; ttl < 1_000; ttl += 300 {

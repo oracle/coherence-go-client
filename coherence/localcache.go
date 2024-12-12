@@ -53,8 +53,10 @@ type CacheStats interface {
 	GetTotalGets() int64                    // the number of gets against the near cache
 	GetCachePrunes() int64                  // the number of times the near cache was pruned
 	GetCachePrunesDuration() time.Duration  // the duration of all prunes
-	GetCacheExpires() int64                 // the number of times the near cache had expiry event
+	GetCacheEntriesPruned() int64           // the actual number of cache entries that were pruned
+	GetCacheExpires() int64                 // the number of times the near cache expired entries
 	GetCacheExpiresDuration() time.Duration // the duration of all expires
+	GetCacheEntriesExpired() int64          // the actual number of cache entries that were expired
 	Size() int                              // the number of entries in the near cache
 	SizeBytes() int64                       // the number of bytes used by the entries (keys and values) in the near cache
 	ResetStats()                            // reset the stats for the near cache, not including Size() or SizeBytes()
@@ -64,18 +66,20 @@ type localCacheImpl[K comparable, V any] struct {
 	Name    string
 	options *localCacheOptions
 	sync.Mutex
-	data               map[K]*localCacheEntry[K, V]
-	expiryMap          map[int64]*[]K
-	nextExpiry         time.Time
-	cacheHits          int64
-	cacheMisses        int64
-	cacheMissesNannos  int64
-	cachePuts          int64
-	cachePrunes        int64
-	cachePrunesNannos  int64
-	cacheExpires       int64
-	cacheExpiresNannos int64
-	cacheMemory        int64
+	data                map[K]*localCacheEntry[K, V]
+	expiryMap           map[int64]*[]K
+	nextExpiry          time.Time
+	cacheHits           int64
+	cacheMisses         int64
+	cacheMissesNannos   int64
+	cachePuts           int64
+	cacheEntriesPruned  int64
+	cachePrunes         int64
+	cachePrunesNannos   int64
+	cacheEntriesExpired int64
+	cacheExpires        int64
+	cacheExpiresNannos  int64
+	cacheMemory         int64
 }
 
 type localCacheEntry[K comparable, V any] struct {
@@ -273,6 +277,7 @@ func (l *localCacheImpl[K, V]) expireEntries() {
 				bucketsToRemove = append(bucketsToRemove, expireTime)
 				for _, k := range *v {
 					l.updateEntrySize(l.data[k], -1)
+					atomic.AddInt64(&l.cacheEntriesExpired, 1)
 					delete(l.data, k)
 				}
 			}
@@ -334,6 +339,7 @@ func (l *localCacheImpl[K, V]) pruneEntries() {
 				break
 			}
 			l.updateEntrySize(l.data[v.key], -1)
+			atomic.AddInt64(&l.cacheEntriesPruned, 1)
 			delete(l.data, v.key)
 		}
 	}
@@ -475,6 +481,14 @@ func (l *localCacheImpl[K, V]) GetCachePuts() int64 {
 	return l.cachePuts
 }
 
+func (l *localCacheImpl[K, V]) GetCacheEntriesExpired() int64 {
+	return l.cacheEntriesExpired
+}
+
+func (l *localCacheImpl[K, V]) GetCacheEntriesPruned() int64 {
+	return l.cacheEntriesPruned
+}
+
 func (l *localCacheImpl[K, V]) GetCachePrunes() int64 {
 	return l.cachePrunes
 }
@@ -505,19 +519,24 @@ func (l *localCacheImpl[K, V]) GetHitRate() float32 {
 
 func (l *localCacheImpl[K, V]) ResetStats() {
 	atomic.StoreInt64(&l.cachePrunesNannos, 0)
+	atomic.StoreInt64(&l.cacheExpiresNannos, 0)
 	atomic.StoreInt64(&l.cacheMissesNannos, 0)
 	atomic.StoreInt64(&l.cachePrunes, 0)
 	atomic.StoreInt64(&l.cacheHits, 0)
 	atomic.StoreInt64(&l.cacheMisses, 0)
 	atomic.StoreInt64(&l.cachePuts, 0)
+	atomic.StoreInt64(&l.cacheEntriesExpired, 0)
+	atomic.StoreInt64(&l.cacheEntriesPruned, 0)
 }
 
 func (l *localCacheImpl[K, V]) String() string {
 	return fmt.Sprintf("localCache{name=%s, options=%v, stats=CacheStats{puts=%v, gets=%v, hits=%v, misses=%v, "+
-		"missesDuration=%v, hitRate=%v%%, prunes=%v, prunesDuration=%v, expires=%v, expiresDuration=%v, size=%v, memoryUsed=%v}}",
+		"missesDuration=%v, hitRate=%v%%, prunes=%v, prunesDuration=%v, entriesPruned=%v, expires=%v, expiresDuration=%v, entriesExpired=%v, size=%v, memoryUsed=%v}}",
 		l.Name, l.options, l.GetCachePuts(), l.GetTotalGets(), l.GetCacheHits(), l.GetCacheMisses(),
-		l.GetCacheMissesDuration(), l.GetHitRate()*100, l.GetCachePrunes(), l.GetCachePrunesDuration(),
-		l.GetCacheExpires(), l.GetCacheExpiresDuration(), l.Size(), formatMemory(l.cacheMemory))
+		l.GetCacheMissesDuration(), l.GetHitRate()*100,
+		l.GetCachePrunes(), l.GetCachePrunesDuration(), l.GetCacheEntriesPruned(),
+		l.GetCacheExpires(), l.GetCacheExpiresDuration(), l.GetCacheEntriesExpired(),
+		l.Size(), formatMemory(l.cacheMemory))
 }
 
 // updateEntrySize updates the cacheMemory size based upon a local entry. The sign indicates to either remove or add.
