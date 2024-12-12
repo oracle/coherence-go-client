@@ -256,7 +256,7 @@ func (l *localCacheImpl[K, V]) expireEntries() {
 		return
 	}
 
-	// get the keys from the map and sort them so we
+	// get the keys from the map and sort them, so we are seeing earliest first
 	for key := range l.expiryMap {
 		expiryKeys[index] = key
 		index++
