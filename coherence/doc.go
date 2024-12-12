@@ -738,6 +738,9 @@ To manage the amount of memory used by the near cache, the following options are
 
 Note: You can specify either High-Units or Memory and in either case, optionally, a TTL.
 
+Note: The minimum expiry time for a near cache entry is 1/4 second. This is to ensure that expiry of elements is as efficient
+as possible. You will receive an error if you try to set the TTL to a lower value.
+
 The above can be specified by passing [NearCacheOptions] within [WithNearCache] when creating a [NamedMap] or [NamedCache].
 See below for various ways of creating near caches.
 

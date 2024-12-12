@@ -855,6 +855,10 @@ func ensureNearCacheOptions(options *NearCacheOptions) error {
 		return ErrInvalidNearCacheWithNoTTL
 	}
 
+	if options.TTL != 0 && options.TTL < time.Duration(256)*time.Millisecond {
+		return ErrInvalidNearCacheTTL
+	}
+
 	// ensure the default prune factor is set if it is zero
 	if options.PruneFactor == 0 {
 		options.PruneFactor = defaultPruneFactor

@@ -35,6 +35,7 @@ var (
 	ErrInvalidFormat             = errors.New("format can only be 'json'")
 	ErrInvalidNearCache          = errors.New("you must specify at least one near cache option")
 	ErrInvalidNearCacheWithTTL   = errors.New("when using TTL for near cache you can only specify highUnits or highUnitsMemory")
+	ErrInvalidNearCacheTTL       = errors.New("minimum near cache TTL is 1/4 of a second")
 	ErrInvalidNearCacheWithNoTTL = errors.New("you can only specify highUnits or highUnitsMemory, not both")
 	ErrNegativeNearCacheOptions  = errors.New("you cannot specify negative values for near cache options")
 	ErrInvalidPruneFactor        = errors.New("prune factor must be between 0.1 and 1.0")
