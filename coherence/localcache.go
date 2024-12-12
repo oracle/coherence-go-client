@@ -252,7 +252,7 @@ func (l *localCacheImpl[K, V]) expireEntries() {
 		index           = 0
 	)
 
-	if start.Compare(l.nextExpiry) == -1 {
+	if start.Before(l.nextExpiry) {
 		return
 	}
 
