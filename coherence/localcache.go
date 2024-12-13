@@ -193,6 +193,7 @@ func (l *localCacheImpl[K, V]) Remove(key K) *V {
 	v, ok := l.data[key]
 
 	if ok {
+		l.removeExpiry(key)
 		delete(l.data, key)
 		l.updateEntrySize(v, -1)
 		return &v.value
@@ -260,7 +261,7 @@ func (l *localCacheImpl[K, V]) expireEntries() {
 		return
 	}
 
-	// get the keys from the map and sort them, so we are seeing earliest first
+	// get the keys from the map and sort them, so we are seeing the earliest first
 	for key := range l.expiryMap {
 		expiryKeys[index] = key
 		index++
@@ -340,6 +341,7 @@ func (l *localCacheImpl[K, V]) pruneEntries() {
 			}
 			l.updateEntrySize(l.data[v.key], -1)
 			atomic.AddInt64(&l.cacheEntriesPruned, 1)
+			l.removeExpiry(v.key)
 			delete(l.data, v.key)
 		}
 	}
@@ -543,7 +545,8 @@ func (l *localCacheImpl[K, V]) String() string {
 func (l *localCacheImpl[K, V]) updateEntrySize(entry *localCacheEntry[K, V], sign int) {
 	var size = int64(unsafe.Sizeof(entry.key)) + int64(unsafe.Sizeof(entry.value)) +
 		int64(unsafe.Sizeof(entry.lastAccess)) + int64(unsafe.Sizeof(entry.ttl)) +
-		int64(unsafe.Sizeof(entry.insertTime)) + int64(unsafe.Sizeof(entry))
+		int64(unsafe.Sizeof(entry.insertTime)) + int64(unsafe.Sizeof(entry.expiresAt)) +
+		int64(unsafe.Sizeof(entry))
 	l.updateCacheMemory(int64(sign) * size)
 }
 
@@ -575,6 +578,38 @@ func (l *localCacheImpl[K, V]) registerExpiry(entry *localCacheEntry[K, V]) {
 		} else {
 			// append to the existing one
 			*v = append(*v, entry.key)
+		}
+	}
+}
+
+func (l *localCacheImpl[K, V]) removeExpiry(k K) {
+	// find the entry for the key and process if it exists
+	if entry, ok1 := l.data[k]; ok1 {
+		if entry.ttl > 0 {
+			expiresAtMillis := entry.expiresAt.UnixMilli()
+
+			// see if we can find an entry for the expires time as millis
+			v, ok := l.expiryMap[expiresAtMillis]
+			if ok {
+				// entry exists for expiry, so remove the entry from the slice
+				existingKeys := *v
+
+				if len(existingKeys) == 1 {
+					// delete the TTL map entry as no keys left in slice
+					delete(l.expiryMap, expiresAtMillis)
+					return
+				}
+
+				newSlice := existingKeys[:0]
+
+				for _, key := range existingKeys {
+					if key != entry.key {
+						newSlice = append(newSlice, key)
+					}
+				}
+
+				*v = newSlice
+			}
 		}
 	}
 }

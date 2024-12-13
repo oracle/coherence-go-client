@@ -64,6 +64,37 @@ func TestBasicLocalCacheOperations(t *testing.T) {
 	time.Sleep(time.Duration(258) * time.Millisecond)
 	g.Expect(cache.Size()).To(gomega.Equal(0))
 
+	g.Expect(len(cache.expiryMap)).To(gomega.Equal(0))
+
+	fmt.Println(cache)
+}
+
+func TestBasicLocalCacheOperationsWithExpiry(t *testing.T) {
+	g := gomega.NewWithT(t)
+
+	cache := newLocalCache[int, string]("my-cache-2")
+	g.Expect(cache.Size()).To(gomega.Equal(0))
+
+	old := cache.PutWithExpiry(1, "one", time.Duration(1)*time.Second)
+	g.Expect(cache.Size()).To(gomega.Equal(1))
+	g.Expect(old).To(gomega.BeNil())
+
+	old = cache.PutWithExpiry(2, "two", time.Duration(1)*time.Second)
+	g.Expect(cache.Size()).To(gomega.Equal(2))
+	g.Expect(old).To(gomega.BeNil())
+
+	// remove one of the entries,
+	cache.Remove(1)
+	g.Expect(cache.Size()).To(gomega.Equal(1))
+
+	// wait for 2 seconds for the other to expire
+	time.Sleep(time.Duration(2) * time.Second)
+
+	// do a Size() to force expiry
+	g.Expect(cache.Size()).To(gomega.Equal(0))
+
+	g.Expect(len(cache.expiryMap)).To(gomega.Equal(0))
+
 	fmt.Println(cache)
 }
 
