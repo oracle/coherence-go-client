@@ -50,6 +50,7 @@ func TestInvalidNearCacheOptions(t *testing.T) {
 		nearCacheOptions3 = NearCacheOptions{HighUnitsMemory: 1, HighUnits: 1}
 		nearCacheOptions4 = NearCacheOptions{TTL: time.Duration(1) * time.Second, HighUnitsMemory: 1, HighUnits: 1}
 		nearCacheOptions5 = NearCacheOptions{}
+		nearCacheOptions7 = NearCacheOptions{TTL: time.Duration(255) * time.Millisecond}
 	)
 
 	err := ensureNearCacheOptions(&nearCacheOptions1)
@@ -66,4 +67,7 @@ func TestInvalidNearCacheOptions(t *testing.T) {
 
 	err = ensureNearCacheOptions(&nearCacheOptions5)
 	g.Expect(err).To(gomega.Equal(ErrInvalidNearCache))
+
+	err = ensureNearCacheOptions(&nearCacheOptions7)
+	g.Expect(err).To(gomega.Equal(ErrInvalidNearCacheTTL))
 }
