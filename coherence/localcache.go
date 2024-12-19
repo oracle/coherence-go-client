@@ -298,21 +298,34 @@ func (l *localCacheImpl[K, V]) expireEntries() {
 
 // pruneEntries goes through the map to see if any entries have expired or size is reached and remove them.
 func (l *localCacheImpl[K, V]) pruneEntries() {
-	currentCacheSize := int64(len(l.data))
+	var (
+		currentCacheSize   = int64(len(l.data))
+		currentCacheMemory = l.cacheMemory
+	)
 
 	l.expireEntries()
 
 	start := time.Now()
 
-	// if highUnits or highUnitsMemory are set then check
-	if (l.options.HighUnits > 0 && currentCacheSize+1 > l.options.HighUnits) ||
-		(l.options.HighUnitsMemory > 0 && l.cacheMemory+1 > l.options.HighUnitsMemory) {
+	highUnitsPrune := l.options.HighUnits > 0 && currentCacheSize+1 > l.options.HighUnits
+	highUnitsMemoryPrune := l.options.HighUnitsMemory > 0 && currentCacheMemory+1 > l.options.HighUnitsMemory
 
+	// if highUnits or highUnitsMemory are set then check
+	if highUnitsPrune || highUnitsMemoryPrune {
 		defer func() {
 			l.registerPruneNanos(time.Since(start).Nanoseconds())
 		}()
 
-		entriesToDelete := int(math.Round(float64(float32(currentCacheSize) * (1 - l.options.PruneFactor))))
+		var (
+			entriesToDelete       = -1
+			targetMemory    int64 = -1
+		)
+
+		if highUnitsPrune {
+			entriesToDelete = int(math.Round(float64(float32(currentCacheSize) * (1 - l.options.PruneFactor))))
+		} else {
+			targetMemory = int64(math.Round(float64(float32(currentCacheMemory) * l.options.PruneFactor)))
+		}
 
 		// prune to default of l.options.PruneFactor % of the cache size.
 		// we first sort the map by lastAccess time / then insert time, so we remove all
@@ -336,9 +349,11 @@ func (l *localCacheImpl[K, V]) pruneEntries() {
 		sort.Sort(sortData)
 
 		for i, v := range sortData {
-			if i > entriesToDelete {
+			// break if we have reached the high units or memory prune target
+			if (highUnitsPrune && i > entriesToDelete) || (highUnitsMemoryPrune && l.cacheMemory <= targetMemory) {
 				break
 			}
+
 			l.updateEntrySize(l.data[v.key], -1)
 			atomic.AddInt64(&l.cacheEntriesPruned, 1)
 			l.removeExpiry(v.key)
