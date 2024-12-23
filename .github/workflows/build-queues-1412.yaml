@@ -1,17 +1,20 @@
-# Copyright 2022, 2024 Oracle Corporation and/or its affiliates.
+# Copyright 2024 Oracle Corporation and/or its affiliates.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # https://oss.oracle.com/licenses/upl.
 
 # ---------------------------------------------------------------------------
-# Coherence Go Client GitHub Actions test examples against v22.06 versions
+# Coherence Go Client GitHub Actions CI build Queues - 14.1.2
 # ---------------------------------------------------------------------------
-name: CI-Examples v22.06
+name: CI Queues - 14.1.2
 
 on:
   workflow_dispatch:
   push:
     branches:
       - '*'
+  schedule:
+    # Every day at midnight
+    - cron: '0 0 * * *'
 
 jobs:
   build:
@@ -20,8 +23,6 @@ jobs:
       fail-fast: false
       matrix:
         coherenceVersion:
-          - 22.06.11-SNAPSHOT
-          - 22.06.10
           - 14.1.2-0-0
           - 14.1.2-0-1-SNAPSHOT
         go-version:
@@ -43,7 +44,7 @@ jobs:
       run: |
         docker pull gcr.io/distroless/java17
 
-    - name: Set up JDK
+    - name: Set up JDK 17 for Build
       uses: actions/setup-java@v4
       with:
         java-version: '17'
@@ -69,12 +70,13 @@ jobs:
       with:
         go-version: '${{ matrix.go-version }}'
 
-    - name: Verify Examples
+    - name: E2E Queue Tests
+      env:
+        COH_VERSION: ${{ matrix.coherenceVersion }}
       shell: bash
       run: |
         go get google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.3.0
-        COHERENCE_BASE_IMAGE=gcr.io/distroless/java17 COHERENCE_VERSION=${{ matrix.coherenceVersion }} PROFILES=,-jakarta,javax make clean generate-proto generate-proto-v1 build-test-images test-cluster-startup test-examples
-        make test-cluster-shutdown || true
+        COHERENCE_BASE_IMAGE=gcr.io/distroless/java17 INCLUDE_LONG_RUNNING=true PROFILES=,-jakarta,javax,queues COHERENCE_VERSION=$COH_VERSION make clean generate-proto generate-proto-v1 build-test-images test-e2e-standalone-queues
 
     - uses: actions/upload-artifact@v4
       if: failure()
