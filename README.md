@@ -6,7 +6,7 @@
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/oracle/coherence-go-client)](https://goreportcard.com/report/github.com/oracle/coherence-go-client)
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/oracle/coherence-go-client)](https://github.com/oracle/coherence-go-client/releases)
-<a href="https://pkg.go.dev/github.com/oracle/coherence-go-client/coherence"><img src="https://pkg.go.dev/badge/go get github.com/oracle/coherence-go-client.svg" alt="Go Reference"></a>
+<a href="https://pkg.go.dev/github.com/oracle/coherence-go-client/v2/coherence"><img src="https://pkg.go.dev/badge/go get github.com/oracle/coherence-go-client.svg" alt="Go Reference"></a>
 
 The Coherence Go Client allows Go applications to act as cache clients 
 to a Coherence Cluster using gRPC for the network transport.
@@ -48,13 +48,7 @@ docker run -d -p 1408:1408 -p 30000:30000 ghcr.io/oracle/coherence-ce:24.09
 ## Installation
 
 ```bash
-go get github.com/oracle/coherence-go-client@latest
-````
-
-> Note: If you wish to use the latest v2.0.0-rc1, please use the following:
-
-```bash
-go get github.com/oracle/coherence-go-client/v2@v2.0.0-rc1
+go get github.com/oracle/coherence-go-client/v2@latest
 ````
 
 ## <a name="doc"></a>Documentation
@@ -73,15 +67,13 @@ issues `Put()`, `Get()` and `Size()` operations.
 
 > Note: Keys and values can also be Go `structs`. See detailed examples [here](examples#basic).
 
-> Note: for v2.0.0-rc1, please import `github.com/oracle/coherence-go-client/v2/coherence`
-
 ```go
 package main
 
 import (
     "context"
     "fmt"
-    "github.com/oracle/coherence-go-client/coherence"
+    "github.com/oracle/coherence-go-client/v2/coherence"
 )
 
 func main() {
