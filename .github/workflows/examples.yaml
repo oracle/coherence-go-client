@@ -41,8 +41,7 @@ jobs:
     - name: Get Docker Images
       shell: bash
       run: |
-        docker pull gcr.io/distroless/java:11
-        uname -a
+        docker pull gcr.io/distroless/java17
 
     - name: Set up JDK
       uses: actions/setup-java@v4
