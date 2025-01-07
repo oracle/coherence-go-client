@@ -53,7 +53,7 @@ go get github.com/oracle/coherence-go-client/v2@latest
 
 ## <a name="doc"></a>Documentation
 
-* [Godoc on pkg.go.dev](https://pkg.go.dev/github.com/oracle/coherence-go-client/coherence)
+* [Go Client API Reference for Oracle Coherence](https://pkg.go.dev/github.com/oracle/coherence-go-client/v2/coherence)
 * [FAQ Page](https://github.com/oracle/coherence-go-client/wiki/FAQ)
 * [Troubleshooting Guide](https://github.com/oracle/coherence-go-client/wiki/Troubleshooting)
 
