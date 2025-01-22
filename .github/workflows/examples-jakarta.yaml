@@ -1,4 +1,4 @@
-# Copyright 2023, 2024 Oracle Corporation and/or its affiliates.
+# Copyright 2023, 2025 Oracle Corporation and/or its affiliates.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # https://oss.oracle.com/licenses/upl.
 
@@ -21,6 +21,7 @@ jobs:
       matrix:
         coherenceVersion:
           - 24.09
+          - 24.09.2
           - 24.09.1-SNAPSHOT
         go-version:
           - 1.19.x
