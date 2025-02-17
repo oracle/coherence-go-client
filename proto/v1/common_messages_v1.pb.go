@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2020, 2024, Oracle and/or its affiliates.
+// Copyright (c) 2020, 2025, Oracle and/or its affiliates.
 //
 // Licensed under the Universal Permissive License v 1.0 as shown at
 // https://oss.oracle.com/licenses/upl.
@@ -351,6 +351,151 @@ func (x *BinaryKeyAndValue) GetValue() []byte {
 	return nil
 }
 
+// A message that contains a collection of string values.
+type CollectionOfStringValues struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	// The string values
+	Values []string `protobuf:"bytes,1,rep,name=values,proto3" json:"values,omitempty"`
+}
+
+func (x *CollectionOfStringValues) Reset() {
+	*x = CollectionOfStringValues{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_common_messages_v1_proto_msgTypes[6]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *CollectionOfStringValues) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CollectionOfStringValues) ProtoMessage() {}
+
+func (x *CollectionOfStringValues) ProtoReflect() protoreflect.Message {
+	mi := &file_common_messages_v1_proto_msgTypes[6]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CollectionOfStringValues.ProtoReflect.Descriptor instead.
+func (*CollectionOfStringValues) Descriptor() ([]byte, []int) {
+	return file_common_messages_v1_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *CollectionOfStringValues) GetValues() []string {
+	if x != nil {
+		return x.Values
+	}
+	return nil
+}
+
+// A collection of in32 values
+type CollectionOfInt32 struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Values []int32 `protobuf:"varint,1,rep,packed,name=values,proto3" json:"values,omitempty"`
+}
+
+func (x *CollectionOfInt32) Reset() {
+	*x = CollectionOfInt32{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_common_messages_v1_proto_msgTypes[7]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *CollectionOfInt32) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CollectionOfInt32) ProtoMessage() {}
+
+func (x *CollectionOfInt32) ProtoReflect() protoreflect.Message {
+	mi := &file_common_messages_v1_proto_msgTypes[7]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CollectionOfInt32.ProtoReflect.Descriptor instead.
+func (*CollectionOfInt32) Descriptor() ([]byte, []int) {
+	return file_common_messages_v1_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *CollectionOfInt32) GetValues() []int32 {
+	if x != nil {
+		return x.Values
+	}
+	return nil
+}
+
+// A collection of in32 values
+type CollectionOfInt64 struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Values []int64 `protobuf:"varint,1,rep,packed,name=values,proto3" json:"values,omitempty"`
+}
+
+func (x *CollectionOfInt64) Reset() {
+	*x = CollectionOfInt64{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_common_messages_v1_proto_msgTypes[8]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *CollectionOfInt64) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CollectionOfInt64) ProtoMessage() {}
+
+func (x *CollectionOfInt64) ProtoReflect() protoreflect.Message {
+	mi := &file_common_messages_v1_proto_msgTypes[8]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CollectionOfInt64.ProtoReflect.Descriptor instead.
+func (*CollectionOfInt64) Descriptor() ([]byte, []int) {
+	return file_common_messages_v1_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *CollectionOfInt64) GetValues() []int64 {
+	if x != nil {
+		return x.Values
+	}
+	return nil
+}
+
 var File_common_messages_v1_proto protoreflect.FileDescriptor
 
 var file_common_messages_v1_proto_rawDesc = []byte{
@@ -379,14 +524,23 @@ var file_common_messages_v1_proto_rawDesc = []byte{
 	0x73, 0x22, 0x3b, 0x0a, 0x11, 0x42, 0x69, 0x6e, 0x61, 0x72, 0x79, 0x4b, 0x65, 0x79, 0x41, 0x6e,
 	0x64, 0x56, 0x61, 0x6c, 0x75, 0x65, 0x12, 0x10, 0x0a, 0x03, 0x6b, 0x65, 0x79, 0x18, 0x01, 0x20,
 	0x01, 0x28, 0x0c, 0x52, 0x03, 0x6b, 0x65, 0x79, 0x12, 0x14, 0x0a, 0x05, 0x76, 0x61, 0x6c, 0x75,
-	0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x42, 0x60,
-	0x0a, 0x2c, 0x63, 0x6f, 0x6d, 0x2e, 0x6f, 0x72, 0x61, 0x63, 0x6c, 0x65, 0x2e, 0x63, 0x6f, 0x68,
-	0x65, 0x72, 0x65, 0x6e, 0x63, 0x65, 0x2e, 0x67, 0x72, 0x70, 0x63, 0x2e, 0x6d, 0x65, 0x73, 0x73,
-	0x61, 0x67, 0x65, 0x73, 0x2e, 0x63, 0x6f, 0x6d, 0x6d, 0x6f, 0x6e, 0x2e, 0x76, 0x31, 0x50, 0x01,
-	0x5a, 0x2e, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x6f, 0x72, 0x61,
-	0x63, 0x6c, 0x65, 0x2f, 0x63, 0x6f, 0x68, 0x65, 0x72, 0x65, 0x6e, 0x63, 0x65, 0x2d, 0x67, 0x6f,
-	0x2d, 0x63, 0x6c, 0x69, 0x65, 0x6e, 0x74, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2f, 0x76, 0x31,
-	0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x22, 0x32,
+	0x0a, 0x18, 0x43, 0x6f, 0x6c, 0x6c, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x4f, 0x66, 0x53, 0x74,
+	0x72, 0x69, 0x6e, 0x67, 0x56, 0x61, 0x6c, 0x75, 0x65, 0x73, 0x12, 0x16, 0x0a, 0x06, 0x76, 0x61,
+	0x6c, 0x75, 0x65, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x09, 0x52, 0x06, 0x76, 0x61, 0x6c, 0x75,
+	0x65, 0x73, 0x22, 0x2b, 0x0a, 0x11, 0x43, 0x6f, 0x6c, 0x6c, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e,
+	0x4f, 0x66, 0x49, 0x6e, 0x74, 0x33, 0x32, 0x12, 0x16, 0x0a, 0x06, 0x76, 0x61, 0x6c, 0x75, 0x65,
+	0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x05, 0x52, 0x06, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x73, 0x22,
+	0x2b, 0x0a, 0x11, 0x43, 0x6f, 0x6c, 0x6c, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x4f, 0x66, 0x49,
+	0x6e, 0x74, 0x36, 0x34, 0x12, 0x16, 0x0a, 0x06, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x73, 0x18, 0x01,
+	0x20, 0x03, 0x28, 0x03, 0x52, 0x06, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x73, 0x42, 0x60, 0x0a, 0x2c,
+	0x63, 0x6f, 0x6d, 0x2e, 0x6f, 0x72, 0x61, 0x63, 0x6c, 0x65, 0x2e, 0x63, 0x6f, 0x68, 0x65, 0x72,
+	0x65, 0x6e, 0x63, 0x65, 0x2e, 0x67, 0x72, 0x70, 0x63, 0x2e, 0x6d, 0x65, 0x73, 0x73, 0x61, 0x67,
+	0x65, 0x73, 0x2e, 0x63, 0x6f, 0x6d, 0x6d, 0x6f, 0x6e, 0x2e, 0x76, 0x31, 0x50, 0x01, 0x5a, 0x2e,
+	0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x6f, 0x72, 0x61, 0x63, 0x6c,
+	0x65, 0x2f, 0x63, 0x6f, 0x68, 0x65, 0x72, 0x65, 0x6e, 0x63, 0x65, 0x2d, 0x67, 0x6f, 0x2d, 0x63,
+	0x6c, 0x69, 0x65, 0x6e, 0x74, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2f, 0x76, 0x31, 0x62, 0x06,
+	0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -401,14 +555,17 @@ func file_common_messages_v1_proto_rawDescGZIP() []byte {
 	return file_common_messages_v1_proto_rawDescData
 }
 
-var file_common_messages_v1_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_common_messages_v1_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_common_messages_v1_proto_goTypes = []interface{}{
-	(*ErrorMessage)(nil),            // 0: coherence.common.v1.ErrorMessage
-	(*Complete)(nil),                // 1: coherence.common.v1.Complete
-	(*HeartbeatMessage)(nil),        // 2: coherence.common.v1.HeartbeatMessage
-	(*OptionalValue)(nil),           // 3: coherence.common.v1.OptionalValue
-	(*CollectionOfBytesValues)(nil), // 4: coherence.common.v1.CollectionOfBytesValues
-	(*BinaryKeyAndValue)(nil),       // 5: coherence.common.v1.BinaryKeyAndValue
+	(*ErrorMessage)(nil),             // 0: coherence.common.v1.ErrorMessage
+	(*Complete)(nil),                 // 1: coherence.common.v1.Complete
+	(*HeartbeatMessage)(nil),         // 2: coherence.common.v1.HeartbeatMessage
+	(*OptionalValue)(nil),            // 3: coherence.common.v1.OptionalValue
+	(*CollectionOfBytesValues)(nil),  // 4: coherence.common.v1.CollectionOfBytesValues
+	(*BinaryKeyAndValue)(nil),        // 5: coherence.common.v1.BinaryKeyAndValue
+	(*CollectionOfStringValues)(nil), // 6: coherence.common.v1.CollectionOfStringValues
+	(*CollectionOfInt32)(nil),        // 7: coherence.common.v1.CollectionOfInt32
+	(*CollectionOfInt64)(nil),        // 8: coherence.common.v1.CollectionOfInt64
 }
 var file_common_messages_v1_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type
@@ -496,6 +653,42 @@ func file_common_messages_v1_proto_init() {
 				return nil
 			}
 		}
+		file_common_messages_v1_proto_msgTypes[6].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*CollectionOfStringValues); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_common_messages_v1_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*CollectionOfInt32); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_common_messages_v1_proto_msgTypes[8].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*CollectionOfInt64); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
 	}
 	file_common_messages_v1_proto_msgTypes[0].OneofWrappers = []interface{}{}
 	file_common_messages_v1_proto_msgTypes[2].OneofWrappers = []interface{}{}
@@ -505,7 +698,7 @@ func file_common_messages_v1_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_common_messages_v1_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   6,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -16,7 +16,7 @@ echo "Coherence CE 22.06.10"
 COHERENCE_VERSION=22.06.10 PROFILES=,-jakarta,javax make clean generate-proto build-test-images test-e2e-standalone
 
 echo "Coherence CE 14.1.2-0-0"
-COHERENCE_BASE_IMAGE=gcr.io/distroless/java17 COHERENCE_VERSION=14.1.2-0-0 PROFILES=,-jakarta,javax make clean generate-proto build-test-images test-e2e-standalone
+COHERENCE_BASE_IMAGE=gcr.io/distroless/java17-debian12 COHERENCE_VERSION=14.1.2-0-0 PROFILES=,-jakarta,javax make clean generate-proto build-test-images test-e2e-standalone
 
 echo "Coherence CE 22.06.10 with scope"
 COHERENCE_VERSION=22.06.10 PROFILES=,-jakarta,javax,scope make clean generate-proto build-test-images test-e2e-standalone-scope
@@ -44,17 +44,17 @@ SECURE=tlsConfig COHERENCE_IGNORE_INVALID_CERTS_OPTION=true \
   COHERENCE_TLS_CLIENT_KEY_OPTION=`pwd`/test/utils/certs/star-lord.key \
   COHERENCE_VERSION=22.06.7 PROFILES=,secure make clean certs generate-proto build-test-images test-e2e-standalone
 
-echo "Coherence CE 24.09"
-COHERENCE_BASE_IMAGE=gcr.io/distroless/java17 PROFILES=,jakarta,-javax COHERENCE_VERSION=24.09 make clean generate-proto generate-proto-v1 build-test-images test-e2e-standalone
+echo "Coherence CE 24.09.3"
+COHERENCE_BASE_IMAGE=gcr.io/distroless/java17-debian12 PROFILES=,jakarta,-javax COHERENCE_VERSION=24.09.3 make clean generate-proto generate-proto-v1 build-test-images test-e2e-standalone
 
-echo "Coherence CE 24.09 with scope"
-COHERENCE_BASE_IMAGE=gcr.io/distroless/java17 COHERENCE_VERSION=24.09 PROFILES=,jakarta,-javax,scope make clean generate-proto generate-proto-v1 build-test-images test-e2e-standalone-scope
+echo "Coherence CE 24.09.3 with scope"
+COHERENCE_BASE_IMAGE=gcr.io/distroless/java17-debian12 COHERENCE_VERSION=24.09.3 PROFILES=,jakarta,-javax,scope make clean generate-proto generate-proto-v1 build-test-images test-e2e-standalone-scope
 
-echo "Coherence CE 24.09 with queues"
-COHERENCE_BASE_IMAGE=gcr.io/distroless/java17 PROFILES=,jakarta,-javax,queues COHERENCE_VERSION=24.09 make clean generate-proto generate-proto-v1 build-test-images test-e2e-standalone-queues
+echo "Coherence CE 24.09.3 with queues"
+COHERENCE_BASE_IMAGE=gcr.io/distroless/java17-debian12 PROFILES=,jakarta,-javax,queues COHERENCE_VERSION=24.09.3 make clean generate-proto generate-proto-v1 build-test-images test-e2e-standalone-queues
 
-echo "Coherence CE 24.09 Base Tests"
-COHERENCE_BASE_IMAGE=gcr.io/distroless/java17 PROFILES=,jakarta,-javax COHERENCE_VERSION=24.09 make clean generate-proto generate-proto-v1 build-test-images test-v1-base 
+echo "Coherence CE 24.09.3 Base Tests"
+COHERENCE_BASE_IMAGE=gcr.io/distroless/java17-debian12 PROFILES=,jakarta,-javax COHERENCE_VERSION=24.09.3 make clean generate-proto generate-proto-v1 build-test-images test-v1-base 
 
-echo "Coherence CE 24.09 All Tests gRPC v1"
-COHERENCE_BASE_IMAGE=gcr.io/distroless/java17 PROFILES=,jakarta,-javax COHERENCE_VERSION=24.09 make clean generate-proto generate-proto-v1 build-test-images test-e2e-standalone
+echo "Coherence CE 24.09.3 All Tests gRPC v1"
+COHERENCE_BASE_IMAGE=gcr.io/distroless/java17-debian12 PROFILES=,jakarta,-javax COHERENCE_VERSION=24.09.3 make clean generate-proto generate-proto-v1 build-test-images test-e2e-standalone

@@ -41,7 +41,7 @@ COHERENCE_WKA2 ?= server1
 CLUSTER_PORT ?= 7574
 # Profiles to include for building
 PROFILES ?=
-COHERENCE_BASE_IMAGE ?= gcr.io/distroless/java:11
+COHERENCE_BASE_IMAGE ?= gcr.io/distroless/java11-debian11
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Set the location of various build tools
@@ -221,11 +221,11 @@ generate-proto: $(TOOLS_BIN)/protoc ## Generate Proto Files
 .PHONY: generate-proto-v1
 generate-proto-v1: $(TOOLS_BIN)/protoc ## Generate Proto Files v1
 	mkdir -p $(PROTOV1_DIR) || true
-	curl -o $(PROTOV1_DIR)/proxy_service_messages_v1.proto https://raw.githubusercontent.com/oracle/coherence/24.09.2/prj/coherence-grpc/src/main/proto/proxy_service_messages_v1.proto
-	curl -o $(PROTOV1_DIR)/proxy_service_v1.proto https://raw.githubusercontent.com/oracle/coherence/24.09.2/prj/coherence-grpc/src/main/proto/proxy_service_v1.proto
-	curl -o $(PROTOV1_DIR)/common_messages_v1.proto https://raw.githubusercontent.com/oracle/coherence/24.09.2/prj/coherence-grpc/src/main/proto/common_messages_v1.proto
-	curl -o $(PROTOV1_DIR)/cache_service_messages_v1.proto https://raw.githubusercontent.com/oracle/coherence/24.09.2/prj/coherence-grpc/src/main/proto/cache_service_messages_v1.proto
-	curl -o $(PROTOV1_DIR)/queue_service_messages_v1.proto https://raw.githubusercontent.com/oracle/coherence/24.09.2/prj/coherence-grpc/src/main/proto/queue_service_messages_v1.proto
+	curl -o $(PROTOV1_DIR)/proxy_service_messages_v1.proto https://raw.githubusercontent.com/oracle/coherence/24.09.3/prj/coherence-grpc/src/main/proto/proxy_service_messages_v1.proto
+	curl -o $(PROTOV1_DIR)/proxy_service_v1.proto https://raw.githubusercontent.com/oracle/coherence/24.09.3/prj/coherence-grpc/src/main/proto/proxy_service_v1.proto
+	curl -o $(PROTOV1_DIR)/common_messages_v1.proto https://raw.githubusercontent.com/oracle/coherence/24.09.3/prj/coherence-grpc/src/main/proto/common_messages_v1.proto
+	curl -o $(PROTOV1_DIR)/cache_service_messages_v1.proto https://raw.githubusercontent.com/oracle/coherence/24.09.3/prj/coherence-grpc/src/main/proto/cache_service_messages_v1.proto
+	curl -o $(PROTOV1_DIR)/queue_service_messages_v1.proto https://raw.githubusercontent.com/oracle/coherence/24.09.3/prj/coherence-grpc/src/main/proto/queue_service_messages_v1.proto
 	echo "" >> $(PROTOV1_DIR)/proxy_service_messages_v1.proto
 	echo "" >> $(PROTOV1_DIR)/proxy_service_v1.proto
 	echo "" >> $(PROTOV1_DIR)/common_messages_v1.proto
