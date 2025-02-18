@@ -43,7 +43,7 @@ jobs:
     - name: Get Docker Images
       shell: bash
       run: |
-        docker pull gcr.io/distroless/java17
+        docker pull gcr.io/distroless/java17-debian12
 
     - name: Set up JDK 17 for Build
       uses: actions/setup-java@v4
@@ -77,7 +77,7 @@ jobs:
       shell: bash
       run: |
         go get google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.3.0
-        COHERENCE_BASE_IMAGE=gcr.io/distroless/java17 INCLUDE_LONG_RUNNING=true PROFILES=,-jakarta,javax,queues COHERENCE_VERSION=$COH_VERSION make clean generate-proto generate-proto-v1 build-test-images test-e2e-standalone-queues
+        COHERENCE_BASE_IMAGE=gcr.io/distroless/java17-debian12 INCLUDE_LONG_RUNNING=true PROFILES=,-jakarta,javax,queues COHERENCE_VERSION=$COH_VERSION make clean generate-proto generate-proto-v1 build-test-images test-e2e-standalone-queues
 
     - uses: actions/upload-artifact@v4
       if: failure()

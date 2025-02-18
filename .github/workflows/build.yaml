@@ -62,8 +62,8 @@ jobs:
     - name: Get Docker Images
       shell: bash
       run: |
-        docker pull gcr.io/distroless/java17
-        docker pull gcr.io/distroless/java:11
+        docker pull gcr.io/distroless/java17-debian12
+        docker pull gcr.io/distroless/java11-debian11
 
     - name: E2E Local Tests
       shell: bash
