@@ -165,10 +165,18 @@ go run querying/main.go
 
 This example shows how to carry out various aggregations against a NamedMap or NamedCache.
 
-Source code: [aggregators/main.go](aggregators/main.go)
+Source code: [aggregators/basic/main.go](aggregators/basic/main.go)
 
 ```go
-go run aggregators/main.go
+go run aggregators/basic/main.go
+```
+
+This example shows how to carry out and explain plan against a NamedMap or NamedCache.
+
+Source code: [aggregators/explain/main.go](aggregators/explain/main.go)
+
+```go
+go run aggregators/explain/main.go
 ```
 
 ### <a name="processors"></a> Running processors
