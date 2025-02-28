@@ -171,7 +171,7 @@ Source code: [aggregators/basic/main.go](aggregators/basic/main.go)
 go run aggregators/basic/main.go
 ```
 
-This example shows how to carry out and explain plan against a NamedMap or NamedCache.
+This example shows how to carry out an explain plan against a NamedMap or NamedCache.
 
 Source code: [aggregators/explain/main.go](aggregators/explain/main.go)
 
