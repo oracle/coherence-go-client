@@ -17,7 +17,6 @@ import (
 	"github.com/oracle/coherence-go-client/v2/coherence/aggregators"
 	"github.com/oracle/coherence-go-client/v2/coherence/extractors"
 	"github.com/oracle/coherence-go-client/v2/coherence/filters"
-	"os"
 )
 
 type Person struct {
@@ -37,8 +36,6 @@ func main() {
 		}
 		ctx = context.Background()
 	)
-
-	_ = os.Setenv("COHERENCE_SERVER_ADDRESS", "coherence:///localhost")
 
 	// create a new Session to the default gRPC port of 1408 using plain text
 	session, err := coherence.NewSession(ctx, coherence.WithPlainText())
