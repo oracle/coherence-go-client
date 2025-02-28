@@ -5,7 +5,7 @@
  */
 
 /*
-Package main shows how to run and explain plan using a NamedMap with key of int and value of Person struct.
+Package main shows how to run an explain plan using a NamedMap with key of int and value of Person struct.
 */
 package main
 
