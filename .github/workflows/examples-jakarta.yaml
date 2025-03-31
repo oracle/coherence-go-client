@@ -21,7 +21,8 @@ jobs:
       matrix:
         coherenceVersion:
           - 24.09.3
-          - 24.09.4-SNAPSHOT
+          - 25.03
+          - 25.03.1-SNAPSHOT
         go-version:
           - 1.23.x
           - 1.24.x
