@@ -22,6 +22,7 @@ jobs:
         coherenceVersion:
           - 22.06.11
           - 24.09.3
+          - 25.03
           - 14.1.2-0-1
         go-version:
           - 1.23.x
