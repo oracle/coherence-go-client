@@ -74,3 +74,8 @@ jobs:
       with:
         name: test-output-${{ matrix.go-version }}-${{ matrix.coherenceVersion }}
         path: build/_output/test-logs
+
+    - uses: actions/upload-artifact@v4
+      with:
+        name: test-result-${{ matrix.go-version }}-${{ matrix.coherenceVersion }}
+        path:  test/e2e/perf/results.txt

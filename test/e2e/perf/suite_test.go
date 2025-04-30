@@ -15,6 +15,7 @@ import (
 	"math/rand"
 	"os"
 	"sort"
+	"strings"
 	"testing"
 	"time"
 )
@@ -107,7 +108,6 @@ func TestMain(m *testing.M) {
 
 	fmt.Printf("Tests completed with return code %d\n", exitCode)
 
-	log.SetOutput(os.Stdout)
 	printResults()
 
 	os.Exit(exitCode)
@@ -120,19 +120,28 @@ func printResults() {
 	}
 	sort.Strings(keys)
 
-	// Sort keys
-	sort.Strings(keys)
-	log.Println()
-	log.Println("RESULTS START")
-	log.Println()
-	log.Printf("%-30s %15s %15s %15s %15s %15s\n", "TEST", "TOTAL TIME", "EXECUTIONS", "MIN", "MAX", "AVERAGE")
+	file, err := os.Create("results.txt")
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+
+	var sb strings.Builder
+
+	sb.WriteString("\n")
+	sb.WriteString("RESULTS START")
+	sb.WriteString("\n")
+	sb.WriteString(fmt.Sprintf("%-30s %15s %15s %15s %15s %15s\n", "TEST", "TOTAL TIME", "EXECUTIONS", "MIN", "MAX", "AVERAGE"))
 	for _, k := range keys {
 		v := mapResults[k]
-		log.Printf("%-30s %15v %15d %15v %15v %15v\n", k, time.Duration(v.TotalTime), v.Executions,
-			v.MinTime, v.MaxTime, time.Duration(v.TotalTime/v.Executions))
+		sb.WriteString(fmt.Sprintf("%-30s %15v %15d %15v %15v %15v\n", k, time.Duration(v.TotalTime), v.Executions,
+			v.MinTime, v.MaxTime, time.Duration(v.TotalTime/v.Executions)))
 	}
-	log.Println()
-	log.Println("RESULTS END")
+	sb.WriteString("\n")
+	sb.WriteString("RESULTS END\n")
+
+	_, err = fmt.Fprintln(file, sb.String())
+
 }
 
 func errorAndExit(message string, err error) {
