@@ -67,10 +67,10 @@ jobs:
       shell: bash
       run: |
         curl -sL https://raw.githubusercontent.com/oracle/coherence-cli/main/scripts/install.sh | bash
-        COHERENCE_VERSION=${{ coherenceVersion }} make test-perf
-       
+        COHERENCE_VERSION=${{ matrix.coherenceVersion }} make test-perf
+
     - uses: actions/upload-artifact@v4
       if: failure()
       with:
-        name: test-output-${{ matrix.go-version }}-${{ coherenceVersion }}
+        name: test-output-${{ matrix.go-version }}-${{ matrix.coherenceVersion }}
         path: build/_output/test-logs
