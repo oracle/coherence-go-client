@@ -140,8 +140,8 @@ func printResults() {
 	sb.WriteString("\n")
 	sb.WriteString("RESULTS END\n")
 
-	_, err = fmt.Fprintln(file, sb.String())
-
+	_, _ = fmt.Fprintln(file, sb.String())
+	_, _ = fmt.Fprintln(file, sb.String())
 }
 
 func errorAndExit(message string, err error) {
