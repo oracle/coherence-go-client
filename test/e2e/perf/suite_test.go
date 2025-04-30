@@ -52,7 +52,7 @@ var (
 )
 
 const (
-	maxStudents = 2_000_000
+	maxStudents = 1_000_000
 )
 
 // The entry point for the test suite
