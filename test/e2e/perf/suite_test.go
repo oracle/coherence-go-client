@@ -106,6 +106,8 @@ func TestMain(m *testing.M) {
 	exitCode := m.Run()
 
 	fmt.Printf("Tests completed with return code %d\n", exitCode)
+
+	log.SetOutput(os.Stdout)
 	printResults()
 
 	os.Exit(exitCode)
