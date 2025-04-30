@@ -52,7 +52,7 @@ var (
 )
 
 const (
-	maxStudents = 1_000_000
+	maxStudents = 2_000_000
 )
 
 // The entry point for the test suite
@@ -120,17 +120,17 @@ func printResults() {
 
 	// Sort keys
 	sort.Strings(keys)
-	fmt.Println()
-	fmt.Println("RESULTS START")
-	fmt.Println()
-	fmt.Printf("%-30s %15s %15s %15s %15s %15s\n", "TEST", "TOTAL TIME", "EXECUTIONS", "MIN", "MAX", "AVERAGE")
+	log.Println()
+	log.Println("RESULTS START")
+	log.Println()
+	log.Printf("%-30s %15s %15s %15s %15s %15s\n", "TEST", "TOTAL TIME", "EXECUTIONS", "MIN", "MAX", "AVERAGE")
 	for _, k := range keys {
 		v := mapResults[k]
-		fmt.Printf("%-30s %15v %15d %15v %15v %15v\n", k, time.Duration(v.TotalTime), v.Executions,
+		log.Printf("%-30s %15v %15d %15v %15v %15v\n", k, time.Duration(v.TotalTime), v.Executions,
 			v.MinTime, v.MaxTime, time.Duration(v.TotalTime/v.Executions))
 	}
-	fmt.Println()
-	fmt.Println("RESULTS END")
+	log.Println()
+	log.Println("RESULTS END")
 }
 
 func errorAndExit(message string, err error) {
