@@ -1,11 +1,11 @@
-# Copyright 2022, 2025 Oracle Corporation and/or its affiliates.
+# Copyright 2025 Oracle Corporation and/or its affiliates.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # https://oss.oracle.com/licenses/upl.
 
 # ---------------------------------------------------------------------------
-# Coherence Resolver Compatability Tests for Multiple Clusters
+# Coherence Go Client GitHub Actions test streaming against v22.06 versions
 # ---------------------------------------------------------------------------
-name: Resolver Compatability Multiple
+name: CI-Streaming v22.06
 
 on:
   workflow_dispatch:
@@ -20,9 +20,10 @@ jobs:
       fail-fast: false
       matrix:
         coherenceVersion:
+          - 22.06.13-SNAPSHOT
           - 22.06.12
-          - 25.03.1
           - 14.1.2-0-2
+          - 14.1.2-0-3-SNAPSHOT
         go-version:
           - 1.23.x
           - 1.24.x
@@ -33,6 +34,11 @@ jobs:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 0
+
+    - name: Get Docker Images
+      shell: bash
+      run: |
+        docker pull gcr.io/distroless/java17-debian12
 
     - name: Set up JDK
       uses: actions/setup-java@v4
@@ -60,11 +66,12 @@ jobs:
       with:
         go-version: '${{ matrix.go-version }}'
 
-    - name: Discovery Compatability Tests
+    - name: Verify Examples
       shell: bash
       run: |
-        export COHERENCE_VERSION=${{ matrix.coherenceVersion }}
-        make clean test-clean test-resolver-cluster
+        go get google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.3.0
+        COHERENCE_BASE_IMAGE=gcr.io/distroless/java17-debian12 COHERENCE_VERSION=${{ matrix.coherenceVersion }} PROFILES=,-jakarta,javax make clean generate-proto generate-proto-v1 build-test-images test-cluster-startup test-e2e-streaming
+        make test-cluster-shutdown || true
 
     - uses: actions/upload-artifact@v4
       if: failure()
