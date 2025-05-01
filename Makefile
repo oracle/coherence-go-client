@@ -285,6 +285,14 @@ test-e2e-standalone: test-clean test gotestsum $(BUILD_PROPS) ## Run e2e tests w
 	go tool cover -func=$(COVERAGE_DIR)/cover-functional.out | grep -v '0.0%'
 
 # ----------------------------------------------------------------------------------------------------------------------
+# Executes the Go streaming tests for standalone Coherence
+# ----------------------------------------------------------------------------------------------------------------------
+.PHONY: test-e2e-streaming
+test-e2e-streaming: test-clean test gotestsum $(BUILD_PROPS) ## Run e2e tests with Coherence
+	CGO_ENABLED=0 $(GOTESTSUM) --format testname --junitfile $(TEST_LOGS_DIR)/go-streaming-test.xml \
+	  -- $(GO_TEST_FLAGS) -v -coverprofile=$(COVERAGE_DIR)/cover-functional.out -v ./test/e2e/streaming/... -coverpkg=github.com/oracle/coherence-go-client/v2/coherence/...
+
+# ----------------------------------------------------------------------------------------------------------------------
 # Executes the Go end to end tests for standalone Coherence with Scope set
 # ----------------------------------------------------------------------------------------------------------------------
 .PHONY: test-e2e-standalone-scope

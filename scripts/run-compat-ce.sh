@@ -15,8 +15,11 @@ set -e
 echo "Coherence CE 22.06.10"
 COHERENCE_VERSION=22.06.10 PROFILES=,-jakarta,javax make clean generate-proto build-test-images test-e2e-standalone
 
-echo "Coherence CE 14.1.2-0-0"
-COHERENCE_BASE_IMAGE=gcr.io/distroless/java17-debian12 COHERENCE_VERSION=14.1.2-0-0 PROFILES=,-jakarta,javax make clean generate-proto build-test-images test-e2e-standalone
+echo "Coherence CE 14.1.2-0-2"
+COHERENCE_BASE_IMAGE=gcr.io/distroless/java17-debian12 COHERENCE_VERSION=14.1.2-0-2 PROFILES=,-jakarta,javax make clean generate-proto build-test-images test-e2e-standalone
+
+echo "Coherence CE 14.1.2-0-2 Streaming"
+COHERENCE_BASE_IMAGE=gcr.io/distroless/java17-debian12 COHERENCE_VERSION=14.1.2-0-2 PROFILES=,-jakarta,javax make clean generate-proto build-test-images test-e2e-streaming
 
 echo "Coherence CE 22.06.10 with scope"
 COHERENCE_VERSION=22.06.10 PROFILES=,-jakarta,javax,scope make clean generate-proto build-test-images test-e2e-standalone-scope
