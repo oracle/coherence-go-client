@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Oracle and/or its affiliates.
+ * Copyright (c) 2024, 2025 Oracle and/or its affiliates.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * https://oss.oracle.com/licenses/upl.
  */
@@ -455,11 +455,6 @@ func runTestQueueCompatability(g *gomega.WithT, queueName string, firstQueueType
 	g.Expect(queue.Destroy(ctx)).ShouldNot(gomega.HaveOccurred())
 
 	utils.Sleep(5)
-
-	//g.Expect(errorOccurred).To(gomega.Equal(shouldError))
-	//if !shouldError {
-	//	g.Expect(queue.Destroy(ctx)).ShouldNot(gomega.HaveOccurred())
-	//}
 }
 
 func testQueue(ctx context.Context, g *gomega.WithT, queue coherence.NamedQueue[string]) {

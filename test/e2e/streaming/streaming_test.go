@@ -48,8 +48,6 @@ var (
 func TestStreamingConcurrency(t *testing.T) {
 	g := gomega.NewWithT(t)
 
-	_ = os.Setenv("COHERENCE_CLIENT_REQUEST_TIMEOUT", "300000")
-
 	osCacheCount := os.Getenv("COHERENCE_CACHE_COUNT")
 	if os.Getenv(osCacheCount) != "" {
 		v, err := strconv.Atoi(osCacheCount)
@@ -58,7 +56,7 @@ func TestStreamingConcurrency(t *testing.T) {
 		}
 	}
 
-	session, err := utils.GetSession()
+	session, err := utils.GetSession(coherence.WithRequestTimeout(5 * time.Minute))
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	defer session.Close()
 
