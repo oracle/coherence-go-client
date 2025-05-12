@@ -50,9 +50,10 @@ func runLogLevelTest(t *testing.T, messageLevel, testLogLevel logLevel, expectOu
 	const message = "MESSAGE"
 
 	var buf bytes.Buffer
-	log.SetOutput(&buf)
-	defer log.SetOutput(nil)
 
+	origOutput := log.Writer()
+	log.SetOutput(&buf)
+	defer log.SetOutput(origOutput)
 	setLogLevel(testLogLevel.String())
 
 	logMessage(messageLevel, message)
@@ -63,5 +64,4 @@ func runLogLevelTest(t *testing.T, messageLevel, testLogLevel logLevel, expectOu
 	} else {
 		g.Expect(output).To(gomega.Not(gomega.ContainSubstring(message)))
 	}
-
 }
