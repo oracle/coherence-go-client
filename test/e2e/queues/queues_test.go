@@ -639,9 +639,6 @@ func TestQueueDestroy(t *testing.T) {
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	defer session.Close()
 
-	t.Setenv("COHERENCE_SESSION_DEBUG", "true")
-	t.Setenv("COHERENCE_MESSAGE_DEBUG", "true")
-
 	runTestQueueDestroy(g, session, "destroy-q", coherence.Queue)
 	runTestQueueDestroy(g, session, "destroy-paged-q", coherence.PagedQueue)
 	runTestQueueDestroy(g, session, "destroy-dq", coherence.Dequeue)

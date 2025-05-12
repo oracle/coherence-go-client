@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2024 Oracle and/or its affiliates.
+ * Copyright (c) 2022, 2025 Oracle and/or its affiliates.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * https://oss.oracle.com/licenses/upl.
  */
@@ -26,15 +26,17 @@ import (
 // V1ProxyProtocol defines the types of proxy protocols such as "CacheService" or "QueueService".
 type V1ProxyProtocol string
 
-type logLevel string
+type logLevel int
 
 var (
-	INFO    logLevel = "INFO:"
-	WARNING logLevel = "WARN:"
-	ERROR   logLevel = "ERROR:"
-	DEBUG   logLevel = "DEBUG:"
-	RCV              = "RCV"
-	SND              = "SND"
+	ERROR   logLevel = 1
+	WARNING logLevel = 2
+	INFO    logLevel = 3 // Default
+	DEBUG   logLevel = 4
+	ALL     logLevel = 5 // all messages
+
+	// current log level
+	currentLogLevel int
 )
 
 const (
@@ -234,12 +236,32 @@ func (m *streamManagerV1) processResponseMessage(id int64, resp *responseMessage
 	m.processResponse(id, resp)
 }
 
+// logMessage logs a message only if the level <= currentLogLevel
 func logMessage(level logLevel, format string, args ...any) {
-	log.Println(getLogMessage(level, format, args...))
+	if int(level) <= currentLogLevel {
+		log.Println(getLogMessage(level, format, args...))
+	}
 }
 
 func getLogMessage(level logLevel, format string, args ...any) string {
 	return fmt.Sprintf("%v ", level) + fmt.Sprintf(format, args...)
+}
+
+func (l logLevel) String() string {
+	switch l {
+	case ERROR:
+		return "ERROR"
+	case WARNING:
+		return "WARNING"
+	case INFO:
+		return "INFO"
+	case DEBUG:
+		return "DEBUG"
+	case ALL:
+		return "DEBUG"
+	default:
+		return fmt.Sprintf("logLevel(%d)", int(l))
+	}
 }
 
 func (m *streamManagerV1) setServerInfo(r *pb1.InitResponse) {

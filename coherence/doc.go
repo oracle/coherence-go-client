@@ -99,6 +99,27 @@ You also have the ability to control maximum amount of time, in milliseconds, a 
 without successfully reconnecting. For this you use the option [coherence.WithDisconnectTimeout] or the environment
 variable COHERENCE_SESSION_DISCONNECT_TIMEOUT.
 
+# Setting Log Levels
+
+The Coherence Go client supports setting the following log levels to change verbosity of messages output.
+The default level is 'INFO' and this can be changed by setting the environment variable COHERENCE_LOG_LEVEL to one of the following values:
+
+- ERROR
+
+- WARNING
+
+- INFO
+
+- DEBUG
+
+- ALL
+
+All messages at and above the level are displayed. For example setting to WARNING will only show ERROR and WARNING messages.
+Where as setting DEBUG, will show ERROR, WARNING, INFO and DEBUG messages.
+
+Note: Setting to ALL should only be used to diagnose issues as directed by Oracle Support. This level will
+output a large volume of messages.
+
 # Obtaining a NamedMap or NamedCache
 
 Once a session has been created, the [GetNamedMap](session, name, ...options) or [GetNamedCache](session, name, ...options)

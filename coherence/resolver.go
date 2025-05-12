@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2024 Oracle and/or its affiliates.
+ * Copyright (c) 2022, 2025 Oracle and/or its affiliates.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * https://oss.oracle.com/licenses/upl.
  */
@@ -219,10 +219,13 @@ func parseNsLookupString(addresses string) ([]string, error) {
 }
 
 func checkResolverDebug() {
-	if getBoolValueFromEnvVarOrDefault(envResolverDebug, false) {
+	if getBoolValueFromEnvVarOrDefault(envResolverDebug, false) || currentLogLevel >= int(DEBUG) {
 		// enable session debugging
 		resolverDebug = func(s string, v ...any) {
 			logMessage(DEBUG, s, v...)
+		}
+		if currentLogLevel <= int(DEBUG) {
+			currentLogLevel = int(DEBUG)
 		}
 	}
 }

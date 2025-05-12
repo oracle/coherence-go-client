@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Oracle and/or its affiliates.
+ * Copyright (c) 2024, 2025 Oracle and/or its affiliates.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * https://oss.oracle.com/licenses/upl.
  */
@@ -887,8 +887,7 @@ func assertSize(g *gomega.WithT, session *coherence.Session, cache string, expec
 }
 
 func getTestSession(t *testing.T, g *gomega.WithT) *coherence.Session {
-	t.Setenv("COHERENCE_SESSION_DEBUG", "true")
-	t.Setenv("COHERENCE_MESSAGE_DEBUG", "true")
+	t.Setenv("COHERENCE_LOG_LEVEL", "ALL")
 	t.Setenv("COHERENCE_CLIENT_REQUEST_TIMEOUT", "120000")
 
 	session, err := utils.GetSession()

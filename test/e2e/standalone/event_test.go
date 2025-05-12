@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2024 Oracle and/or its affiliates.
+ * Copyright (c) 2022, 2025 Oracle and/or its affiliates.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * https://oss.oracle.com/licenses/upl.
  */
@@ -140,8 +140,6 @@ func TestExpiringEvents(t *testing.T) {
 // TestEventDisconnect tests to ensure that if we get a disconnect, then we can rec-connect and
 // re-register event listeners.
 func TestEventDisconnect(t *testing.T) {
-	t.Setenv("COHERENCE_SESSION_DEBUG", "true")
-
 	g, session := initTest(t,
 		coherence.WithDisconnectTimeout(time.Duration(130)*time.Second),
 		coherence.WithReadyTimeout(time.Duration(130)*time.Second))
@@ -164,8 +162,6 @@ func TestEventDisconnect(t *testing.T) {
 // TestEventDisconnectWithReadyTimeoutDelay tests that the ready timeout is honoured,
 // as we have stopped the gRPC proxy before the test runs.
 func TestEventDisconnectWithReadyTimeoutDelay(t *testing.T) {
-	t.Setenv("COHERENCE_SESSION_DEBUG", "true")
-
 	fmt.Println("Issue stop of $GRPC:GrpcProxy")
 	_, err := utils.IssuePostRequest("http://127.0.0.1:30000/management/coherence/cluster/services/$GRPC:GrpcProxy/members/1/stop")
 	if err != nil {
@@ -190,8 +186,6 @@ func TestEventDisconnectWithReadyTimeoutDelay(t *testing.T) {
 
 func TestMapEventInsertsOnly(t *testing.T) {
 	expectedA := "A"
-	t.Setenv("COHERENCE_SESSION_DEBUG", "true")
-	t.Setenv("COHERENCE_MESSAGE_DEBUG", "true")
 
 	expected := ExpectedEvents[string, string]{
 		inserts: []*ValidateEvent[string, string]{

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024, Oracle and/or its affiliates.
+ * Copyright (c) 2024, 2025 Oracle and/or its affiliates.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * https://oss.oracle.com/licenses/upl.
  */
@@ -44,7 +44,7 @@ func TestNsLookupGrpcAddressesMultipleClusters(t *testing.T) {
 func TestConnectingUsingNSResolverMultipleClusters(t *testing.T) {
 	g := gomega.NewGomegaWithT(t)
 	ctx := context.Background()
-	t.Setenv("COHERENCE_RESOLVER_DEBUG", "true")
+	t.Setenv("COHERENCE_LOG_LEVEL", "DEBUG")
 
 	session, err := coherence.NewSession(ctx, coherence.WithPlainText(), coherence.WithAddress("coherence:///localhost:7574/cluster2"))
 	g.Expect(err).To(gomega.Not(gomega.HaveOccurred()))

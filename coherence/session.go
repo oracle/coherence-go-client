@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2024 Oracle and/or its affiliates.
+ * Copyright (c) 2022, 2025 Oracle and/or its affiliates.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * https://oss.oracle.com/licenses/upl.
  */
@@ -20,7 +20,6 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/resolver"
 	"google.golang.org/grpc/status"
-	"log"
 	"os"
 	"reflect"
 	"strconv"
@@ -72,9 +71,8 @@ type Session struct {
 	connectMutex          sync.RWMutex         // mutes for connection attempts
 	firstConnectAttempted bool                 // indicates if the first connection has been attempted
 	hasConnected          bool                 // indicates if the session has ever connected
-	debug                 func(string, ...any) // a function to output debug messages
-	debugConnection       func(string, ...any) // a function to output debug messages for gRPCV1 connections
-	messageDebugMode      string               // either "on" or "full"
+	debug                 func(string, ...any) // a function to output DEBUG messages
+	debugConnection       func(string, ...any) // a function to output ALL messages for gRPCV1 connections
 	requestID             int64                // request id for gRPC v1
 	filterID              int64                // filter id for gRPC v1
 	v1StreamManagerCache  *streamManagerV1
@@ -192,24 +190,26 @@ func NewSession(ctx context.Context, options ...func(session *SessionOptions)) (
 	// ensure name resolver has been registered
 	resolver.Register(&nsLookupResolverBuilder{})
 
-	if getBoolValueFromEnvVarOrDefault(envSessionDebug, false) {
+	// set the coherenceLogLevel
+	setLogLevel()
+
+	if getBoolValueFromEnvVarOrDefault(envSessionDebug, false) || currentLogLevel >= int(DEBUG) {
 		// enable session debugging
 		session.debug = func(format string, v ...any) {
 			logMessage(DEBUG, format, v...)
 		}
+		if currentLogLevel <= int(DEBUG) {
+			currentLogLevel = int(DEBUG)
+		}
 	}
 
 	messageDebug := getStringValueFromEnvVarOrDefault(envMessageDebug, "")
-	if messageDebug != "" {
+	if messageDebug != "" || currentLogLevel == int(ALL) {
 		// enable session debugging
 		session.debugConnection = func(s string, v ...any) {
-			msg := getLogMessage(DEBUG, s, v...)
-			if session.messageDebugMode == "on" && len(msg) > 256 {
-				msg = msg[:256]
-			}
-			log.Println(msg)
+			logMessage(DEBUG, s, v...)
 		}
-		session.messageDebugMode = messageDebug
+		currentLogLevel = int(ALL)
 	}
 
 	// apply any options
@@ -255,6 +255,40 @@ func NewSession(ctx context.Context, options ...func(session *SessionOptions)) (
 
 	// ensure initial connection
 	return session, session.ensureConnection()
+}
+
+// setLogLevel sets the log level from the COHERENCE_LOG_LEVEL environment variable.
+func setLogLevel() {
+	var (
+		level    int
+		envLevel = getStringValueFromEnvVarOrDefault(envLogLevel, "3")
+	)
+
+	// try to convert from integer first
+	if lvl, err := strconv.Atoi(envLevel); err == nil {
+		if lvl >= 1 && lvl <= 5 {
+			currentLogLevel = lvl
+			return
+		}
+	}
+
+	// fall-through, check for string values
+	switch envLevel {
+	case "ERROR":
+		level = 1
+	case "WARNING":
+		level = 2
+	case "INFO":
+		level = 3
+	case "DEBUG":
+		level = 4
+	case "ALL":
+		level = 5
+	default:
+		level = 3 // INFO
+	}
+
+	currentLogLevel = level
 }
 
 func getTimeoutValue(envVar, defaultValue, description string) (time.Duration, error) {
@@ -418,7 +452,7 @@ func (s *Session) Close() {
 			return newSessionLifecycleEvent(s, Closed)
 		})
 		if err != nil {
-			log.Printf("unable to close session %s %v", s.sessionID, err)
+			logMessage(WARNING, "unable to close session %s %v", s.sessionID, err)
 		}
 	} else {
 		defer s.mapMutex.Unlock()
@@ -753,7 +787,7 @@ func (s *SessionOptions) createTLSOption() (grpc.DialOption, error) {
 	// check if a tls.Config has been set and use this, otherwise continue to check for env and other options
 	if s.TlSConfig != nil {
 		if s.TlSConfig.InsecureSkipVerify {
-			log.Println(insecureWarning)
+			logMessage(WARNING, insecureWarning)
 		}
 		return grpc.WithTransportCredentials(credentials.NewTLS(s.TlSConfig)), nil
 	}
@@ -774,7 +808,7 @@ func (s *SessionOptions) createTLSOption() (grpc.DialOption, error) {
 
 	ignoreInvalidCerts := ignoreInvalidCertsEnv == "true"
 	if ignoreInvalidCerts {
-		log.Println(insecureWarning)
+		logMessage(WARNING, insecureWarning)
 	}
 	s.IgnoreInvalidCerts = ignoreInvalidCerts
 
@@ -801,7 +835,7 @@ func (s *SessionOptions) createTLSOption() (grpc.DialOption, error) {
 	if s.CaCertPath != "" {
 		cp = x509.NewCertPool()
 
-		log.Println("loading CA certificate")
+		logMessage(DEBUG, "loading CA certificate")
 		if err = validateFilePath(s.CaCertPath); err != nil {
 			return nil, err
 		}
@@ -817,7 +851,7 @@ func (s *SessionOptions) createTLSOption() (grpc.DialOption, error) {
 	}
 
 	if s.ClientCertPath != "" && s.ClientKeyPath != "" {
-		log.Println("loading client certificate and key, cert=", s.ClientCertPath, "key=", s.ClientKeyPath)
+		logMessage(DEBUG, "loading client certificate and key paths, cert=%s, key=%s", s.ClientCertPath, s.ClientKeyPath)
 		if err = validateFilePath(s.ClientCertPath); err != nil {
 			return nil, err
 		}
