@@ -50,7 +50,7 @@ const (
 	// envResolverDebug enables randomization of addresses returned by resolver
 	envResolverRandomize = "COHERENCE_RESOLVER_RANDOMIZE"
 
-	// the Coherence log level: 0 -> 5
+	// the Coherence log level: 1 -> 5 (ERROR -> ALL)
 	envLogLevel = "COHERENCE_LOG_LEVEL"
 
 	// Integer.MAX_VALUE on Java
