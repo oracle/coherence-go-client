@@ -191,7 +191,7 @@ func NewSession(ctx context.Context, options ...func(session *SessionOptions)) (
 	resolver.Register(&nsLookupResolverBuilder{})
 
 	// set the coherenceLogLevel
-	setLogLevel()
+	setLogLevel(getStringValueFromEnvVarOrDefault(envLogLevel, "3"))
 
 	if getBoolValueFromEnvVarOrDefault(envSessionDebug, false) || currentLogLevel >= int(DEBUG) {
 		// enable session debugging
@@ -258,11 +258,8 @@ func NewSession(ctx context.Context, options ...func(session *SessionOptions)) (
 }
 
 // setLogLevel sets the log level from the COHERENCE_LOG_LEVEL environment variable.
-func setLogLevel() {
-	var (
-		level    int
-		envLevel = getStringValueFromEnvVarOrDefault(envLogLevel, "3")
-	)
+func setLogLevel(envLevel string) {
+	var level int
 
 	// try to convert from integer first
 	if lvl, err := strconv.Atoi(envLevel); err == nil {

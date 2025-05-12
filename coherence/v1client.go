@@ -258,7 +258,7 @@ func (l logLevel) String() string {
 	case DEBUG:
 		return "DEBUG"
 	case ALL:
-		return "DEBUG"
+		return "ALL"
 	default:
 		return fmt.Sprintf("logLevel(%d)", int(l))
 	}
