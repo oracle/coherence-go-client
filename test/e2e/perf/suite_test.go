@@ -155,7 +155,8 @@ func InitializeCoherence(ctx context.Context, address string) (Config, error) {
 	)
 
 	// create a new Session to the default gRPC port of 1408 using plain text
-	config.Session, err = coherence.NewSession(ctx, coherence.WithPlainText(), coherence.WithAddress(address))
+	config.Session, err = coherence.NewSession(ctx, coherence.WithPlainText(), coherence.WithAddress(address),
+		coherence.WithRequestTimeout(300*time.Minute))
 	if err != nil {
 		return config, err
 	}
