@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2024 Oracle and/or its affiliates.
+ * Copyright (c) 2022, 2025 Oracle and/or its affiliates.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * https://oss.oracle.com/licenses/upl.
  */
@@ -35,13 +35,13 @@ const (
 	envDisconnectTimeout  = "COHERENCE_SESSION_DISCONNECT_TIMEOUT"
 	envReadyTimeout       = "COHERENCE_READY_TIMEOUT"
 
-	// envSessionDebug enables session debug messages to be displayed.
+	// envSessionDebug enables session debug messages to be displayed. Deprecated, use COHERENCE_LOG_LEVEL=DEBUG instead.
 	envSessionDebug = "COHERENCE_SESSION_DEBUG"
 
-	// envMessageDebug enables message debug messages to be displayed.
+	// envMessageDebug enables message debug messages to be displayed. Deprecated, use COHERENCE_LOG_LEVEL=ALL instead.
 	envMessageDebug = "COHERENCE_MESSAGE_DEBUG"
 
-	// envResolverDebug enables resolver debug messages to be displayed.
+	// envResolverDebug enables resolver debug messages to be displayed. Deprecated, use COHERENCE_LOG_LEVEL=DEBUG instead.
 	envResolverDebug = "COHERENCE_RESOLVER_DEBUG"
 
 	// envResolverDebug sets the number of retries when the resolver fails.
@@ -49,6 +49,9 @@ const (
 
 	// envResolverDebug enables randomization of addresses returned by resolver
 	envResolverRandomize = "COHERENCE_RESOLVER_RANDOMIZE"
+
+	// the Coherence log level: 1 -> 5 (ERROR -> ALL)
+	envLogLevel = "COHERENCE_LOG_LEVEL"
 
 	// Integer.MAX_VALUE on Java
 	integerMaxValue = 2147483647

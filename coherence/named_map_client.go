@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2024 Oracle and/or its affiliates.
+ * Copyright (c) 2022, 2025 Oracle and/or its affiliates.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * https://oss.oracle.com/licenses/upl.
  */
@@ -14,7 +14,6 @@ import (
 	"github.com/oracle/coherence-go-client/v2/coherence/extractors"
 	"github.com/oracle/coherence-go-client/v2/coherence/filters"
 	"github.com/oracle/coherence-go-client/v2/coherence/processors"
-	"log"
 	"sync"
 	"time"
 )
@@ -456,7 +455,7 @@ func (nm *NamedMapClient[K, V]) Release() {
 	if nm.baseClient.nearCacheListener != nil {
 		err := nm.RemoveListener(context.Background(), nm.baseClient.nearCacheListener.listener)
 		if err != nil {
-			log.Printf("unable to remove listener to near cache: %v", err)
+			logMessage(WARNING, "unable to remove listener to near cache: %v", err)
 		}
 	}
 
@@ -995,7 +994,7 @@ func newNamedMapReconnectListener[K comparable, V any](nm NamedMapClient[K, V]) 
 		// re-register listeners for the NamedMap
 		namedMap := convertNamedMapClient[K, V](&nm)
 		if err := reRegisterListeners[K, V](context.Background(), &namedMap, nm.baseClient); err != nil {
-			log.Println(err)
+			logMessage(WARNING, "unable to re-register listeners: %v", err)
 		}
 	})
 
@@ -1057,7 +1056,7 @@ func newNearNamedMapMapLister[K comparable, V any](nc NamedMapClient[K, V], cach
 	listener.listener.OnAny(func(e MapEvent[K, V]) {
 		err := processNearCacheEvent(nc.baseClient.nearCache, e)
 		if err != nil {
-			log.Println("Error processing near cache MapEvent", e)
+			logMessage(WARNING, "Error processing near cache MapEvent: %v", e)
 		}
 	})
 

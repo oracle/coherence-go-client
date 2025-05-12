@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024 Oracle and/or its affiliates.
+ * Copyright (c) 2023, 2025 Oracle and/or its affiliates.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * https://oss.oracle.com/licenses/upl.
  */
@@ -19,7 +19,7 @@ import (
 func TestSessionLifecycle(t *testing.T) {
 	g := gomega.NewWithT(t)
 
-	t.Setenv("COHERENCE_SESSION_DEBUG", "true")
+	t.Setenv("COHERENCE_LOG_LEVEL", "DEBUG")
 
 	session, err := utils.GetSession()
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())

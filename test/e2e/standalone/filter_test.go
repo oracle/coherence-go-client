@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024 Oracle and/or its affiliates.
+ * Copyright (c) 2023, 2025 Oracle and/or its affiliates.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * https://oss.oracle.com/licenses/upl.
  */
@@ -206,9 +206,6 @@ func TestFiltersAgainstMapAndCache(t *testing.T) {
 // TestPresentFilter runs all tests for Present() filter
 func TestPresentFilter(t *testing.T) {
 	g := gomega.NewWithT(t)
-
-	t.Setenv("COHERENCE_SESSION_DEBUG", "true")
-	t.Setenv("COHERENCE_GRPCV1_DEBUG", "true")
 
 	session, err := utils.GetSession()
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
