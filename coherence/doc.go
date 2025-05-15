@@ -295,6 +295,8 @@ or [NamedCache] interface, but a function call that takes a [NamedMap] or [Named
 Note: the entries are sorted internally on the gRPC proxy to avoid excessive memory usage, but you need to be careful
 when running this operation against NamedCaches with large number of entries.
 
+Sorting via a [Comparator] is only available when connecting to Coherence server versions CE 25.03+ and commercial 14.1.2.0+.
+
 # Using entry processors for in-place processing
 
 A Processor is an object that allows you to process (update) one or more [NamedMap] entries on the [NamedMap] itself,

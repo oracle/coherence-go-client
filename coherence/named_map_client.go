@@ -333,6 +333,8 @@ func AddIndexWithComparator[K comparable, V, T, E any](ctx context.Context, nm N
 //
 // Note: the entries are sorted internally on the gRPC proxy to avoid excessive memory usage, but you need to be
 // careful when running this operation against NamedCaches with large number of entries.
+//
+// This feature is only available when connecting to Coherence server versions CE 25.03+ and commercial 14.1.2.0+.
 func EntrySetFilterWithComparator[K comparable, V, E any](ctx context.Context, nm NamedMap[K, V], filter filters.Filter, comparator extractors.Comparator[E]) <-chan *StreamedEntry[K, V] {
 	return executeEntrySetFilter(ctx, nm.getBaseClient(), filter, comparator)
 }

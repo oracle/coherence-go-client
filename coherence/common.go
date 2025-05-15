@@ -1884,6 +1884,12 @@ func executeEntrySetFilter[K comparable, V any, E any](ctx context.Context, bc *
 	}
 
 	if comparator != nil {
+		if bc.session.GetProtocolVersion() == 0 {
+			// feature not available in V0
+			ch <- &StreamedEntry[K, V]{Err: fmt.Errorf("this feature is not available in this server version")}
+			return ch
+		}
+
 		binComparator, err = serializer.Serialize(comparator)
 		if err != nil {
 			ch <- &StreamedEntry[K, V]{Err: err}

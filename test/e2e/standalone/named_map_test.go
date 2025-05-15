@@ -866,6 +866,11 @@ func RunTestEntrySetFilterWithComparator(t *testing.T, namedMap coherence.NamedM
 		ageResultsDescending = []int{44, 33, 20, 12}
 	)
 
+	if namedMap.GetSession().GetProtocolVersion() == 0 {
+		// skip as not supported in V0
+		return
+	}
+
 	// populate the cache
 	populatePeople(g, namedMap)
 
