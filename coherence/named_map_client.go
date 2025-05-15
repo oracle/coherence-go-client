@@ -303,8 +303,38 @@ func AddIndex[K comparable, V, T, E any](ctx context.Context, nm NamedMap[K, V],
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
-func AddIndexWithComparator[K comparable, V, T, E any](ctx context.Context, nm NamedMap[K, V], extractor extractors.ValueExtractor[T, E], comparator extractors.ValueExtractor[T, E]) error {
+func AddIndexWithComparator[K comparable, V, T, E any](ctx context.Context, nm NamedMap[K, V], extractor extractors.ValueExtractor[T, E], comparator extractors.Comparator[E]) error {
 	return executeAddIndex(ctx, nm.getBaseClient(), extractor, false, comparator)
+}
+
+// EntrySetFilterWithComparator returns a channel from which entries satisfying the specified filter can be obtained.
+// The results are sorted via the provided comparator which is a [extractors.Comparator].
+// Each entry in the channel is of type [*StreamedEntry] which wraps an error and the result.
+// As always, the result must be accessed (and will be valid) only if the error is nil.
+//
+// The example below shows how to iterate the entries in a [NamedCache] or [NamedMap] where the age > 20 and returns
+// the results sorted by age ascending.
+//
+//	namedMap, err := coherence.GetNamedMap[int, Person](session, "people")
+//	if err != nil {
+//	    log.Fatal(err)
+//	}
+//
+//	comparatorAscending  = extractors.ExtractorComparator(extractors.Extract[int]("age"), true)
+//
+//	ch := coherence.EntrySetFilterWithComparator(ctx, namedMap, filters.Always(), comparatorAscending)
+//	for result := range ch {
+//	if result.Err != nil {
+//	        // process, handle the error
+//	    } else {
+//	        fmt.Println("Key:", result.Key, "Value:", result.Value)
+//	    }
+//	}
+//
+// Note: the entries are sorted internally on the gRPC proxy to avoid excessive memory usage, but you need to be
+// careful when running this operation against NamedCaches with large number of entries.
+func EntrySetFilterWithComparator[K comparable, V, E any](ctx context.Context, nm NamedMap[K, V], filter filters.Filter, comparator extractors.Comparator[E]) <-chan *StreamedEntry[K, V] {
+	return executeEntrySetFilter(ctx, nm.getBaseClient(), filter, comparator)
 }
 
 // RemoveIndex removes index based upon the supplied [extractors.ValueExtractor].
@@ -558,7 +588,37 @@ func (nm *NamedMapClient[K, V]) IsEmpty(ctx context.Context) (bool, error) {
 //	    }
 //	}
 func (nm *NamedMapClient[K, V]) EntrySetFilter(ctx context.Context, fltr filters.Filter) <-chan *StreamedEntry[K, V] {
-	return executeEntrySetFilter[K, V](ctx, nm.baseClient, fltr)
+	return executeEntrySetFilter[K, V, any](ctx, nm.baseClient, fltr, nil)
+}
+
+// EntrySetFilterWithComparator returns a channel from which entries satisfying the specified filter can be obtained.
+// The results are sorted via the provided comparator which is a [extractors.ValueExtractor].
+// Each entry in the channel is of type [*StreamedEntry] which wraps an error and the result.
+// As always, the result must be accessed (and will be valid) only if the error is nil.
+//
+// The example below shows how to iterate the entries in a [NamedMap] where the age > 20 and returns the results
+// sorted by age.
+//
+//	namedMap, err := coherence.GetNamedMap[int, Person](session, "people")
+//	if err != nil {
+//	    log.Fatal(err)
+//	}
+//
+//	comparator := extractors.Extract[any]("age")
+//
+//	ch := namedMap.EntrySetFilterWithComparator(ctx, filters.GreaterEqual(extractors.Extract[int]("age"), 20), comparator)
+//	for result := range ch {
+//	if result.Err != nil {
+//	        // process, handle the error
+//	    } else {
+//	        fmt.Println("Key:", result.Key, "Value:", result.Value)
+//	    }
+//	}
+//
+// Note: the entries are sorted internally on the gRPC proxy to avoid excessive memory usage, but you need to be
+// careful when running this operation against NamedMaps with large number of entries.
+func (nm *NamedMapClient[K, V]) EntrySetFilterWithComparator(ctx context.Context, fltr filters.Filter, comparator extractors.Comparator[any]) <-chan *StreamedEntry[K, V] {
+	return executeEntrySetFilter(ctx, nm.baseClient, fltr, comparator)
 }
 
 // EntrySet returns a channel from which  all entries can be obtained.
@@ -827,7 +887,7 @@ func (nm *NamedMapClient[K, V]) Size(ctx context.Context) (int, error) {
 //	    }
 //	}
 func (nm *NamedMapClient[K, V]) ValuesFilter(ctx context.Context, fltr filters.Filter) <-chan *StreamedValue[V] {
-	return executeValues(ctx, nm.baseClient, fltr)
+	return executeValues[K, V, any](ctx, nm.baseClient, fltr, nil)
 }
 
 // Values returns a view of all values contained in the [NamedMap].

@@ -943,8 +943,8 @@ func (m *streamManagerV1) invoke(ctx context.Context, cache string, agent []byte
 	return m.getStreamingResponseKeyAndValue(ctx, requestType, req.Id)
 }
 
-func (m *streamManagerV1) entrySetFilter(ctx context.Context, cache string, filter []byte) (<-chan BinaryKeyAndValue, error) {
-	req, err := m.newEntrySetRequest(cache, filter)
+func (m *streamManagerV1) entrySetFilter(ctx context.Context, cache string, filter []byte, comparator []byte) (<-chan BinaryKeyAndValue, error) {
+	req, err := m.newEntrySetRequest(cache, filter, comparator)
 	if err != nil {
 		return nil, err
 	}
@@ -971,8 +971,8 @@ func (m *streamManagerV1) keySetFilter(ctx context.Context, cache string, filter
 	return m.getStreamingResponseKey(ctx, requestType, req.Id)
 }
 
-func (m *streamManagerV1) valuesFilter(ctx context.Context, cache string, filter []byte) (<-chan BinaryValue, error) {
-	req, err := m.newValuesFilterRequest(cache, filter)
+func (m *streamManagerV1) valuesFilter(ctx context.Context, cache string, filter []byte, comparator []byte) (<-chan BinaryValue, error) {
+	req, err := m.newValuesFilterRequest(cache, filter, comparator)
 	if err != nil {
 		return nil, err
 	}

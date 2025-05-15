@@ -43,8 +43,9 @@ func TestIndexAgainstMapAndCache(t *testing.T) {
 
 func RunTestIndex(t *testing.T, namedMap coherence.NamedMap[int, utils.Person]) {
 	var (
-		g   = gomega.NewWithT(t)
-		err error
+		g           = gomega.NewWithT(t)
+		err         error
+		idExtractor = extractors.Extract[int]("id")
 	)
 
 	addPerson(g, namedMap)
@@ -53,7 +54,7 @@ func RunTestIndex(t *testing.T, namedMap coherence.NamedMap[int, utils.Person]) 
 
 	log.Println("Add Index")
 	// add indexes without comparators
-	err = coherence.AddIndex(ctx, namedMap, extractors.Extract[int]("id"), true)
+	err = coherence.AddIndex(ctx, namedMap, idExtractor, true)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 	utils.Sleep(5)
@@ -62,7 +63,7 @@ func RunTestIndex(t *testing.T, namedMap coherence.NamedMap[int, utils.Person]) 
 	g.Expect(canFindIndex(g, namedMap)).To(gomega.BeTrue())
 
 	log.Println("Remove Index")
-	err = coherence.RemoveIndex(ctx, namedMap, extractors.Extract[int]("id"))
+	err = coherence.RemoveIndex(ctx, namedMap, idExtractor)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 	utils.Sleep(5)
@@ -72,7 +73,7 @@ func RunTestIndex(t *testing.T, namedMap coherence.NamedMap[int, utils.Person]) 
 
 	log.Println("Add Index with Comparator")
 	// add index with comparator
-	err = coherence.AddIndexWithComparator(ctx, namedMap, extractors.Extract[int]("id"), extractors.Extract[int]("name"))
+	err = coherence.AddIndexWithComparator(ctx, namedMap, idExtractor, extractors.ExtractorComparator[int](idExtractor, true))
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 	utils.Sleep(10)

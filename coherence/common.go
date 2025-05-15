@@ -194,7 +194,7 @@ func unregisterLifecycleListener[K comparable, V any](baseClient *baseClient[K, 
 }
 
 // executeAddIndex executes the add index operation against a baseClient.
-func executeAddIndex[K comparable, V, T, E any](ctx context.Context, bc *baseClient[K, V], extractor extractors.ValueExtractor[T, E], sorted bool, comparator extractors.ValueExtractor[T, E]) error {
+func executeAddIndex[K comparable, V, T, E any](ctx context.Context, bc *baseClient[K, V], extractor extractors.ValueExtractor[T, E], sorted bool, comparator extractors.Comparator[E]) error {
 	var (
 		extractorSerializer = NewSerializer[any](bc.format)
 		binExtractor        []byte
@@ -778,8 +778,8 @@ func executeInvokeAllFilterOrKeysV1Value[K comparable, V any, R any](ctx context
 }
 
 // executeInvokeAllFilterOrKeysV1 executes an invokeAll() when connected to v1 gRPC proxy.
-func executeInvokeEntrySetFilterV1[K comparable, V any](ctx context.Context, bc *baseClient[K, V], binFilter []byte, ch chan *StreamedEntry[K, V]) {
-	chInvoke, err := bc.session.v1StreamManagerCache.entrySetFilter(ctx, bc.name, binFilter)
+func executeInvokeEntrySetFilterV1[K comparable, V any](ctx context.Context, bc *baseClient[K, V], binFilter []byte, binComparator []byte, ch chan *StreamedEntry[K, V]) {
+	chInvoke, err := bc.session.v1StreamManagerCache.entrySetFilter(ctx, bc.name, binFilter, binComparator)
 
 	if err != nil {
 		ch <- &StreamedEntry[K, V]{Err: err}
@@ -802,8 +802,8 @@ func executeKeySetFilterV1[K comparable, V any](ctx context.Context, bc *baseCli
 }
 
 // executeValuesFilterV1 executes an values with filter when connected to v1 gRPC proxy.
-func executeValuesFilterV1[K comparable, V any](ctx context.Context, bc *baseClient[K, V], binFilter []byte, ch chan *StreamedValue[V]) {
-	chInvoke, err := bc.session.v1StreamManagerCache.valuesFilter(ctx, bc.name, binFilter)
+func executeValuesFilterV1[K comparable, V any](ctx context.Context, bc *baseClient[K, V], binFilter []byte, binComparator []byte, ch chan *StreamedValue[V]) {
+	chInvoke, err := bc.session.v1StreamManagerCache.valuesFilter(ctx, bc.name, binFilter, binComparator)
 
 	if err != nil {
 		ch <- &StreamedValue[V]{Err: err}
@@ -1317,6 +1317,7 @@ func executeKeySetFilter[K comparable, V any](ctx context.Context, bc *baseClien
 			return
 		}
 
+		// Note: Comparator for KeySetRequest in v0 is not supported.
 		request := pb.KeySetRequest{Cache: bc.name, Filter: binFilter,
 			Format: bc.format, Scope: bc.sessionOpts.Scope}
 		valuesClient, err1 := bc.client.KeySet(newCtx, &request)
@@ -1858,11 +1859,13 @@ func executeEntrySet[K comparable, V any](ctx context.Context, bc *baseClient[K,
 	return ch
 }
 
-func executeEntrySetFilter[K comparable, V any](ctx context.Context, bc *baseClient[K, V], fltr filters.Filter) <-chan *StreamedEntry[K, V] {
+func executeEntrySetFilter[K comparable, V any, E any](ctx context.Context, bc *baseClient[K, V], fltr filters.Filter, comparator extractors.Comparator[E]) <-chan *StreamedEntry[K, V] {
 	var (
-		err       = bc.ensureClientConnection()
-		binFilter = make([]byte, 0)
-		ch        = make(chan *StreamedEntry[K, V])
+		err           = bc.ensureClientConnection()
+		binFilter     = make([]byte, 0)
+		binComparator = make([]byte, 0)
+		ch            = make(chan *StreamedEntry[K, V])
+		serializer    = NewSerializer[any](bc.format)
 	)
 
 	if err != nil {
@@ -1875,10 +1878,18 @@ func executeEntrySetFilter[K comparable, V any](ctx context.Context, bc *baseCli
 	if fltr == nil {
 		fltr = filters.Always()
 	}
-	binFilter, err = NewSerializer[any](bc.format).Serialize(fltr)
+	binFilter, err = serializer.Serialize(fltr)
 	if err != nil {
 		ch <- &StreamedEntry[K, V]{Err: err}
 		return ch
+	}
+
+	if comparator != nil {
+		binComparator, err = serializer.Serialize(comparator)
+		if err != nil {
+			ch <- &StreamedEntry[K, V]{Err: err}
+			return ch
+		}
 	}
 
 	go func() {
@@ -1887,14 +1898,14 @@ func executeEntrySetFilter[K comparable, V any](ctx context.Context, bc *baseCli
 		}
 
 		if bc.session.GetProtocolVersion() > 0 {
-			executeInvokeEntrySetFilterV1(ctx, bc, binFilter, ch)
+			executeInvokeEntrySetFilterV1(ctx, bc, binFilter, binComparator, ch)
 			close(ch)
 			return
 		}
 
 		var (
 			request = pb.EntrySetRequest{Cache: bc.name, Filter: binFilter,
-				Format: bc.format, Scope: bc.sessionOpts.Scope}
+				Format: bc.format, Scope: bc.sessionOpts.Scope, Comparator: binComparator}
 			key   *K
 			value *V
 		)
@@ -1942,11 +1953,13 @@ func executeEntrySetFilter[K comparable, V any](ctx context.Context, bc *baseCli
 }
 
 // executeValues executes the Values operation against a baseClient.
-func executeValues[K comparable, V any](ctx context.Context, bc *baseClient[K, V], fltr filters.Filter) <-chan *StreamedValue[V] {
+func executeValues[K comparable, V any, E any](ctx context.Context, bc *baseClient[K, V], fltr filters.Filter, comparator extractors.Comparator[E]) <-chan *StreamedValue[V] {
 	var (
-		err       = bc.ensureClientConnection()
-		binFilter = make([]byte, 0)
-		ch        = make(chan *StreamedValue[V])
+		err           = bc.ensureClientConnection()
+		binFilter     = make([]byte, 0)
+		binComparator = make([]byte, 0)
+		ch            = make(chan *StreamedValue[V])
+		serializer    = NewSerializer[any](bc.format)
 	)
 
 	if err != nil {
@@ -1959,10 +1972,18 @@ func executeValues[K comparable, V any](ctx context.Context, bc *baseClient[K, V
 	if fltr == nil {
 		fltr = filters.Always()
 	}
-	binFilter, err = NewSerializer[any](bc.format).Serialize(fltr)
+	binFilter, err = serializer.Serialize(fltr)
 	if err != nil {
 		ch <- &StreamedValue[V]{Err: err}
 		return ch
+	}
+
+	if comparator != nil {
+		binComparator, err = serializer.Serialize(comparator)
+		if err != nil {
+			ch <- &StreamedValue[V]{Err: err}
+			return ch
+		}
 	}
 
 	go func() {
@@ -1971,12 +1992,12 @@ func executeValues[K comparable, V any](ctx context.Context, bc *baseClient[K, V
 		}
 
 		if bc.session.GetProtocolVersion() > 0 {
-			executeValuesFilterV1(ctx, bc, binFilter, ch)
+			executeValuesFilterV1(ctx, bc, binFilter, binComparator, ch)
 			close(ch)
 			return
 		}
 		request := pb.ValuesRequest{Cache: bc.name, Filter: binFilter,
-			Format: bc.format, Scope: bc.sessionOpts.Scope}
+			Format: bc.format, Scope: bc.sessionOpts.Scope, Comparator: binComparator}
 		valuesClient, err1 := bc.client.Values(newCtx, &request)
 
 		if err1 != nil {

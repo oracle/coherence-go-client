@@ -149,6 +149,14 @@ Source code: [querying/filters/main.go](querying/filters/main.go)
 go run querying/filters/main.go
 ```
 
+#### Querying using filters and sorted results
+
+Source code: [querying/filters_sorted/main.go](querying/filters_sorted/main.go)
+
+```go
+go run querying/filters_sorted/main.go
+```
+
 #### Querying all data
 
 > Note: When using open-ended queries, Coherence internally pages data to ensure that you are not

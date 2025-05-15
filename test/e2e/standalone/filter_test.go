@@ -23,7 +23,7 @@ func TestFiltersAgainstMapAndCache(t *testing.T) {
 		age       = extractors.Extract[int]("age")
 		name      = extractors.Extract[string]("name")
 		city      = extractors.Extract[string]("homeAddress.city")
-		languages = extractors.Extract[string]("languages")
+		languages = extractors.Universal[string]("languages")
 	)
 
 	// various filters to test against
