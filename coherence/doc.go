@@ -277,6 +277,24 @@ EntrySet, KeySet, Values, InvokeAll and InvokeAllFilter.
 	// we can also do more complex filtering such as looking for people > 30 and where there name begins with 'T'
 	ch := namedMap.EntrySetFilter(ctx, filters.Greater(age, 20).And(filters.Like(name, "T%", true)))
 
+If you want to sort the results from the EntrySetFilter command you can use the following function
+[EntrySetFilterWithComparator]. Due generics limitations in Go, this is not a function call off the [NamedMap]
+or [NamedCache] interface, but a function call that takes a [NamedMap] or [NamedCache].
+
+	age := extractors.Extract[int]("age")
+
+	fmt.Println("Retrieve the people between the age of 17 and 21 and order by age ascending")
+	ch := coherence.EntrySetFilterWithComparator(ctx, namedMap, filters.Between(age, 17, 21), extractors.ExtractorComparator(age, true))
+	for result := range ch {
+	    if result.Err != nil {
+	        panic(err)
+	    }
+	    fmt.Printf("Key: %v, Value: %s\n", result.Key, result.Value.String())
+	}
+
+Note: the entries are sorted internally on the gRPC proxy to avoid excessive memory usage, but you need to be careful
+when running this operation against NamedCaches with large number of entries.
+
 # Using entry processors for in-place processing
 
 A Processor is an object that allows you to process (update) one or more [NamedMap] entries on the [NamedMap] itself,

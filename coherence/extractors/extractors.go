@@ -218,6 +218,11 @@ func (ue *compositeExtractor[T, E]) Compare(_ T, _ T) (int, error) {
 	return 0, nil
 }
 
+// Compare is an internal type (exported only for serialization purpose).
+func (ue *universalExtractor[T, E]) Compare(_ T, _ T) (int, error) {
+	return 0, nil
+}
+
 // Extract creates a ValueExtractor from an entry's value. If the property
 // contains a "." (period), then a chained extractor is created otherwise a
 // UniversalExtractor is created. The type parameter is E = type of extracted value.

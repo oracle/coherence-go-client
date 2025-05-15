@@ -1317,7 +1317,6 @@ func executeKeySetFilter[K comparable, V any](ctx context.Context, bc *baseClien
 			return
 		}
 
-		// Note: Comparator for KeySetRequest in v0 is not supported.
 		request := pb.KeySetRequest{Cache: bc.name, Filter: binFilter,
 			Format: bc.format, Scope: bc.sessionOpts.Scope}
 		valuesClient, err1 := bc.client.KeySet(newCtx, &request)
