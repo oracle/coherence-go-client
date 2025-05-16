@@ -252,6 +252,8 @@ func TestBasicOperationsAgainstMapAndCache(t *testing.T) {
 		{"NamedCacheRunTestValuesFilter", utils.GetNamedCache[int, utils.Person](g, session, "values-filter-cache"), RunTestValuesFilter},
 		{"NamedMapRunTestEntrySetFilter", utils.GetNamedMap[int, utils.Person](g, session, "entryset-filter-map"), RunTestEntrySetFilter},
 		{"NamedCacheRunTestEntrySetFilter", utils.GetNamedCache[int, utils.Person](g, session, "entryset-filter-cache"), RunTestEntrySetFilter},
+		{"NamedMapRunTestEntrySetFilterWithComparator", utils.GetNamedMap[int, utils.Person](g, session, "entryset-filter-map-comparator"), RunTestEntrySetFilterWithComparator},
+		{"NamedCacheRunTestEntrySetFilterWithComparator", utils.GetNamedCache[int, utils.Person](g, session, "entryset-filter-cache-comparator"), RunTestEntrySetFilterWithComparator},
 		{"NamedMapRunTestKeySetFilter", utils.GetNamedMap[int, utils.Person](g, session, "keyset-map"), RunTestKeySetFilter},
 		{"NamedCacheRunTestKeySetFilter", utils.GetNamedCache[int, utils.Person](g, session, "keyset-cache"), RunTestKeySetFilter},
 		{"NamedMapRunTestGetAll", utils.GetNamedMap[int, utils.Person](g, session, "getall-filter-map"), RunTestGetAll},
@@ -851,6 +853,52 @@ func RunTestEntrySetFilter(t *testing.T, namedMap coherence.NamedMap[int, utils.
 	}
 
 	g.Expect(len(results)).To(gomega.Equal(3))
+}
+
+func RunTestEntrySetFilterWithComparator(t *testing.T, namedMap coherence.NamedMap[int, utils.Person]) {
+	var (
+		g                    = gomega.NewWithT(t)
+		results              = make([]utils.Person, 0)
+		comparatorAscending  = extractors.ExtractorComparator(extractors.Extract[int]("age"), true)
+		comparatorDescending = extractors.ExtractorComparator(extractors.Extract[int]("age"), false)
+		count                = 0
+		ageResultsAscending  = []int{12, 20, 33, 44}
+		ageResultsDescending = []int{44, 33, 20, 12}
+	)
+
+	if namedMap.GetSession().GetProtocolVersion() == 0 {
+		// skip as not supported in V0
+		return
+	}
+
+	// populate the cache
+	populatePeople(g, namedMap)
+
+	// try ascending first
+	ch := coherence.EntrySetFilterWithComparator(ctx, namedMap, filters.Always(), comparatorAscending)
+	for se := range ch {
+		g.Expect(se.Err).ShouldNot(gomega.HaveOccurred())
+		g.Expect(se.Value).ShouldNot(gomega.BeNil())
+		g.Expect(ageResultsAscending[count]).To(gomega.Equal(se.Value.Age))
+		count++
+		results = append(results, se.Value)
+	}
+	g.Expect(len(results)).To(gomega.Equal(len(peopleData)))
+
+	// reset
+	count = 0
+	results = make([]utils.Person, 0)
+
+	// descending
+	ch = coherence.EntrySetFilterWithComparator(ctx, namedMap, filters.Always(), comparatorDescending)
+	for se := range ch {
+		g.Expect(se.Err).ShouldNot(gomega.HaveOccurred())
+		g.Expect(se.Value).ShouldNot(gomega.BeNil())
+		g.Expect(ageResultsDescending[count]).To(gomega.Equal(se.Value.Age))
+		count++
+		results = append(results, se.Value)
+	}
+	g.Expect(len(results)).To(gomega.Equal(len(peopleData)))
 }
 
 func RunTestKeySetFilter(t *testing.T, namedMap coherence.NamedMap[int, utils.Person]) {

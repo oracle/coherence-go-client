@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2024 Oracle and/or its affiliates.
+ * Copyright (c) 2022, 2025 Oracle and/or its affiliates.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * https://oss.oracle.com/licenses/upl.
  */
@@ -261,7 +261,7 @@ func (nc *NamedCacheClient[K, V]) IsEmpty(ctx context.Context) (bool, error) {
 //	    }
 //	}
 func (nc *NamedCacheClient[K, V]) EntrySetFilter(ctx context.Context, fltr filters.Filter) <-chan *StreamedEntry[K, V] {
-	return executeEntrySetFilter(ctx, nc.baseClient, fltr)
+	return executeEntrySetFilter[K, V, any](ctx, nc.baseClient, fltr, nil)
 }
 
 // EntrySet returns a channel from which all entries can be obtained.
@@ -357,6 +357,9 @@ func (nc *NamedCacheClient[K, V]) GetOrDefault(ctx context.Context, key K, def V
 //	        fmt.Println("Key:", result.Key)
 //	    }
 //	}
+//
+// Note: the entries are sorted internally on the gRPC proxy to avoid excessive memory usage, but you need to be
+// careful when running this operation against NamedCaches with large number of entries.
 func (nc *NamedCacheClient[K, V]) KeySetFilter(ctx context.Context, fltr filters.Filter) <-chan *StreamedKey[K] {
 	return executeKeySetFilter(ctx, nc.baseClient, fltr)
 }
@@ -548,7 +551,7 @@ func (nc *NamedCacheClient[K, V]) Size(ctx context.Context) (int, error) {
 // The returned channel will be asynchronously filled with values in the
 // [NamedCache] that satisfy the filter.
 //
-// The example below shows how to iterate the values in a [NamedCache] where the age > 20.
+// The example below shows how to iterate the values in a [NamedCache] where the age > 20
 //
 //	namedCache, err := coherence.GetNamedCache[int, Person](session, "people")
 //	if err != nil {
@@ -564,7 +567,7 @@ func (nc *NamedCacheClient[K, V]) Size(ctx context.Context) (int, error) {
 //	    }
 //	}
 func (nc *NamedCacheClient[K, V]) ValuesFilter(ctx context.Context, fltr filters.Filter) <-chan *StreamedValue[V] {
-	return executeValues(ctx, nc.baseClient, fltr)
+	return executeValues[K, V, any](ctx, nc.baseClient, fltr, nil)
 }
 
 // Values returns a view of all values contained in this [NamedCache].

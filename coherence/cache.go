@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2024 Oracle and/or its affiliates.
+ * Copyright (c) 2022, 2025 Oracle and/or its affiliates.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * https://oss.oracle.com/licenses/upl.
  */
@@ -93,7 +93,7 @@ type NamedMap[K comparable, V any] interface {
 	IsEmpty(ctx context.Context) (bool, error)
 
 	// EntrySetFilter returns a channel from which entries satisfying the specified filter can be obtained.
-	// Each entry in the channel is of type *StreamEntry which basically wraps an error and the result.
+	// Each entry in the channel is of type *[StreamedEntry] which wraps an error and the result.
 	// As always, the result must be accessed (and will be valid) only if the error is nil.
 	EntrySetFilter(ctx context.Context, filter filters.Filter) <-chan *StreamedEntry[K, V]
 
@@ -106,7 +106,7 @@ type NamedMap[K comparable, V any] interface {
 	Get(ctx context.Context, key K) (*V, error)
 
 	// GetAll returns a channel from which entries satisfying the specified filter can be obtained.
-	// Each entry in the channel is of type *StreamEntry which basically wraps an error and the result.
+	// Each entry in the channel is of type *[StreamedEntry] which wraps an error and the result.
 	// As always, the result must be accessed (and will be valid) only of the error is nil.
 	GetAll(ctx context.Context, keys []K) <-chan *StreamedEntry[K, V]
 
@@ -120,7 +120,7 @@ type NamedMap[K comparable, V any] interface {
 	InvokeAll(ctx context.Context, keysOrFilter any, proc processors.Processor) <-chan *StreamedValue[V]
 
 	// KeySetFilter returns a channel from which keys of the entries that satisfy the filter can be obtained.
-	// Each entry in the channel is of type *StreamEntry which basically wraps an error and the key.
+	// Each entry in the channel is of type *[StreamedEntry] which wraps an error and the key.
 	// As always, the result must be accessed (and will be valid) only of the error is nil.
 	KeySetFilter(ctx context.Context, filter filters.Filter) <-chan *StreamedKey[K]
 

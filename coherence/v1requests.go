@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2024 Oracle and/or its affiliates.
+ * Copyright (c) 2022, 2025 Oracle and/or its affiliates.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * https://oss.oracle.com/licenses/upl.
  */
@@ -265,9 +265,10 @@ func (m *streamManagerV1) newInvokeRequest(cache string, agent []byte, keysOrFil
 	return m.newWrapperProxyRequest(cache, pb1.NamedCacheRequestType_Invoke, anyReq)
 }
 
-func (m *streamManagerV1) newEntrySetRequest(cache string, filter []byte) (*pb1.ProxyRequest, error) {
+func (m *streamManagerV1) newEntrySetRequest(cache string, filter []byte, comparator []byte) (*pb1.ProxyRequest, error) {
 	entrySetRequest := &pb1.QueryRequest{
-		Filter: filter,
+		Filter:     filter,
+		Comparator: comparator,
 	}
 
 	anyReq, err := anypb.New(entrySetRequest)
@@ -278,9 +279,10 @@ func (m *streamManagerV1) newEntrySetRequest(cache string, filter []byte) (*pb1.
 	return m.newWrapperProxyRequest(cache, pb1.NamedCacheRequestType_QueryEntries, anyReq)
 }
 
-func (m *streamManagerV1) newValuesFilterRequest(cache string, filter []byte) (*pb1.ProxyRequest, error) {
+func (m *streamManagerV1) newValuesFilterRequest(cache string, filter []byte, comparator []byte) (*pb1.ProxyRequest, error) {
 	entrySetRequest := &pb1.QueryRequest{
-		Filter: filter,
+		Filter:     filter,
+		Comparator: comparator,
 	}
 
 	anyReq, err := anypb.New(entrySetRequest)
