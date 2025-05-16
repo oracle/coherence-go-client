@@ -25,16 +25,6 @@ const (
 	multiExtractorType     = extractorPackage + "MultiExtractor"
 )
 
-// EntryComparatorStyle defines the style of an [EntryComparator].
-type EntryComparatorStyle int
-
-var (
-	StyleAuto  EntryComparatorStyle
-	StyleValue EntryComparatorStyle = 1
-	StyleKey   EntryComparatorStyle = 2
-	StyleEntry EntryComparatorStyle = 3
-)
-
 // ValueExtractor extracts a value from a given object.
 // The type parameters are T = the type of the value to extract from
 // and E = the type of value that will be extracted.
@@ -73,24 +63,6 @@ type extractorComparator[E any] struct {
 // Compare is an internal type (exported only for serialization purpose).
 func (ec *extractorComparator[T]) Compare(_ T, _ T) (int, error) {
 	return 0, nil
-}
-
-type entryComparator[E any] struct {
-	Type       string               `json:"@class,omitempty"`
-	Style      EntryComparatorStyle `json:"style"`
-	Comparator *Comparator[E]       `json:"comparator"`
-}
-
-// Compare is an internal type (exported only for serialization purpose).
-func (ec *entryComparator[T]) Compare(_ T, _ T) (int, error) {
-	return 0, nil
-}
-
-// EntryComparator returns an comparators used to compare map entries. Depending on the
-// comparison style this comparator will compare entries', values or keys.
-func EntryComparator[E any](comparator Comparator[E], style EntryComparatorStyle) Comparator[E] {
-	ec := &entryComparator[E]{Type: entryComparatorType, Comparator: &comparator, Style: style}
-	return ec
 }
 
 // NewSafeComparator returns a new safe Comparator.

@@ -15,6 +15,7 @@ import (
 	"github.com/oracle/coherence-go-client/v2/coherence"
 	"github.com/oracle/coherence-go-client/v2/coherence/extractors"
 	"github.com/oracle/coherence-go-client/v2/coherence/filters"
+	"log"
 )
 
 type Person struct {
@@ -29,7 +30,6 @@ func (p *Person) String() string {
 }
 
 func main() {
-
 	var (
 		ctx    = context.Background()
 		cities = []string{"Perth", "Adelaide", "Sydney", "Melbourne"}
@@ -45,6 +45,11 @@ func main() {
 	namedMap, err := coherence.GetNamedMap[int, Person](session, "people")
 	if err != nil {
 		panic(err)
+	}
+
+	if session.GetProtocolVersion() == 0 {
+		log.Println("feature not support in v0 gRPC API")
+		return
 	}
 
 	if err = namedMap.Clear(ctx); err != nil {
@@ -70,7 +75,7 @@ func main() {
 	ch := coherence.EntrySetFilterWithComparator(ctx, namedMap, filters.Between(age, 17, 21), extractors.ExtractorComparator(age, true))
 	for result := range ch {
 		if result.Err != nil {
-			panic(err)
+			panic(result.Err)
 		}
 
 		fmt.Printf("Key: %v, Value: %s\n", result.Key, result.Value.String())
