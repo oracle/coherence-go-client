@@ -213,6 +213,7 @@ golangci: $(TOOLS_BIN)/golangci-lint ## Go code review
 # ----------------------------------------------------------------------------------------------------------------------
 .PHONY: generate-proto
 generate-proto: $(TOOLS_BIN)/protoc ## Generate Proto Files
+	curl $(CURL_AUTH) -s https://api.github.com/rate_limit | jq '.rate'
 	mkdir -p $(PROTO_DIR) || true
 	curl $(CURL_AUTH) -o $(PROTO_DIR)/services.proto https://raw.githubusercontent.com/oracle/coherence/22.06.12/prj/coherence-grpc/src/main/proto/services.proto
 	curl $(CURL_AUTH) -o $(PROTO_DIR)/messages.proto https://raw.githubusercontent.com/oracle/coherence/22.06.12/prj/coherence-grpc/src/main/proto/messages.proto
@@ -227,6 +228,7 @@ generate-proto: $(TOOLS_BIN)/protoc ## Generate Proto Files
 # ----------------------------------------------------------------------------------------------------------------------
 .PHONY: generate-proto-v1
 generate-proto-v1: $(TOOLS_BIN)/protoc ## Generate Proto Files v1
+	curl $(CURL_AUTH) -s https://api.github.com/rate_limit | jq '.rate'
 	mkdir -p $(PROTOV1_DIR) || true
 	curl $(CURL_AUTH) -o $(PROTOV1_DIR)/proxy_service_messages_v1.proto https://raw.githubusercontent.com/oracle/coherence/25.03.1/prj/coherence-grpc/src/main/proto/proxy_service_messages_v1.proto
 	curl $(CURL_AUTH) -o $(PROTOV1_DIR)/proxy_service_v1.proto https://raw.githubusercontent.com/oracle/coherence/25.03.1/prj/coherence-grpc/src/main/proto/proxy_service_v1.proto
