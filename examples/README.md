@@ -358,14 +358,14 @@ go run rest/main.go
 
 ### <a name="custom"></a> Custom Comparator and Entry Processors
 
-This advanced use-case example explains how to implement custom comparators and entry processors.
+This advanced use-case explains how to implement custom comparators and entry processors.
 
 Coherence ships with many out of the box processors and comparators, but if you wish to use a custom comparator
-or entry processor, there are a number of steps you need to carry out:
+or entry processor from the Go client, there are a number of steps you need to carry out:
 
-1. Implement your server side code for the comparator or entry processor.
+1. Implement your server side Java code for the comparator or entry processor
 2. Add the classes to the `META-INF/type-aliases.properties` file on the server
-3. Implement a Go struct to represent the server side class.
+3. Implement a Go struct to represent the server side class
 4. Call your custom comparator or entry processor from the Go client
 
 #### Custom Comparators
