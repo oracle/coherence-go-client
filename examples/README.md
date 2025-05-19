@@ -38,6 +38,7 @@ docker run -d -p 1408:1408 -p 30000:30000 ghcr.io/oracle/coherence-ce:24.09
 * [Adding indexes](#indexes)
 * [Working with Queues](#queues)
 * [Basic REST server](#rest)
+* [Custom Comparators and Entry Processors](#custom)
 
 ### <a name="basic"></a> Basic Operations
 
@@ -345,7 +346,6 @@ Source code: [queues/events/main.go](queues/events/main.go)
 go run queues/events/main.go
 ```
 
-
 ### <a name="rest"></a> Basic REST server
 
 This example starts a listener on port localhost:17268 which provides a basic REST API providing POST, GET, PUT and DELETE operations against a NamedMap.
@@ -355,3 +355,90 @@ Source code: [rest/main.go](rest/main.go)
 ```go
 go run rest/main.go
 ```
+
+### <a name="custom"></a> Custom Comparator and Entry Processors
+
+This advanced use-case example explains how to implement custom comparators and entry processors.
+
+Coherence ships with many out of the box processors and comparators, but if you wish to use a custom comparator
+or entry processor, there are a number of steps you need to carry out:
+
+1. Implement your server side code for the comparator or entry processor.
+2. Add the classes to the `META-INF/type-aliases.properties` file on the server
+3. Implement a Go struct to represent the server side class.
+4. Call your custom comparator or entry processor from the Go client
+
+#### Custom Comparators
+
+1. Implement `compare` method of the sample Custom Comparator and add to your server side Java project - See the sample here: [CustomComparator](custom/comparators/java/com/oracle/coherence/example/CustomComparator.java)
+2. Add a `META-INF/type-aliases.properties` file in your `resources` directory, with the following contents. The class name should match your class name and `custom.comparator` must match the value in the `Type` field in the Go code: 
+   ```properties
+   # Custom type-aliases.properties
+   custom.comparator=com.oracle.coherence.example.CustomComparator
+   ```
+3. Ensure your Coherence server contains the above code compiled in the correct location, as well as the resources in the correct location
+4. Create a Go struct to mimic the comparator, with the following contents:
+   ```go
+   type CustomComparator struct {
+        Type      string                                 `json:"@class,omitempty"`
+        Extractor extractors.ValueExtractor[any, string] `json:"extractor"`
+   }
+
+   // Compare must be implemented, but is a no-op on the client
+   func (ue *CustomComparator) Compare(_ string, _ string) (int, error) {
+       return 0, nil
+   }
+   ```
+5. Call your custom comparator from the Go client:
+   ```go
+   // create your custom comparator with the correct `Type` value and your chosen extractor
+   customComparator := &CustomComparator{
+       Type:      "custom.comparator",
+       Extractor: extractors.Extract[string]("name"),
+   }
+   
+   // use with EntrySetFilterWithComparator as example using Always filter
+   ch := coherence.EntrySetFilterWithComparator(ctx, config.Schools, filters.Always(), customComparator)
+   for v := range ch {
+       ...   
+   }
+   ```
+
+#### Custom Entry Processors
+
+1. Implement your custom Entry Processor - See the sample here: [UppercaseProcessor](custom/entry_processors/java/com/oracle/coherence/example/UppercaseProcessor.java)
+2. Add a `META-INF/type-aliases.properties` file in your `resources` directory, with the following contents. The class name should match your class name and `custom.processor` must match the value in the `Type` field in the Go code:
+   ```properties
+   # Custom type-aliases.properties
+   custom.processor=com.oracle.coherence.example.UppercaseProcessor
+   ```
+3. Ensure your Coherence server contains the above code compiled in the correct location, as well as the resources in the correct location
+4. Create a Go struct to mimic the entry processor, with the following contents:
+   ```go
+   type UppercaseProcessor struct {
+       Type string `json:"@class,omitempty"`
+   }
+
+   // AndThen must be implemented to be considered a Processor.
+   func (p *UppercaseProcessor) AndThen(next processors.Processor) processors.Processor {
+       return next
+   }
+
+   // When must also be implemented to be considered a Processor.
+   func (p *UppercaseProcessor) When(_ filters.Filter) processors.Processor {
+       return nil
+    }
+   ```
+5. Call your custom entry processor from the Go client:
+   ```go
+   // create your custom entry process with the correct `Type` value
+   processor := &UppercaseProcessor{
+       Type: "custom.processor",
+   }
+   
+   // use with Invoke to ensure customer with key 10 as uppercase name
+   // Can also be used with InvokeAll, etc
+   result, err := coherence.Invoke[int, Customer, interface{}](ctx, Customer, 10, processor)
+   if err != nil {
+       ...
+   ```
