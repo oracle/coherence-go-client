@@ -5,7 +5,7 @@
 # ---------------------------------------------------------------------------
 # Coherence Go Client GitHub Actions test streaming against v23.03+
 # ---------------------------------------------------------------------------
-name: CI-Examples Jakarta
+name: CI-Streaming Jakarta
 
 on:
   workflow_dispatch:

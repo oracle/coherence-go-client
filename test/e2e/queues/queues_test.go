@@ -101,6 +101,7 @@ func TestQueueVDequeue(t *testing.T) {
 
 	err = queue1.Destroy(ctx)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	utils.Sleep(10)
 
 	// now try the other way around
 	queue2, err = coherence.GetNamedDeQueue[string](ctx, session1, queueName)
