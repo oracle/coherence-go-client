@@ -16,6 +16,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-24.04
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     timeout-minutes: 60
     strategy:
       matrix:

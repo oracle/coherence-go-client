@@ -19,12 +19,15 @@ on:
 jobs:
   build:
     runs-on: ubuntu-22.04
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     strategy:
       fail-fast: false
       matrix:
         coherenceVersion:
           - 22.06.11
-          - 22.06.12-SNAPSHOT
+          - 22.06.12
+          - 22.06.13-SNAPSHOT
         go-version:
           - 1.23.x
           - 1.24.x

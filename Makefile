@@ -43,6 +43,13 @@ CLUSTER_PORT ?= 7574
 PROFILES ?=
 COHERENCE_BASE_IMAGE ?= gcr.io/distroless/java11-debian11
 
+# For GitHub Rate limiting
+ifdef GITHUB_TOKEN
+CURL_AUTH = -H "Authorization: token $(GITHUB_TOKEN)"
+else
+CURL_AUTH =
+endif
+
 # ----------------------------------------------------------------------------------------------------------------------
 # Set the location of various build tools
 # ----------------------------------------------------------------------------------------------------------------------
@@ -207,8 +214,8 @@ golangci: $(TOOLS_BIN)/golangci-lint ## Go code review
 .PHONY: generate-proto
 generate-proto: $(TOOLS_BIN)/protoc ## Generate Proto Files
 	mkdir -p $(PROTO_DIR) || true
-	curl -o $(PROTO_DIR)/services.proto https://raw.githubusercontent.com/oracle/coherence/22.06.12/prj/coherence-grpc/src/main/proto/services.proto
-	curl -o $(PROTO_DIR)/messages.proto https://raw.githubusercontent.com/oracle/coherence/22.06.12/prj/coherence-grpc/src/main/proto/messages.proto
+	curl $(CURL_AUTH) -o $(PROTO_DIR)/services.proto https://raw.githubusercontent.com/oracle/coherence/22.06.12/prj/coherence-grpc/src/main/proto/services.proto
+	curl $(CURL_AUTH) -o $(PROTO_DIR)/messages.proto https://raw.githubusercontent.com/oracle/coherence/22.06.12/prj/coherence-grpc/src/main/proto/messages.proto
 	echo "" >> $(PROTO_DIR)/services.proto
 	echo "" >> $(PROTO_DIR)/messages.proto
 	echo 'option go_package = "github.com/oracle/coherence-go-client/proto";' >> $(PROTO_DIR)/services.proto
@@ -221,11 +228,11 @@ generate-proto: $(TOOLS_BIN)/protoc ## Generate Proto Files
 .PHONY: generate-proto-v1
 generate-proto-v1: $(TOOLS_BIN)/protoc ## Generate Proto Files v1
 	mkdir -p $(PROTOV1_DIR) || true
-	curl -o $(PROTOV1_DIR)/proxy_service_messages_v1.proto https://raw.githubusercontent.com/oracle/coherence/25.03.1/prj/coherence-grpc/src/main/proto/proxy_service_messages_v1.proto
-	curl -o $(PROTOV1_DIR)/proxy_service_v1.proto https://raw.githubusercontent.com/oracle/coherence/25.03.1/prj/coherence-grpc/src/main/proto/proxy_service_v1.proto
-	curl -o $(PROTOV1_DIR)/common_messages_v1.proto https://raw.githubusercontent.com/oracle/coherence/25.03.1/prj/coherence-grpc/src/main/proto/common_messages_v1.proto
-	curl -o $(PROTOV1_DIR)/cache_service_messages_v1.proto https://raw.githubusercontent.com/oracle/coherence/25.03.1/prj/coherence-grpc/src/main/proto/cache_service_messages_v1.proto
-	curl -o $(PROTOV1_DIR)/queue_service_messages_v1.proto https://raw.githubusercontent.com/oracle/coherence/25.03.1/prj/coherence-grpc/src/main/proto/queue_service_messages_v1.proto
+	curl $(CURL_AUTH) -o $(PROTOV1_DIR)/proxy_service_messages_v1.proto https://raw.githubusercontent.com/oracle/coherence/25.03.1/prj/coherence-grpc/src/main/proto/proxy_service_messages_v1.proto
+	curl $(CURL_AUTH) -o $(PROTOV1_DIR)/proxy_service_v1.proto https://raw.githubusercontent.com/oracle/coherence/25.03.1/prj/coherence-grpc/src/main/proto/proxy_service_v1.proto
+	curl $(CURL_AUTH) -o $(PROTOV1_DIR)/common_messages_v1.proto https://raw.githubusercontent.com/oracle/coherence/25.03.1/prj/coherence-grpc/src/main/proto/common_messages_v1.proto
+	curl $(CURL_AUTH) -o $(PROTOV1_DIR)/cache_service_messages_v1.proto https://raw.githubusercontent.com/oracle/coherence/25.03.1/prj/coherence-grpc/src/main/proto/cache_service_messages_v1.proto
+	curl $(CURL_AUTH) -o $(PROTOV1_DIR)/queue_service_messages_v1.proto https://raw.githubusercontent.com/oracle/coherence/25.03.1/prj/coherence-grpc/src/main/proto/queue_service_messages_v1.proto
 	echo "" >> $(PROTOV1_DIR)/proxy_service_messages_v1.proto
 	echo "" >> $(PROTOV1_DIR)/proxy_service_v1.proto
 	echo "" >> $(PROTOV1_DIR)/common_messages_v1.proto
@@ -434,7 +441,7 @@ test-resolver-cluster: test-clean gotestsum $(BUILD_PROPS) ## Run Resolver tests
 # ----------------------------------------------------------------------------------------------------------------------
 $(TOOLS_BIN)/golangci-lint:
 	@mkdir -p $(TOOLS_BIN)
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(TOOLS_BIN) v1.64.8
+	curl $(CURL_AUTH) -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(TOOLS_BIN) v1.64.8
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -442,7 +449,7 @@ $(TOOLS_BIN)/golangci-lint:
 # ----------------------------------------------------------------------------------------------------------------------
 .PHONY: getcopyright
 getcopyright: ## Download copyright jar locally if necessary.
-	@test -f scripts/$(COPYRIGHT_JAR)  || curl -o scripts/$(COPYRIGHT_JAR) \
+	@test -f scripts/$(COPYRIGHT_JAR)  || curl $(CURL_AUTH) -o scripts/$(COPYRIGHT_JAR) \
 		https://repo.maven.apache.org/maven2/org/glassfish/copyright/glassfish-copyright-maven-plugin/2.4/glassfish-copyright-maven-plugin-2.4.jar
 
 
@@ -476,4 +483,4 @@ endef
 .PHONY: gettrivy
 gettrivy:
 	@mkdir -p $(TOOLS_BIN)
-	curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b $(TOOLS_BIN) v0.51.2
+	curl $(CURL_AUTH) -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b $(TOOLS_BIN) v0.51.2
