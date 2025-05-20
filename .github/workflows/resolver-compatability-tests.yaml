@@ -16,6 +16,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-22.04
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     strategy:
       fail-fast: false
       matrix:
@@ -64,7 +66,7 @@ jobs:
       shell: bash
       run: |
         export COHERENCE_VERSION=${{ matrix.coherenceVersion }}
-        curl -sL https://raw.githubusercontent.com/oracle/coherence-cli/main/scripts/install.sh | bash
+        curl --retry 5 --retry-delay 2 -sL https://raw.githubusercontent.com/oracle/coherence-cli/main/scripts/install.sh | bash
         cohctl version
         cohctl create cluster grpc-cluster -v ${{ matrix.coherenceVersion }} -y -a coherence-grpc-proxy 
         sleep 20

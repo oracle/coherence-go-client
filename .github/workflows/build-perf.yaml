@@ -19,6 +19,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     strategy:
       fail-fast: false
       matrix:
@@ -66,7 +68,7 @@ jobs:
     - name: Run Perf Test
       shell: bash
       run: |
-        curl -sL https://raw.githubusercontent.com/oracle/coherence-cli/main/scripts/install.sh | bash
+        curl --retry 5 --retry-delay 2 -sL https://raw.githubusercontent.com/oracle/coherence-cli/main/scripts/install.sh | bash
         COHERENCE_CLIENT_REQUEST_TIMEOUT=200000 COHERENCE_VERSION=${{ matrix.coherenceVersion }} make test-perf
 
     - uses: actions/upload-artifact@v4

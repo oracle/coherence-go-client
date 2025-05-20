@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #
-# Copyright (c) 2022, 2024 Oracle and/or its affiliates.
+# Copyright (c) 2022, 2025 Oracle and/or its affiliates.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # https://oss.oracle.com/licenses/upl.
 #
@@ -44,7 +44,7 @@ pause && pause && pause && pause
 set -e
 cd examples
 
-find . -type f -name '*.go' | grep -v people_listen | grep -v people_insert | grep -v doc.go | grep -v rest | grep -v blocking | while read file
+find . -type f -name '*.go' | grep -v people_listen | grep -v people_insert | grep -v doc.go | grep -v rest | grep -v blocking | grep -v custom | while read file
 do
   echo
   echo "==========================================="

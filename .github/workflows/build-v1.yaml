@@ -16,6 +16,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-22.04
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     timeout-minutes: 60
     strategy:
       matrix:
@@ -23,9 +25,9 @@ jobs:
           - 1.23.x
           - 1.24.x
         coherence-version:
-          - 24.09.3
           - 25.03
-          - 25.03.1-SNAPSHOT
+          - 25.03.1
+          - 25.03.2-SNAPSHOT
 
 #   Checkout the source, we need a depth of zero to fetch all of the history otherwise
 #   the copyright check cannot work out the date of the files from Git.

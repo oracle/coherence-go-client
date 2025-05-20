@@ -19,12 +19,14 @@ on:
 jobs:
   build:
     runs-on: ubuntu-22.04
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     strategy:
       fail-fast: false
       matrix:
         coherenceVersion:
-          - 14.1.2-0-1
-          - 14.1.2-0-2-SNAPSHOT
+          - 14.1.2-0-2
+          - 14.1.2-0-3-SNAPSHOT
         go-version:
           - 1.23.x
           - 1.24.x
@@ -82,7 +84,7 @@ jobs:
       shell: bash
       run: |
         go get google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.3.0
-        COHERENCE_BASE_IMAGE=gcr.io/distroless/java17-debian12 COHERENCE_VERSION=$COH_VERSION PROFILES=,-jakarta,javax,scope make clean generate-proto generate-proto-v1 build-test-images test-e2e-standalone-scope
+        SKIP_PROTO_GENERATION=true COHERENCE_BASE_IMAGE=gcr.io/distroless/java17-debian12 COHERENCE_VERSION=$COH_VERSION PROFILES=,-jakarta,javax,scope make clean generate-proto generate-proto-v1 build-test-images test-e2e-standalone-scope
 
     - uses: actions/upload-artifact@v4
       if: failure()
@@ -103,7 +105,7 @@ jobs:
       run: |
         echo "Running verify against $COH_VERSION"
         go get google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.3.0
-        COHERENCE_BASE_IMAGE=gcr.io/distroless/java17-debian12 SECURE=true COHERENCE_IGNORE_INVALID_CERTS=true INCLUDE_LONG_RUNNING=true \
+        SKIP_PROTO_GENERATION=true COHERENCE_BASE_IMAGE=gcr.io/distroless/java17-debian12 SECURE=true COHERENCE_IGNORE_INVALID_CERTS=true INCLUDE_LONG_RUNNING=true \
           COHERENCE_TLS_CERTS_PATH=`pwd`/test/utils/certs/guardians-ca.crt \
           COHERENCE_TLS_CLIENT_CERT=`pwd`/test/utils/certs/star-lord.crt \
           COHERENCE_TLS_CLIENT_KEY=`pwd`/test/utils/certs/star-lord.key \
