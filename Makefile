@@ -43,7 +43,7 @@ CLUSTER_PORT ?= 7574
 PROFILES ?=
 COHERENCE_BASE_IMAGE ?= gcr.io/distroless/java11-debian11
 
-CURL_OPTS = -L --retry 5 --retry-delay 2
+CURL_OPTS = -L --retry 10 --retry-delay 5
 
 # For GitHub Rate limiting
 ifdef GITHUB_TOKEN
@@ -220,7 +220,6 @@ generate-proto: $(TOOLS_BIN)/protoc ## Generate Proto Files
 ifeq ($(SKIP_PROTO_GENERATION),true)
 	@echo "Skipping proto generation..."
 else
-	curl $(CURL_AUTH) -s https://api.github.com/rate_limit | jq '.rate'
 	mkdir -p $(PROTO_DIR) || true
 	curl $(CURL_AUTH) -o $(PROTO_DIR)/services.proto https://raw.githubusercontent.com/oracle/coherence/22.06.12/prj/coherence-grpc/src/main/proto/services.proto
 	curl $(CURL_AUTH) -o $(PROTO_DIR)/messages.proto https://raw.githubusercontent.com/oracle/coherence/22.06.12/prj/coherence-grpc/src/main/proto/messages.proto
@@ -239,7 +238,6 @@ generate-proto-v1: $(TOOLS_BIN)/protoc ## Generate Proto Files v1
 ifeq ($(SKIP_PROTO_GENERATION),true)
 	@echo "Skipping proto generation..."
 else
-	curl $(CURL_AUTH) -s https://api.github.com/rate_limit | jq '.rate'
 	mkdir -p $(PROTOV1_DIR) || true
 	curl $(CURL_AUTH) -o $(PROTOV1_DIR)/proxy_service_messages_v1.proto https://raw.githubusercontent.com/oracle/coherence/25.03.1/prj/coherence-grpc/src/main/proto/proxy_service_messages_v1.proto
 	curl $(CURL_AUTH) -o $(PROTOV1_DIR)/proxy_service_v1.proto https://raw.githubusercontent.com/oracle/coherence/25.03.1/prj/coherence-grpc/src/main/proto/proxy_service_v1.proto
@@ -496,4 +494,4 @@ endef
 .PHONY: gettrivy
 gettrivy:
 	@mkdir -p $(TOOLS_BIN)
-	curl $(CURL_AUTH) -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b $(TOOLS_BIN) v0.51.2
+	curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b $(TOOLS_BIN) v0.51.2
