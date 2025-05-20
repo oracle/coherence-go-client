@@ -43,12 +43,15 @@ CLUSTER_PORT ?= 7574
 PROFILES ?=
 COHERENCE_BASE_IMAGE ?= gcr.io/distroless/java11-debian11
 
+CURL_OPTS = -L --retry 5 --retry-delay 2
+
 # For GitHub Rate limiting
 ifdef GITHUB_TOKEN
-CURL_AUTH = -H "Authorization: token $(GITHUB_TOKEN)"
+CURL_AUTH = -H "Authorization: token $(GITHUB_TOKEN)" $(CURL_OPTS)
 else
-CURL_AUTH =
+CURL_AUTH = $(CURL_OPTS)
 endif
+
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Set the location of various build tools
