@@ -68,7 +68,7 @@ jobs:
       shell: bash
       run: |
         go get google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.3.0
-        INCLUDE_LONG_RUNNING=true PROFILES=,-jakarta,javax COHERENCE_VERSION=22.06.11 make clean generate-proto build-test-images test-e2e-standalone
+        INCLUDE_LONG_RUNNING=true PROFILES=,-jakarta,javax COHERENCE_VERSION=22.06.12 make clean generate-proto build-test-images test-e2e-standalone
 
     - name: Profile Near Cache
       shell: bash
@@ -85,7 +85,7 @@ jobs:
       shell: bash
       run: |
         go get google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.3.0
-        COHERENCE_VERSION=22.06.11 PROFILES=,-jakarta,javax,scope make clean generate-proto build-test-images test-e2e-standalone-scope
+        SKIP_PROTO_GENERATION=true COHERENCE_VERSION=22.06.11 PROFILES=,-jakarta,javax,scope make clean generate-proto build-test-images test-e2e-standalone-scope
 
     - uses: actions/upload-artifact@v4
       if: failure()
@@ -96,7 +96,7 @@ jobs:
     - name: E2E Local Tests SSL (env)
       shell: bash
       run: |
-        SECURE=env COHERENCE_IGNORE_INVALID_CERTS=true \
+        SKIP_PROTO_GENERATION=true SECURE=env COHERENCE_IGNORE_INVALID_CERTS=true \
           COHERENCE_TLS_CERTS_PATH=`pwd`/test/utils/certs/guardians-ca.crt \
           COHERENCE_TLS_CLIENT_CERT=`pwd`/test/utils/certs/star-lord.crt \
           COHERENCE_TLS_CLIENT_KEY=`pwd`/test/utils/certs/star-lord.key \
@@ -105,7 +105,7 @@ jobs:
     - name: E2E Local Tests SSL (options)
       shell: bash
       run: |
-        SECURE=options COHERENCE_IGNORE_INVALID_CERTS_OPTION=true \
+        SKIP_PROTO_GENERATION=true SECURE=options COHERENCE_IGNORE_INVALID_CERTS_OPTION=true \
           COHERENCE_TLS_CERTS_PATH_OPTION=`pwd`/test/utils/certs/guardians-ca.crt \
           COHERENCE_TLS_CLIENT_CERT_OPTION=`pwd`/test/utils/certs/star-lord.crt \
           COHERENCE_TLS_CLIENT_KEY_OPTION=`pwd`/test/utils/certs/star-lord.key \
@@ -114,7 +114,7 @@ jobs:
     - name: E2E Local Tests SSL (tlsConfig)
       shell: bash
       run: |
-        SECURE=tlsConfig COHERENCE_IGNORE_INVALID_CERTS_OPTION=true \
+        SKIP_PROTO_GENERATION=true SECURE=tlsConfig COHERENCE_IGNORE_INVALID_CERTS_OPTION=true \
           COHERENCE_TLS_CERTS_PATH_OPTION=`pwd`/test/utils/certs/guardians-ca.crt \
           COHERENCE_TLS_CLIENT_CERT_OPTION=`pwd`/test/utils/certs/star-lord.crt \
           COHERENCE_TLS_CLIENT_KEY_OPTION=`pwd`/test/utils/certs/star-lord.key \
