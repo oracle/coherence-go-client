@@ -43,7 +43,7 @@ CLUSTER_PORT ?= 7574
 PROFILES ?=
 COHERENCE_BASE_IMAGE ?= gcr.io/distroless/java11-debian11
 
-CURL_OPTS = -L --retry 10 --retry-delay 5 -w "\nHTTP status: %{http_code}\n"
+CURL_OPTS = -L --retry 10 --retry-delay 5
 
 # For GitHub Rate limiting
 ifdef GITHUB_TOKEN
@@ -494,4 +494,4 @@ endef
 .PHONY: gettrivy
 gettrivy:
 	@mkdir -p $(TOOLS_BIN)
-	curl $(CURL_AUTH) -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b $(TOOLS_BIN) v0.51.2
+	curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b $(TOOLS_BIN) v0.51.2
