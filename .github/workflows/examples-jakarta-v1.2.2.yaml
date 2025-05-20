@@ -74,6 +74,8 @@ jobs:
     - name: Verify Examples
       shell: bash
       run: |
+        # Alias curl to use retries
+        alias curl='curl -L --retry 10 --retry-delay 5 -w "\nHTTP status: %{http_code}\n"
         git checkout v1.2.2
         # Change the jib-maven-plugin as this version fails
         sed -i.bak 's/<version.plugin.jib>3\.3\.0<\/version.plugin.jib>/<version.plugin.jib>3.4.3<\/version.plugin.jib>/' java/pom.xml
