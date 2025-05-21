@@ -24,7 +24,6 @@ jobs:
         coherenceVersion:
           - 22.06.12
           - 22.06.13-SNAPSHOT
-          - 24.09.3
           - 25.03.1
           - 14.1.2-0-2
           - 14.1.2-0-3-SNAPSHOT
