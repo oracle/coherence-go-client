@@ -3,7 +3,7 @@
 # https://oss.oracle.com/licenses/upl.
 
 # ---------------------------------------------------------------------------
-# Coherence Go Client GitHub Actions CI build Against v24.09+ with gRPC v1 API
+# Coherence Go Client GitHub Actions CI build Against v25.03+ with gRPC v1 API
 # ---------------------------------------------------------------------------
 name: CI Compatability Jakarta - V1 gRPC
 
