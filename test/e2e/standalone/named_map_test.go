@@ -215,7 +215,7 @@ func RunTestInvocationTimeout(g *gomega.WithT, namedMap coherence.NamedMap[int, 
 func TestBasicOperationsAgainstMapAndCache(t *testing.T) {
 	g := gomega.NewWithT(t)
 
-	session, err := utils.GetSession(coherence.WithAddress("coherence:///localhost:7574"))
+	session, err := utils.GetSession()
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	defer session.Close()
 
