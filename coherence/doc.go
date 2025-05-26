@@ -277,6 +277,19 @@ EntrySet, KeySet, Values, InvokeAll and InvokeAllFilter.
 	// we can also do more complex filtering such as looking for people > 30 and where there name begins with 'T'
 	ch := namedMap.EntrySetFilter(ctx, filters.Greater(age, 20).And(filters.Like(name, "T%", true)))
 
+NOTE: With any of the functions returning a channel, if you break out of the range loop before potentially reading all
+entries from the channel, you must drain the channel in a go routine. This ensures that the underlying unbuffered
+channel does not block waiting to write. A simplified drain function could be the following:
+
+	func drain[T any](ch <-chan T) {
+	    go func() {
+	        for range ch {
+	        }
+	    }()
+	 }
+
+The above is a sample only and should implement your own with a timeout or using context with cancel to suit your needs.
+
 If you want to sort the results from the EntrySetFilter command you can use the following function
 [EntrySetFilterWithComparator]. Due generics limitations in Go, this is not a function call off the [NamedMap]
 or [NamedCache] interface, but a function call that takes a [NamedMap] or [NamedCache].

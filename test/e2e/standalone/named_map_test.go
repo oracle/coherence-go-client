@@ -254,6 +254,7 @@ func TestBasicOperationsAgainstMapAndCache(t *testing.T) {
 		{"NamedCacheRunTestEntrySetFilter", utils.GetNamedCache[int, utils.Person](g, session, "entryset-filter-cache"), RunTestEntrySetFilter},
 		{"NamedMapRunTestEntrySetFilterWithComparator", utils.GetNamedMap[int, utils.Person](g, session, "entryset-filter-map-comparator"), RunTestEntrySetFilterWithComparator},
 		{"NamedCacheRunTestEntrySetFilterWithComparator", utils.GetNamedCache[int, utils.Person](g, session, "entryset-filter-cache-comparator"), RunTestEntrySetFilterWithComparator},
+		{"NamedCacheRunTestEntrySetFilterWithComparatorStream", utils.GetNamedCache[int, utils.Person](g, session, "entryset-filter-cache-comparator-stream"), RunTestEntrySetFilterWithComparatorStream},
 		{"NamedMapRunTestKeySetFilter", utils.GetNamedMap[int, utils.Person](g, session, "keyset-map"), RunTestKeySetFilter},
 		{"NamedCacheRunTestKeySetFilter", utils.GetNamedCache[int, utils.Person](g, session, "keyset-cache"), RunTestKeySetFilter},
 		{"NamedMapRunTestGetAll", utils.GetNamedMap[int, utils.Person](g, session, "getall-filter-map"), RunTestGetAll},
@@ -899,6 +900,92 @@ func RunTestEntrySetFilterWithComparator(t *testing.T, namedMap coherence.NamedM
 		results = append(results, se.Value)
 	}
 	g.Expect(len(results)).To(gomega.Equal(len(peopleData)))
+}
+
+func RunTestEntrySetFilterWithComparatorStream(t *testing.T, namedMap coherence.NamedMap[int, utils.Person]) {
+	var (
+		g                   = gomega.NewWithT(t)
+		comparatorAscending = extractors.ExtractorComparator(extractors.Extract[int]("age"), true)
+		count               = 0
+		maxPeople           = 10_000
+	)
+
+	if namedMap.GetSession().GetProtocolVersion() == 0 {
+		// skip as not supported in V0
+		return
+	}
+
+	utils.ClearNamedMap(g, namedMap)
+
+	// populate the cache
+	for i := 1; i <= maxPeople; i++ {
+		_, err := namedMap.Put(ctx, i, utils.Person{
+			ID:   i,
+			Name: fmt.Sprintf("name-%d", i),
+			Age:  10 + (i % 100),
+		})
+		g.Expect(err).NotTo(gomega.HaveOccurred())
+
+	}
+	utils.AssertSize(g, namedMap, maxPeople)
+
+	// only retrieve 300 entries and then skip out
+	ch := coherence.EntrySetFilterWithComparator(ctx, namedMap, filters.Always(), comparatorAscending)
+	for se := range ch {
+		g.Expect(se.Err).ShouldNot(gomega.HaveOccurred())
+		g.Expect(se.Value).ShouldNot(gomega.BeNil())
+		count++
+		if count == 100 {
+			// exit before all entries read
+			break
+		}
+	}
+
+	// because we exited potentially before all entries were read, drain the channel
+	drainWithIdleTimeout(ch, 2*time.Second)
+
+	// run a go routine to access the same cache again
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	go func() {
+		defer wg.Done()
+		count = 0
+		// tun the same query again
+		ch2 := coherence.EntrySetFilterWithComparator(ctx, namedMap, filters.Always(), comparatorAscending)
+		for se := range ch2 {
+			g.Expect(se.Err).ShouldNot(gomega.HaveOccurred())
+			count++
+		}
+
+		g.Expect(count).To(gomega.Equal(maxPeople))
+	}()
+
+	wg.Wait()
+}
+
+func drainWithIdleTimeout[T any](ch <-chan T, timeout time.Duration) {
+	go func() {
+		timer := time.NewTimer(timeout)
+		defer timer.Stop()
+
+		for {
+			select {
+			case val, ok := <-ch:
+				if !ok {
+					return
+				}
+				if !timer.Stop() {
+					<-timer.C
+				}
+				timer.Reset(timeout)
+				_ = val // discard
+
+			case <-timer.C:
+				return
+			}
+		}
+	}()
 }
 
 func RunTestKeySetFilter(t *testing.T, namedMap coherence.NamedMap[int, utils.Person]) {
