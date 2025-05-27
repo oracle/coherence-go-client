@@ -25,7 +25,7 @@ spec:
             - name: TEST_TYPE
               value: "runTest"
             - name: COHERENCE_LOG_LEVEL
-              value: "ALL"
+              value: "DEBUG"
           resources:
             requests:
               memory: "512Mi"

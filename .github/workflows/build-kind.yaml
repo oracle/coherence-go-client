@@ -67,7 +67,8 @@ jobs:
       shell: bash
       run: |
         NAMESPACE=coherence-perf
-        kubectl exec -it -n $NAMESPACE perf-cluster-0 -c coherence -- /coherence-operator/utils/cohctl get caches -o wide 
+        kubectl exec -it -n $NAMESPACE perf-cluster-0 -c coherence -- /coherence-operator/utils/cohctl get caches -o wide
+        make deploy-test-schools
         # Put the tail into the background
         POD=$(kubectl get pods -n $NAMESPACE | grep perf-go-client | awk '{print $1}') 
         kubectl logs $POD -n $NAMESPACE -f > build/_output/test-logs/perf-go-client.log 2>&1 &
@@ -87,6 +88,12 @@ jobs:
       shell: bash
       run: |
         make kind-stop
+
+    - uses: actions/upload-artifact@v4
+      if: failure()
+      with:
+        name: test-output-${{ matrix.go-version }}-failure-logs
+        path: build/_output/test-logs
 
     - uses: actions/upload-artifact@v4
       with:
