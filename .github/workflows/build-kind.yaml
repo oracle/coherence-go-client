@@ -67,26 +67,20 @@ jobs:
       shell: bash
       run: |
         NAMESPACE=coherence-perf
+        kubectl exec -it -n $NAMESPACE perf-cluster-0 -c coherence -- /coherence-operator/utils/cohctl get caches -o wide 
         # Put the tail into the background
         POD=$(kubectl get pods -n $NAMESPACE | grep perf-go-client | awk '{print $1}') 
         kubectl logs $POD -n $NAMESPACE -f > build/_output/test-logs/perf-go-client.log 2>&1 &
         TAIL_PID=$!
-        
         # port forward the http port
         kubectl port-forward -n $NAMESPACE pod/$POD 8080:8080 > build/_output/test-logs/port-forward.log 2>&1 &
         PORT_FORWARD_PID=$!
-        
         # run curl requests
         while : ; do curl -s -v http://localhost:8080/api/schools?q=[1-2] | jq length; sleep 0.5; done > build/_output/test-logs/curl.log 2>&1 &
         CURL_PID=$!
-        
         # Start the rolling restart
         ./scripts/kind/roll-cluster.sh | tee build/_output/test-logs/rolling-restart.log
-        
-        make undeploy-test-schools
-        
         kill -9 $CURL_PID && sleep 5 && kill -9 $PORT_FORWARD_PID && kill -9 $TAIL_PID
-        
 
     - name: Shutdown
  #     if: github.event_name == 'workflow_dispatch'
