@@ -1,0 +1,32 @@
+# Copyright 2025 Oracle Corporation and/or its affiliates.
+# Licensed under the Universal Permissive License v 1.0 as shown at
+# https://oss.oracle.com/licenses/upl.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: go-perf-load-schools
+spec:
+  completions: 1     # total times to run
+  parallelism: 1     # how many pods to run at the same time
+  template:
+    metadata:
+      labels:
+        app: go-client
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: perf-go-client
+          image: "perf-go-client:1.0.0"
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: COHERENCE_SERVER_ADDRESS
+              value: "perf-cluster-grpc:1408"
+            - name: TEST_TYPE
+              value: "load"
+            - name: CACHE_COUNT
+              value: "250000"
+          resources:
+            requests:
+              memory: "1024Mi"
+            limits:
+              memory: "1024Mi"

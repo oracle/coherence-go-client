@@ -1,0 +1,35 @@
+# Copyright 2025 Oracle Corporation and/or its affiliates.
+# Licensed under the Universal Permissive License v 1.0 as shown at
+# https://oss.oracle.com/licenses/upl.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: perf-go-client
+spec:
+  backoffLimit: 0
+  template:
+    metadata:
+      labels:
+        app: perf-go-client
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: go-client
+          image: "perf-go-client:1.0.0"
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: COHERENCE_SERVER_ADDRESS
+              value: "perf-cluster-grpc:1408"
+            - name: COHERENCE_READY_TIMEOUT
+              value: "15000"
+            - name: TEST_TYPE
+              value: "runTest"
+            - name: COHERENCE_LOG_LEVEL
+              value: "ALL"
+          resources:
+            requests:
+              memory: "512Mi"
+            limits:
+              memory: "512Mi"
+          ports:
+            - containerPort: 8080

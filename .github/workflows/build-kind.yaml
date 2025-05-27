@@ -27,7 +27,6 @@ jobs:
       fail-fast: false
       matrix:
         go-version:
-          - 1.23.x
           - 1.24.x
 
 #   Checkout the source, we need a depth of zero to fetch all of the history otherwise
@@ -38,7 +37,7 @@ jobs:
         fetch-depth: 0
 
     - name: Cache Go Modules
-      if: github.event_name == 'workflow_dispatch'
+    #  if: github.event_name == 'workflow_dispatch'
       uses: actions/cache@v4
       with:
         path: ~/go/pkg/mod
@@ -47,38 +46,56 @@ jobs:
           ${{ runner.os }}-go-mods-
 
     - name: Set up Go
-      if: github.event_name == 'workflow_dispatch'
+  #    if: github.event_name == 'workflow_dispatch'
       uses: actions/setup-go@v5
       with:
         go-version: '${{ matrix.go-version }}'
 
     - name: Create Kind Cluster
-      if: github.event_name == 'workflow_dispatch'
+ #     if: github.event_name == 'workflow_dispatch'
       shell: bash
       run: |
         make kind
         make create-namespace deploy-operator
         make deploy-coherence
+        make build-go-client
+        make load-schools
+        mkdir -p build/_output/
 
     - name: Run Tests
-      if: github.event_name == 'workflow_dispatch'
+   #   if: github.event_name == 'workflow_dispatch'
       shell: bash
       run: |
-        kubectl get pods -n coherence-perf
+        NAMESPACE=coherence-perf
+        # Put the tail into the background
+        POD=$(kubectl get pods -n $NAMESPACE | grep perf-go-client | awk '{print $1}') 
+        kubectl logs $POD -n $NAMESPACE -f > build/_output/test-logs/perf-go-client.log 2>&1 &
+        TAIL_PID=$!
+        
+        # port forward the http port
+        kubectl port-forward -n $NAMESPACE pod/$POD 8080:8080 > build/_output/test-logs/port-forward.log 2>&1 &
+        PORT_FORWARD_PID=$!
+        
+        # run curl requests
+        while : ; do curl -s -v http://localhost:8080/api/schools?q=[1-2] | jq length; sleep 0.5; done > build/_output/test-logs/curl.log 2>&1 &
+        CURL_PID=$!
+        
+        # Start the rolling restart
+        ./scripts/kind/roll-cluster.sh | tee build/_output/test-logs/rolling-restart.log
+        
+        make undeploy-test-schools
+        
+        kill -9 $CURL_PID && sleep 5 && kill -9 $PORT_FORWARD_PID && kill -9 $TAIL_PID
+        
 
     - name: Shutdown
-      if: github.event_name == 'workflow_dispatch'
+ #     if: github.event_name == 'workflow_dispatch'
       shell: bash
       run: |
         make kind-stop
 
     - uses: actions/upload-artifact@v4
-      if: failure()
       with:
-        name: test-output-${{ matrix.go-version }}-${{ matrix.coherenceVersion }}
+        name: test-output-${{ matrix.go-version }}-test-logs
         path: build/_output/test-logs
 
-    - uses: actions/upload-artifact@v4
-      with:
-        name: test-result-${{ matrix.go-version }}-${{ matrix.coherenceVersion }}
-        path:  test/e2e/perf/results.txt
