@@ -6,7 +6,7 @@
 #
 
 set -o errexit
-maxIterations=100
+maxIterations=10
 
 if [ ! -z "$MAX_ITERATIONS" ]; then
   maxIterations=$MAX_ITERATIONS
