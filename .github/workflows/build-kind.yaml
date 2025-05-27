@@ -69,6 +69,23 @@ jobs:
         NAMESPACE=coherence-perf
         kubectl exec -it -n $NAMESPACE perf-cluster-0 -c coherence -- /coherence-operator/utils/cohctl get caches -o wide
         make deploy-test-schools
+        JOB_NAME=perf-go-client
+        echo "Waiting for pod from job $JOB_NAME to start running..."
+        for i in {1..30}; do
+          POD=$(kubectl get pods -n "$NAMESPACE" -l job-name="$JOB_NAME" -o jsonpath='{.items[0].metadata.name}')
+          STATUS=$(kubectl get pod "$POD" -n "$NAMESPACE" -o jsonpath='{.status.phase}')
+          echo "Pod: $POD, Status: $STATUS"
+          if [[ "$STATUS" == "Running" ]]; then
+            echo "Pod is running"
+            break
+          elif [[ "$STATUS" == "Pending" || "$STATUS" == "ContainerCreating" ]]; then
+            sleep 2
+          else
+            echo "Pod entered unexpected state: $STATUS"
+            kubectl describe pod "$POD" -n "$NAMESPACE"
+            exit 1
+          fi
+        done
         # Put the tail into the background
         POD=$(kubectl get pods -n $NAMESPACE | grep perf-go-client | awk '{print $1}') 
         kubectl logs $POD -n $NAMESPACE -f > build/_output/test-logs/perf-go-client.log 2>&1 &
@@ -81,7 +98,9 @@ jobs:
         CURL_PID=$!
         # Start the rolling restart
         ./scripts/kind/roll-cluster.sh | tee build/_output/test-logs/rolling-restart.log
-        kill -9 $CURL_PID && sleep 5 && kill -9 $PORT_FORWARD_PID && kill -9 $TAIL_PID
+        kill -9 $CURL_PID || true
+        sleep 5 && kill -9 $PORT_FORWARD_PID || true
+        kill -9 $TAIL_PID || true
 
     - name: Shutdown
  #     if: github.event_name == 'workflow_dispatch'
