@@ -60,7 +60,7 @@ jobs:
         make deploy-coherence
         make build-go-client
         make load-schools
-        mkdir -p build/_output/
+        mkdir -p build/_output/test-logs
 
     - name: Run Tests
    #   if: github.event_name == 'workflow_dispatch'
