@@ -277,6 +277,80 @@ show-docs:   ## Show the Documentation
 trivy-scan: gettrivy ## Scan the CLI using trivy
 	$(TOOLS_BIN)/trivy fs --cache-dir ${TRIVY_CACHE} --exit-code 1 --skip-dirs "./java" .
 
+# ======================================================================================================================
+# Targets related to running KinD clusters for testing
+# ======================================================================================================================
+##@ KinD
+
+KIND_CLUSTER   ?= go-client
+KIND_IMAGE     ?= "kindest/node:v1.33.0@sha256:91e9ed777db80279c22d1d1068c091b899b2078506e4a0f797fbf6e397c0b0b2"
+KIND_SCRIPTS   := ./scripts/kind
+NAMESPACE      ?= coherence-perf
+OPERATOR_VERSION ?= v3.5.0
+COHERENCE_IMAGE ?= ghcr.io/oracle/coherence-ce:14.1.2-0-2-java17
+
+# ----------------------------------------------------------------------------------------------------------------------
+# Start a Kind cluster
+# ----------------------------------------------------------------------------------------------------------------------
+.PHONY: kind
+kind:   ## Run a default KinD cluster
+	kind create cluster --name $(KIND_CLUSTER) --wait 10m --config $(KIND_SCRIPTS)/kind-config.yaml --image $(KIND_IMAGE)
+	$(KIND_SCRIPTS)/kind-label-node.sh
+	docker pull $(COHERENCE_IMAGE)
+	kind --name $(KIND_CLUSTER) load docker-image $(COHERENCE_IMAGE)
+
+# ----------------------------------------------------------------------------------------------------------------------
+# Stop and delete the Kind cluster
+# ----------------------------------------------------------------------------------------------------------------------
+.PHONY: kind-stop
+kind-stop:   ## Stop and delete the KinD cluster
+	kind delete cluster --name $(KIND_CLUSTER)
+
+# ----------------------------------------------------------------------------------------------------------------------
+# Deploy Coherence Operator
+# ----------------------------------------------------------------------------------------------------------------------
+.PHONY: deploy-operator
+deploy-operator:   ## Deploy the Coherence Operator
+	kubectl apply -f https://github.com/oracle/coherence-operator/releases/download/$(OPERATOR_VERSION)/coherence-operator.yaml
+	kubectl -n coherence wait --timeout=300s --for condition=available deployment/coherence-operator-controller-manager
+
+# ----------------------------------------------------------------------------------------------------------------------
+# UnDeploy Coherence Operator
+# ----------------------------------------------------------------------------------------------------------------------
+.PHONY: undeploy-operator
+undeploy-operator:   ## UnDeploy the Coherence Operator
+	kubectl delete -f https://github.com/oracle/coherence-operator/releases/download/$(OPERATOR_VERSION)/coherence-operator.yaml || true
+
+# ----------------------------------------------------------------------------------------------------------------------
+# Deploy Coherence Cluster
+# ----------------------------------------------------------------------------------------------------------------------
+.PHONY: deploy-coherence
+deploy-coherence:   ## Deploy the Coherence Cluster
+	kubectl apply -n $(NAMESPACE) -f $(KIND_SCRIPTS)/coherence-cluster.yaml
+	kubectl -n $(NAMESPACE) wait --timeout=300s --for condition=Ready coherence/perf-cluster
+
+# ----------------------------------------------------------------------------------------------------------------------
+# UnDeploy Coherence Cluster
+# ----------------------------------------------------------------------------------------------------------------------
+.PHONY: undeploy-coherence
+undeploy-coherence:   ## UnDeploy the Coherence Cluster
+	kubectl delete -n $(NAMESPACE) -f $(KIND_SCRIPTS)/coherence-cluster.yaml || true
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+# Create Perf namespace
+# ----------------------------------------------------------------------------------------------------------------------
+.PHONY: create-namespace
+create-namespace:   ## Create the perf test namespace
+	kubectl create namespace $(NAMESPACE)
+
+# ----------------------------------------------------------------------------------------------------------------------
+# Delete Perf namespace
+# ----------------------------------------------------------------------------------------------------------------------
+.PHONY: delete-namespace
+delete-namespace:   ## Create the perf test namespace
+	kubectl delete namespace $(NAMESPACE) || true
+
 
 # ======================================================================================================================
 # Test targets
@@ -343,7 +417,6 @@ test-v1-base: test-clean test gotestsum $(BUILD_PROPS) ## Run e2e tests with Coh
 .PHONY: test-examples
 test-examples: test-clean gotestsum $(BUILD_PROPS) ## Run examples tests with Coherence
 	./scripts/run-test-examples.sh
-
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Startup cluster members via docker compose
