@@ -8,7 +8,15 @@
 name: CI Kind Tests
 
 on:
+  push:
+    branches:
+      - '*'
   workflow_dispatch:
+    inputs:
+      go-version:
+        description: "Go version (comma-separated for matrix)"
+        required: false
+        default: "1.23.x,1.24.x"
 
 jobs:
   build:
@@ -22,13 +30,19 @@ jobs:
           - 1.23.x
           - 1.24.x
 
-
 #   Checkout the source, we need a depth of zero to fetch all of the history otherwise
 #   the copyright check cannot work out the date of the files from Git.
     steps:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 0
+
+    - name: Skip if Pull Request
+      run: |
+        if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+          echo "This is a PR"
+          exit 0
+        fi
 
       #   This step will free up disc space on the runner by removing
       #   lots of things that we do not need.
