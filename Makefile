@@ -296,8 +296,6 @@ COHERENCE_IMAGE ?= ghcr.io/oracle/coherence-ce:14.1.2-0-2-java17
 kind:   ## Run a default KinD cluster
 	kind create cluster --name $(KIND_CLUSTER) --wait 10m --config $(KIND_SCRIPTS)/kind-config.yaml --image $(KIND_IMAGE)
 	$(KIND_SCRIPTS)/kind-label-node.sh
-	docker pull $(COHERENCE_IMAGE)
-	kind --name $(KIND_CLUSTER) load docker-image $(COHERENCE_IMAGE)
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Stop and delete the Kind cluster

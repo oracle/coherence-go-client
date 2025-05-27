@@ -37,16 +37,10 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: Skip if Pull Request
-      run: |
-        if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-          echo "This is a PR"
-          exit 0
-        fi
-
       #   This step will free up disc space on the runner by removing
       #   lots of things that we do not need.
     - name: disc
+      if: github.event_name != 'pull_request'
       shell: bash
       run: |
         echo "Listing 100 largest packages"
@@ -71,6 +65,7 @@ jobs:
         df -h
 
     - name: Cache Go Modules
+      if: github.event_name != 'pull_request'
       uses: actions/cache@v4
       with:
         path: ~/go/pkg/mod
@@ -79,11 +74,13 @@ jobs:
           ${{ runner.os }}-go-mods-
 
     - name: Set up Go
+      if: github.event_name != 'pull_request'
       uses: actions/setup-go@v5
       with:
         go-version: '${{ matrix.go-version }}'
 
     - name: Create Kind Cluster
+      if: github.event_name != 'pull_request'
       shell: bash
       run: |
         make kind
@@ -91,11 +88,13 @@ jobs:
         make deploy-coherence
 
     - name: Run Tests
+      if: github.event_name != 'pull_request'
       shell: bash
       run: |
         kubectl get pods -n coherence-perf
 
     - name: Shutdown
+      if: github.event_name != 'pull_request'
       shell: bash
       run: |
         make kind-stop
