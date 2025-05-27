@@ -37,35 +37,8 @@ jobs:
       with:
         fetch-depth: 0
 
-      #   This step will free up disc space on the runner by removing
-      #   lots of things that we do not need.
-    - name: disc
-      if: github.event_name != 'pull_request'
-      shell: bash
-      run: |
-        echo "Listing 100 largest packages"
-        dpkg-query -Wf '${Installed-Size}\t${Package}\n' | sort -n | tail -n 100
-        df -h
-        echo "Removing large packages"
-        sudo docker image prune --all --force
-        sudo docker builder prune -a
-        sudo apt-get remove -y '^dotnet-.*' || true
-        sudo apt-get remove -y '^llvm-.*' || true
-        sudo apt-get remove -y 'monodoc-http' || true
-        sudo apt-get remove -y 'php.*' || true
-        sudo apt-get remove -y azure-cli google-cloud-sdk hhvm google-chrome-stable firefox powershell mono-devel || true
-        sudo apt-get autoremove -y || true
-        sudo apt-get clean
-        df -h
-        echo "Removing large directories"
-        rm -rf /usr/share/dotnet/
-        sudo rm -rf /usr/local/lib/android
-        sudo rm -rf /opt/ghc
-        sudo rm -rf /opt/hostedtoolcache/CodeQL
-        df -h
-
     - name: Cache Go Modules
-      if: github.event_name != 'pull_request'
+      if: github.event_name == 'workflow_dispatch'
       uses: actions/cache@v4
       with:
         path: ~/go/pkg/mod
@@ -74,13 +47,13 @@ jobs:
           ${{ runner.os }}-go-mods-
 
     - name: Set up Go
-      if: github.event_name != 'pull_request'
+      if: github.event_name == 'workflow_dispatch'
       uses: actions/setup-go@v5
       with:
         go-version: '${{ matrix.go-version }}'
 
     - name: Create Kind Cluster
-      if: github.event_name != 'pull_request'
+      if: github.event_name == 'workflow_dispatch'
       shell: bash
       run: |
         make kind
@@ -88,13 +61,13 @@ jobs:
         make deploy-coherence
 
     - name: Run Tests
-      if: github.event_name != 'pull_request'
+      if: github.event_name == 'workflow_dispatch'
       shell: bash
       run: |
         kubectl get pods -n coherence-perf
 
     - name: Shutdown
-      if: github.event_name != 'pull_request'
+      if: github.event_name == 'workflow_dispatch'
       shell: bash
       run: |
         make kind-stop
