@@ -5,7 +5,7 @@
 # ---------------------------------------------------------------------------
 # Coherence Go Client GitHub Actions - Kind Tests
 # ---------------------------------------------------------------------------
-name: CI Perf Tests
+name: CI Kind Tests
 
 on:
   workflow_dispatch:
