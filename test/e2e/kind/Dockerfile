@@ -6,9 +6,10 @@
 
 FROM scratch
 
-COPY runner /files/runner
+COPY --chown=1000:1000 runner /files/runner
+
+USER 1000:1000
 
 EXPOSE 8080
-
 ENTRYPOINT ["/files/runner"]
 CMD ["-h"]
