@@ -21,7 +21,7 @@ spec:
             - name: COHERENCE_SERVER_ADDRESS
               value: "perf-cluster-grpc:1408"
             - name: COHERENCE_READY_TIMEOUT
-              value: "15000"
+              value: "30000"
             - name: TEST_TYPE
               value: "runTest"
             - name: COHERENCE_LOG_LEVEL

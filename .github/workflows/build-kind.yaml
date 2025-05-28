@@ -17,6 +17,10 @@ on:
         description: "Go version (comma-separated for matrix)"
         required: false
         default: "1.23.x,1.24.x"
+      max-iterations:
+        description: "Maximum number of iterations"
+        required: false
+        default: "10"
 
 jobs:
   build:
@@ -65,7 +69,10 @@ jobs:
     - name: Run Tests
    #   if: github.event_name == 'workflow_dispatch'
       shell: bash
+      env:
+        MAX_ITERATIONS: ${{ github.event.inputs.max-iterations }}
       run: |
+        export MAX_ITERATIONS
         NAMESPACE=coherence-perf
         kubectl exec -it -n $NAMESPACE perf-cluster-0 -c coherence -- /coherence-operator/utils/cohctl get caches -o wide
         make deploy-test-schools
