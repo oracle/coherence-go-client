@@ -127,9 +127,8 @@ func schoolsHandler(w http.ResponseWriter, r *http.Request) {
 
 		var people = make([]School, 0)
 
-		log.Println("Health check via size()")
-		_, err := schoolsCache.Size(ctx)
-		if err != nil {
+		ready, err := schoolsCache.IsReady(ctx)
+		if err != nil || !ready {
 			session.Close()
 			log.Printf("failed to do health check: %v", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)

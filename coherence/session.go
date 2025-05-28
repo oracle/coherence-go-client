@@ -678,7 +678,6 @@ func waitForReady(s *Session) error {
 		if state == connectivity.Ready {
 			return nil
 		}
-		logMessage(DEBUG, "state=%v", state)
 
 		if !messageLogged {
 			logMessage(INFO, "Session [%s] State is %v, waiting until ready timeout of %v for valid connection",
