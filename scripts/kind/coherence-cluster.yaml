@@ -1,0 +1,26 @@
+# Copyright 2025 Oracle Corporation and/or its affiliates.
+# Licensed under the Universal Permissive License v 1.0 as shown at
+# https://oss.oracle.com/licenses/upl.
+apiVersion: coherence.oracle.com/v1
+kind: Coherence
+metadata:
+  name: perf-cluster
+spec:
+  jvm:
+    memory:
+      initialHeapSize: $INITIAL_HEAP
+      maxHeapSize: 1g
+  replicas: 3
+  readinessProbe:
+    initialDelaySeconds: 10
+    periodSeconds: 10
+  suspendServicesOnShutdown: false
+  image: "ghcr.io/oracle/coherence-ce:14.1.2-0-2-java17"
+  imagePullPolicy: IfNotPresent
+  coherence:
+    management:
+      enabled: true
+  ports:
+    - name: management
+    - name: grpc
+      port: 1408

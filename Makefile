@@ -8,7 +8,7 @@
 # ----------------------------------------------------------------------------------------------------------------------
 
 # This is the version of the coherence-go-client
-VERSION ?=2.3.0-rc1
+VERSION ?=2.3.0-rc2
 CURRDIR := $(shell pwd)
 USER_ID := $(shell echo "`id -u`:`id -g`")
 
@@ -178,6 +178,7 @@ copyright: getcopyright ## Check copyright headers
 	  -X proto/ \
 	  -X /Dockerfile \
 	  -X .Dockerfile \
+	  -X runner \
 	  -X go.sum \
 	  -X HEADER.txt \
 	  -X .iml \
@@ -277,6 +278,111 @@ show-docs:   ## Show the Documentation
 trivy-scan: gettrivy ## Scan the CLI using trivy
 	$(TOOLS_BIN)/trivy fs --cache-dir ${TRIVY_CACHE} --exit-code 1 --skip-dirs "./java" .
 
+# ======================================================================================================================
+# Targets related to running KinD clusters for testing
+# ======================================================================================================================
+##@ KinD
+
+KIND_CLUSTER     ?= go-client
+KIND_IMAGE       ?= "kindest/node:v1.33.0@sha256:91e9ed777db80279c22d1d1068c091b899b2078506e4a0f797fbf6e397c0b0b2"
+KIND_SCRIPTS     := ./scripts/kind
+NAMESPACE        ?= coherence-perf
+OPERATOR_VERSION ?= v3.5.0
+COHERENCE_IMAGE  ?= ghcr.io/oracle/coherence-ce:14.1.2-0-2-java17
+INITIAL_HEAP     ?= 1g
+GO_CLIENT_ARCH   ?= amd64
+GO_IMAGE         ?= perf-go-client:1.0.0
+
+# ----------------------------------------------------------------------------------------------------------------------
+# Start a Kind cluster
+# ----------------------------------------------------------------------------------------------------------------------
+.PHONY: kind
+kind:   ## Run a default KinD cluster
+	kind create cluster --name $(KIND_CLUSTER) --wait 10m --config $(KIND_SCRIPTS)/kind-config.yaml --image $(KIND_IMAGE)
+	$(KIND_SCRIPTS)/kind-label-node.sh
+
+# ----------------------------------------------------------------------------------------------------------------------
+# Stop and delete the Kind cluster
+# ----------------------------------------------------------------------------------------------------------------------
+.PHONY: kind-stop
+kind-stop:   ## Stop and delete the KinD cluster
+	kind delete cluster --name $(KIND_CLUSTER)
+
+# ----------------------------------------------------------------------------------------------------------------------
+# Deploy Coherence Operator
+# ----------------------------------------------------------------------------------------------------------------------
+.PHONY: deploy-operator
+deploy-operator:   ## Deploy the Coherence Operator
+	kubectl apply -f https://github.com/oracle/coherence-operator/releases/download/$(OPERATOR_VERSION)/coherence-operator.yaml
+	kubectl -n coherence wait --timeout=300s --for condition=available deployment/coherence-operator-controller-manager
+
+# ----------------------------------------------------------------------------------------------------------------------
+# UnDeploy Coherence Operator
+# ----------------------------------------------------------------------------------------------------------------------
+.PHONY: undeploy-operator
+undeploy-operator:   ## UnDeploy the Coherence Operator
+	kubectl delete -f https://github.com/oracle/coherence-operator/releases/download/$(OPERATOR_VERSION)/coherence-operator.yaml || true
+
+# ----------------------------------------------------------------------------------------------------------------------
+# Deploy Coherence Cluster
+# ----------------------------------------------------------------------------------------------------------------------
+.PHONY: deploy-coherence
+deploy-coherence:   ## Deploy the Coherence Cluster
+	envsubst <  $(KIND_SCRIPTS)/coherence-cluster.yaml | kubectl apply -n $(NAMESPACE) -f -
+	sleep 5
+	kubectl -n $(NAMESPACE) wait --timeout=300s --for condition=Ready coherence/perf-cluster
+
+#-----------------------------------------------------------------------------------------------------------------------
+# Deploy Coherence Cluster
+# ----------------------------------------------------------------------------------------------------------------------
+.PHONY: build-go-client
+build-go-client:   ## Make Go Client
+	cd test/e2e/kind && CGO_ENABLED=0 GOOS=linux GOARCH=$(GO_CLIENT_ARCH) GO111MODULE=on go build -trimpath -o runner . && docker build --no-cache -t $(GO_IMAGE) .
+	kind --name $(KIND_CLUSTER) load docker-image $(GO_IMAGE)
+
+#-----------------------------------------------------------------------------------------------------------------------
+# Load Schools Data
+# ----------------------------------------------------------------------------------------------------------------------
+.PHONY: load-schools
+load-schools:   ## Load Schools
+	kubectl -n $(NAMESPACE) apply -f $(KIND_SCRIPTS)/load-schools.yaml
+	kubectl wait -n $(NAMESPACE) --timeout=1200s --for condition=Complete job/go-perf-load-schools
+	kubectl -n $(NAMESPACE) delete -f $(KIND_SCRIPTS)/load-schools.yaml || true
+
+#-----------------------------------------------------------------------------------------------------------------------
+# Test Schools
+# ----------------------------------------------------------------------------------------------------------------------
+.PHONY: deploy-test-schools
+deploy-test-schools:   ## Deploy Test Schools
+	kubectl -n $(NAMESPACE) apply -f $(KIND_SCRIPTS)/test-schools.yaml
+
+#-----------------------------------------------------------------------------------------------------------------------
+# Stop Schools Test
+# ----------------------------------------------------------------------------------------------------------------------
+.PHONY: undeploy-test-schools
+undeploy-test-schools:   ## Undeploy Test Schools
+	kubectl -n $(NAMESPACE) delete -f $(KIND_SCRIPTS)/test-schools.yaml
+
+# ----------------------------------------------------------------------------------------------------------------------
+# UnDeploy Coherence Cluster
+# ----------------------------------------------------------------------------------------------------------------------
+.PHONY: undeploy-coherence
+undeploy-coherence:   ## UnDeploy the Coherence Cluster
+	kubectl delete -n $(NAMESPACE) -f $(KIND_SCRIPTS)/coherence-cluster.yaml || true
+
+# ----------------------------------------------------------------------------------------------------------------------
+# Create Perf namespace
+# ----------------------------------------------------------------------------------------------------------------------
+.PHONY: create-namespace
+create-namespace:   ## Create the perf test namespace
+	kubectl create namespace $(NAMESPACE)
+
+# ----------------------------------------------------------------------------------------------------------------------
+# Delete Perf namespace
+# ----------------------------------------------------------------------------------------------------------------------
+.PHONY: delete-namespace
+delete-namespace:   ## Create the perf test namespace
+	kubectl delete namespace $(NAMESPACE) || true
 
 # ======================================================================================================================
 # Test targets
@@ -343,7 +449,6 @@ test-v1-base: test-clean test gotestsum $(BUILD_PROPS) ## Run e2e tests with Coh
 .PHONY: test-examples
 test-examples: test-clean gotestsum $(BUILD_PROPS) ## Run examples tests with Coherence
 	./scripts/run-test-examples.sh
-
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Startup cluster members via docker compose

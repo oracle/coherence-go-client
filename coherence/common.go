@@ -57,6 +57,8 @@ const (
 	integerMaxValue = 2147483647
 
 	ListenAll InvalidationStrategyType = 0
+
+	panicWarning = "recovered from panic, possible connection closed while received channel data: %v"
 )
 
 var (
@@ -636,6 +638,14 @@ func executeGetAll[K comparable, V any](ctx context.Context, bc *baseClient[K, V
 	}
 
 	go func() {
+		defer func() {
+			// catch panic of closed channel read in rare circumstances
+			if r := recover(); r != nil {
+				logMessage(WARNING, panicWarning, r)
+				return
+			}
+		}()
+
 		if cancel != nil {
 			defer cancel()
 		}
@@ -1185,6 +1195,14 @@ func executeInvokeAllFilterOrKeys[K comparable, V any, R any](ctx context.Contex
 	}
 
 	go func() {
+		defer func() {
+			// catch panic of closed channel read in rare circumstances
+			if r := recover(); r != nil {
+				logMessage(WARNING, panicWarning, r)
+				return
+			}
+		}()
+
 		if cancel != nil {
 			defer cancel()
 		}
@@ -1264,10 +1282,18 @@ func executeKeySet[K comparable, V any](ctx context.Context, bc *baseClient[K, V
 	}
 
 	go func() {
+		defer func() {
+			// catch panic of closed channel read in rare circumstances
+			if r := recover(); r != nil {
+				logMessage(WARNING, panicWarning, r)
+				return
+			}
+		}()
+
 		for {
 			result, err1 := iter.Next()
 
-			if err1 == ErrDone {
+			if errors.Is(err1, ErrDone) {
 				close(ch)
 				return
 			} else if err1 != nil {
@@ -1307,6 +1333,14 @@ func executeKeySetFilter[K comparable, V any](ctx context.Context, bc *baseClien
 	}
 
 	go func() {
+		defer func() {
+			// catch panic of closed channel read in rare circumstances
+			if r := recover(); r != nil {
+				logMessage(WARNING, panicWarning, r)
+				return
+			}
+		}()
+
 		if cancel != nil {
 			defer cancel()
 		}
@@ -1840,10 +1874,18 @@ func executeEntrySet[K comparable, V any](ctx context.Context, bc *baseClient[K,
 	}
 
 	go func() {
+		defer func() {
+			// catch panic of closed channel read in rare circumstances
+			if r := recover(); r != nil {
+				logMessage(WARNING, panicWarning, r)
+				return
+			}
+		}()
+
 		for {
 			result, err1 := iter.Next()
 
-			if err1 == ErrDone {
+			if errors.Is(err1, ErrDone) {
 				close(ch)
 				return
 			} else if err1 != nil {
@@ -1892,6 +1934,14 @@ func executeEntrySetFilter[K comparable, V any, E any](ctx context.Context, bc *
 	}
 
 	go func() {
+		defer func() {
+			// catch panic of closed channel read in rare circumstances
+			if r := recover(); r != nil {
+				logMessage(WARNING, panicWarning, r)
+				return
+			}
+		}()
+
 		if cancel != nil {
 			defer cancel()
 		}
@@ -1986,6 +2036,14 @@ func executeValues[K comparable, V any, E any](ctx context.Context, bc *baseClie
 	}
 
 	go func() {
+		defer func() {
+			// catch panic of closed channel read in rare circumstances
+			if r := recover(); r != nil {
+				logMessage(WARNING, panicWarning, r)
+				return
+			}
+		}()
+
 		if cancel != nil {
 			defer cancel()
 		}
@@ -2056,10 +2114,18 @@ func executeValuesNoFilter[K comparable, V any](ctx context.Context, bc *baseCli
 	}
 
 	go func() {
+		defer func() {
+			// catch panic of closed channel read in rare circumstances
+			if r := recover(); r != nil {
+				logMessage(WARNING, panicWarning, r)
+				return
+			}
+		}()
+
 		for {
 			result, err1 := iter.Next()
 
-			if err1 == ErrDone {
+			if errors.Is(err1, ErrDone) {
 				close(ch)
 				return
 			} else if err1 != nil {

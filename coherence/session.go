@@ -664,6 +664,7 @@ func waitForReady(s *Session) error {
 
 	// try to connect up until timeout, then throw err if not available
 	timeout := time.Now().Add(readyTimeout)
+
 	for {
 		if time.Now().After(timeout) {
 			return fmt.Errorf("unable to connect to %s after ready timeout of %v", s.sessOpts.Address, readyTimeout)
@@ -677,6 +678,7 @@ func waitForReady(s *Session) error {
 		if state == connectivity.Ready {
 			return nil
 		}
+
 		if !messageLogged {
 			logMessage(INFO, "Session [%s] State is %v, waiting until ready timeout of %v for valid connection",
 				s.sessionID, state, readyTimeout)
