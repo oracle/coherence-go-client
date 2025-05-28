@@ -484,7 +484,6 @@ func (s *Session) GetReadyTimeout() time.Duration {
 func (s *Session) ensureConnection() error {
 	s.connectMutex.Lock()
 	defer s.connectMutex.Unlock()
-	logMessage(DEBUG, "ensureConnection()")
 
 	if s.firstConnectAttempted {
 		// We have previously tried to connect so check that the connect state is connected

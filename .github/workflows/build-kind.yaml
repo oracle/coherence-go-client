@@ -94,7 +94,7 @@ jobs:
         kubectl port-forward -n $NAMESPACE pod/$POD 8080:8080 > build/_output/test-logs/port-forward.log 2>&1 &
         PORT_FORWARD_PID=$!
         # run curl requests
-        while : ; do curl -s -v http://localhost:8080/api/schools?q=[1-2] | jq length; sleep 0.5; done > build/_output/test-logs/curl.log 2>&1 &
+        while : ; do curl -s -v http://127.0.0.1:8080/api/schools?q=[1-2] | jq length; sleep 0.5; done > build/_output/test-logs/curl.log 2>&1 &
         CURL_PID=$!
         # Start the rolling restart
         ./scripts/kind/roll-cluster.sh | tee build/_output/test-logs/rolling-restart.log

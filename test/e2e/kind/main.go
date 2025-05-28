@@ -44,7 +44,7 @@ var (
 func main() {
 	var (
 		count    = 250_000
-		testType = "runTest"
+		testType = "runSchoolsTest"
 		err      error
 	)
 	if err = initializeCoherence(); err != nil {
@@ -63,7 +63,7 @@ func main() {
 	if testType == "load" {
 		err = populateSchoolsCache(count)
 	} else {
-		err = runTest()
+		err = runSchoolsTest()
 	}
 	if err != nil {
 		log.Fatalf("failed to run %s: %v", testType, err)
@@ -90,7 +90,7 @@ func initializeCoherence() error {
 	return err
 }
 
-func runTest() error {
+func runSchoolsTest() error {
 	http.HandleFunc("/api/schools", schoolsHandler)
 
 	fmt.Println("Server running on port 8080")
@@ -101,6 +101,16 @@ func runTest() error {
 
 func schoolsHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
+
+	defer func() {
+		if session.IsClosed() {
+			log.Printf("Session [%s] is closed, calling initializeCoherence()", session.ID())
+			err := initializeCoherence()
+			if err != nil {
+				log.Fatalf("failed to initialize coherence: %v", err)
+			}
+		}
+	}()
 
 	switch r.Method {
 
@@ -117,14 +127,13 @@ func schoolsHandler(w http.ResponseWriter, r *http.Request) {
 
 		var people = make([]School, 0)
 
-		if session.IsClosed() {
-			log.Printf("Session [%s] is closed, calling initializeCoherence()", session.ID())
-			err := initializeCoherence()
-			if err != nil {
-				log.Printf("failed to initialize coherence: %v", err)
-				http.Error(w, "not connected", http.StatusInternalServerError)
-				return
-			}
+		log.Println("Health check via size()")
+		_, err := schoolsCache.Size(ctx)
+		if err != nil {
+			session.Close()
+			log.Printf("failed to do health check: %v", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
 
 		for ch := range schoolsCache.ValuesFilter(ctx, marketSegmentFilter) {
