@@ -26,7 +26,7 @@ The Coherence Go client provides the following features:
     and session lifecycle events such as connected, disconnected, reconnected and closed
   - Support for storing Go structs as JSON as well as the ability to serialize to Java objects on the server for access from other Coherence language API's
   - Near cache support to cache frequently accessed data in the Go client to avoid sending requests across the network
-  - Support for simple and double-ended queues in Coherence Community Edition 24.09+ and commercial version 14.1.2.0+
+  - Support for simple and double-ended queues in Coherence Community Edition 25.03+ and commercial version 14.1.2.0+
   - Full support for Go generics in all Coherence API's
 
 For more information on Coherence caches, please see the [Coherence Documentation].
@@ -536,7 +536,7 @@ in your main code, create a new [Session] and register the listener
 
 # Working with Queues
 
-When connecting to a Coherence CE cluster versions 24.09 or above or commercial 14.1.2.0.+, you have the ability to create two main types of queues, a [NamedQueue] or [NamedDequeue].
+When connecting to a Coherence CE cluster versions 25.03 or above or commercial 14.1.2.0.+, you have the ability to create two main types of queues, a [NamedQueue] or [NamedDequeue].
 
 A [NamedQueue] is a simple FIFO queue which can be one of two types: either [Queue] - a simple queue which stores data in a single
 partition and is limited to approx 2GB of storage, or [PagedQueue] which distributes data over the cluster and is only limited
@@ -700,7 +700,7 @@ that occur against a [NamedQueue].
 	time.Sleep(5 * time.Second)
 
 	// output:
-	// 2024/11/28 11:40:58 INFO: Session [b1435a16-f210-4289-97e4-e1654947acd5] connected to [localhost:1408] Coherence version: 24.09, serverProtocolVersion: 1, proxyMemberId: 1
+	// 2024/11/28 11:40:58 INFO: Session [b1435a16-f210-4289-97e4-e1654947acd5] connected to [localhost:1408] Coherence version: 25.03, serverProtocolVersion: 1, proxyMemberId: 1
 	// **EVENT=queue_released: source=NamedQueue{name=queue-events, type=Queue, queueID=1198559040}
 	// 2024/11/28 11:41:03 INFO: Session [b1435a16-f210-4289-97e4-e1654947acd5] closed
 
@@ -895,6 +895,6 @@ accessed and created entries.
 [examples]: https://github.com/oracle/coherence-go-client/tree/main/examples
 [gRPC Proxy documentation]: https://docs.oracle.com/en/middleware/standalone/coherence/14.1.1.2206/develop-remote-clients/using-coherence-grpc-server.html
 [gRPC Naming]: https://github.com/grpc/grpc/blob/master/doc/naming.md
-[Queues]: https://coherence.community/latest/24.09/docs/#/docs/core/09_queues
+[Queues]: https://docs.oracle.com/en/middleware/fusion-middleware/coherence/14.1.2/develop-applications/implementing-concurreny-distributed-environment.html#GUID-18AEA825-C23E-4997-A938-DC7E5915AD45
 */
 package coherence
