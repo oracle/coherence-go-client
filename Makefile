@@ -575,8 +575,8 @@ getcopyright: ## Download copyright jar locally if necessary.
 $(TOOLS_BIN)/protoc:
 	@mkdir -p $(TOOLS_BIN)
 	./scripts/download-protoc.sh $(TOOLS_DIRECTORY)
-	go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.33.0
-	go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.3.0
+	go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.6
+	go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.5.1
 
 
 # go-get-tool will 'go get' any package $2 and install it to $1.

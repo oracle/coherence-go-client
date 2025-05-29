@@ -524,6 +524,7 @@ func (s *Session) ensureConnection() error {
 		defer cancel()
 	}
 
+	//nolint:staticcheck // SA1019 - ignore for the moment
 	conn, err := grpc.DialContext(newCtx, s.sessOpts.Address, s.dialOptions...)
 
 	if err != nil {
