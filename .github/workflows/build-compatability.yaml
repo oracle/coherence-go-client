@@ -74,7 +74,7 @@ jobs:
         COH_VERSION: ${{ matrix.coherenceVersion }}
       shell: bash
       run: |
-        go get google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.3.0
+        go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.6
         COHERENCE_BASE_IMAGE=gcr.io/distroless/java17-debian12 INCLUDE_LONG_RUNNING=true PROFILES=,jakarta,-javax COHERENCE_VERSION=$COH_VERSION make clean generate-proto build-test-images test-e2e-standalone
 
     - uses: actions/upload-artifact@v4
@@ -88,7 +88,7 @@ jobs:
         COH_VERSION: ${{ matrix.coherenceVersion }}
       shell: bash
       run: |
-        go get google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.3.0
+        go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.5.1
         SKIP_PROTO_GENERATION=true COHERENCE_BASE_IMAGE=gcr.io/distroless/java17-debian12 COHERENCE_VERSION=$COH_VERSION  PROFILES=,jakarta,-javax,scope make clean generate-proto build-test-images test-e2e-standalone-scope
 
     - uses: actions/upload-artifact@v4
@@ -103,7 +103,7 @@ jobs:
       shell: bash
       run: |
         echo "Running verify against $COH_VERSION"
-        go get google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.3.0
+        go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.5.1
         SKIP_PROTO_GENERATION=true COHERENCE_BASE_IMAGE=gcr.io/distroless/java17-debian12 SECURE=true COHERENCE_IGNORE_INVALID_CERTS=true INCLUDE_LONG_RUNNING=true \
           COHERENCE_TLS_CERTS_PATH=`pwd`/test/utils/certs/guardians-ca.crt \
           COHERENCE_TLS_CLIENT_CERT=`pwd`/test/utils/certs/star-lord.crt \
