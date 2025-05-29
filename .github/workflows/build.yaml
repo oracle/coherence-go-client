@@ -85,7 +85,7 @@ jobs:
       shell: bash
       run: |
         go get google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.3.0
-        SKIP_PROTO_GENERATION=true COHERENCE_VERSION=22.06.11 PROFILES=,-jakarta,javax,scope make clean generate-proto build-test-images test-e2e-standalone-scope
+        SKIP_PROTO_GENERATION=true COHERENCE_VERSION=22.06.12 PROFILES=,-jakarta,javax,scope make clean generate-proto build-test-images test-e2e-standalone-scope
 
     - uses: actions/upload-artifact@v4
       if: failure()
@@ -100,7 +100,7 @@ jobs:
           COHERENCE_TLS_CERTS_PATH=`pwd`/test/utils/certs/guardians-ca.crt \
           COHERENCE_TLS_CLIENT_CERT=`pwd`/test/utils/certs/star-lord.crt \
           COHERENCE_TLS_CLIENT_KEY=`pwd`/test/utils/certs/star-lord.key \
-          COHERENCE_VERSION=22.06.11 PROFILES=,secure,-jakarta,javax make clean certs generate-proto build-test-images test-e2e-standalone
+          COHERENCE_VERSION=22.06.12 PROFILES=,secure,-jakarta,javax make clean certs generate-proto build-test-images test-e2e-standalone
 
     - name: E2E Local Tests SSL (options)
       shell: bash
@@ -109,7 +109,7 @@ jobs:
           COHERENCE_TLS_CERTS_PATH_OPTION=`pwd`/test/utils/certs/guardians-ca.crt \
           COHERENCE_TLS_CLIENT_CERT_OPTION=`pwd`/test/utils/certs/star-lord.crt \
           COHERENCE_TLS_CLIENT_KEY_OPTION=`pwd`/test/utils/certs/star-lord.key \
-          COHERENCE_VERSION=22.06.11 PROFILES=,secure,-jakarta,javax,scope make clean certs generate-proto build-test-images test-e2e-standalone-scope
+          COHERENCE_VERSION=22.06.12 PROFILES=,secure,-jakarta,javax,scope make clean certs generate-proto build-test-images test-e2e-standalone-scope
 
     - name: E2E Local Tests SSL (tlsConfig)
       shell: bash
@@ -118,7 +118,7 @@ jobs:
           COHERENCE_TLS_CERTS_PATH_OPTION=`pwd`/test/utils/certs/guardians-ca.crt \
           COHERENCE_TLS_CLIENT_CERT_OPTION=`pwd`/test/utils/certs/star-lord.crt \
           COHERENCE_TLS_CLIENT_KEY_OPTION=`pwd`/test/utils/certs/star-lord.key \
-          COHERENCE_VERSION=22.06.11 PROFILES=,secure,-jakarta,javax,scope make clean certs generate-proto build-test-images test-e2e-standalone-scope
+          COHERENCE_VERSION=22.06.12 PROFILES=,secure,-jakarta,javax,scope make clean certs generate-proto build-test-images test-e2e-standalone-scope
 
     - uses: actions/upload-artifact@v4
       if: failure()

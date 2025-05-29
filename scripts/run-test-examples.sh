@@ -52,8 +52,8 @@ do
   echo "==========================================="
 
   if [ ! -z `echo $file | grep queues` ]; then
-     # Check for queues which cannot be run unless we have versions 24.09, 14.1.2, or 15.1.1
-     if echo "$COHERENCE_VERSION" | grep -q -e 24.09 -e 14.1.2 -e 15.1.1; then
+     # Check for queues which cannot be run unless we have versions 25.03, 14.1.2, or 15.1.1
+     if echo "$COHERENCE_VERSION" | grep -q -e 25.03 -e 14.1.2 -e 15.1.1; then
         go run -race "$file"
      fi
   else

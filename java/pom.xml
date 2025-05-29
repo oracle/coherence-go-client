@@ -34,7 +34,7 @@
     <maven.compiler.target>11</maven.compiler.target>
 
     <coherence.group.id>com.oracle.coherence.ce</coherence.group.id>
-    <coherence.version>22.09</coherence.version>
+    <coherence.version>25.03.1</coherence.version>
 
     <!-- The version of Coherence to use in the test images -->
     <coherence.test.groupId>com.oracle.coherence.ce</coherence.test.groupId>
