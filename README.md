@@ -1,6 +1,6 @@
 # Coherence Go Client
 
-![Coherence Go Client](https://github.com/oracle/coherence-go-client/workflows/CI/badge.svg?branch=main)
+![Coherence Go Client](https://github.com/oracle/coherence-go-client/actions/workflows/build.yaml/badge.svg?branch=main)
 [![License](http://img.shields.io/badge/license-UPL%201.0-blue.svg)](https://oss.oracle.com/licenses/upl/)
 [![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=oracle_coherence-go-client&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=oracle_coherence-go-client)
 
