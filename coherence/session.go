@@ -444,6 +444,9 @@ func (s *Session) Close() {
 
 		if s.GetProtocolVersion() > 0 {
 			_ = s.v1StreamManagerCache.eventStream.grpcStream.CloseSend()
+			if s.v1StreamManagerQueue != nil {
+				_ = s.v1StreamManagerQueue.eventStream.grpcStream.CloseSend()
+			}
 		}
 		s.dispatch(Closed, func() SessionLifecycleEvent {
 			return newSessionLifecycleEvent(s, Closed)
