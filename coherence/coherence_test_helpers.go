@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Oracle and/or its affiliates.
+ * Copyright (c) 2024, 2025 Oracle and/or its affiliates.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * https://oss.oracle.com/licenses/upl.
  */
@@ -14,10 +14,6 @@ import (
 )
 
 // test helpers
-
-//func SubmitRequest(session *Session, req *pb1.ProxyRequest) (proxyRequestChannel, error) {
-//	return session.v1StreamManagerCache.submitRequest(req)
-//}
 
 func TestEnsureCache(ctx context.Context, session *Session, cache string) (*int32, error) {
 	return session.v1StreamManagerCache.ensureCache(ctx, cache)
