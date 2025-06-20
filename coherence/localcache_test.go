@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Oracle and/or its affiliates.
+ * Copyright (c) 2024, 2025 Oracle and/or its affiliates.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * https://oss.oracle.com/licenses/upl.
  */
@@ -7,7 +7,6 @@ package coherence
 
 import (
 	"fmt"
-	"github.com/onsi/gomega"
 	"log"
 	"math"
 	"sync"
@@ -16,264 +15,362 @@ import (
 )
 
 func TestBasicLocalCacheOperations(t *testing.T) {
-	g := gomega.NewWithT(t)
-
 	cache := newLocalCache[int, string]("my-cache-1")
-	g.Expect(cache.Size()).To(gomega.Equal(0))
+	if cache.Size() != 0 {
+		t.Fatalf("expected size 0, got %d", cache.Size())
+	}
 
 	old := cache.Put(1, "one")
-	g.Expect(cache.Size()).To(gomega.Equal(1))
-	g.Expect(old).To(gomega.BeNil())
+	if old != nil {
+		t.Fatalf("expected nil on first Put, got %v", *old)
+	}
+	if cache.Size() != 1 {
+		t.Fatalf("expected size 1, got %d", cache.Size())
+	}
 
 	value := cache.Get(1)
-	g.Expect(*value).To(gomega.Equal("one"))
+	if value == nil || *value != "one" {
+		t.Fatalf("expected Get(1) to return 'one', got %v", value)
+	}
 
 	oldValue := cache.Put(1, "ONE")
-	g.Expect(*oldValue).To(gomega.Equal("one"))
+	if oldValue == nil || *oldValue != "one" {
+		t.Fatalf("expected old value to be 'one', got %v", oldValue)
+	}
 
 	oldValue = cache.Remove(1)
-	g.Expect(*oldValue).To(gomega.Equal("ONE"))
-	g.Expect(cache.Size()).To(gomega.Equal(0))
+	if oldValue == nil || *oldValue != "ONE" {
+		t.Fatalf("expected removed value to be 'ONE', got %v", oldValue)
+	}
+	if cache.Size() != 0 {
+		t.Fatalf("expected size 0 after removal, got %d", cache.Size())
+	}
 
 	value = cache.Get(1)
-	g.Expect(value).To(gomega.BeNil())
+	if value != nil {
+		t.Fatalf("expected nil after removal, got %v", *value)
+	}
 
 	cache.Put(1, "one")
 	cache.Put(2, "two")
 	cache.Put(3, "three")
-	g.Expect(cache.Size()).To(gomega.Equal(3))
+	if cache.Size() != 3 {
+		t.Fatalf("expected size 3 after puts, got %d", cache.Size())
+	}
 
 	cache.Clear()
-	g.Expect(cache.Size()).To(gomega.Equal(0))
+	if cache.Size() != 0 {
+		t.Fatalf("expected size 0 after clear, got %d", cache.Size())
+	}
 
-	cache.PutWithExpiry(1, "one", time.Duration(3)*time.Second)
+	cache.PutWithExpiry(1, "one", 3*time.Second)
 	Sleep(4)
-	g.Expect(cache.Get(1)).To(gomega.BeNil())
-	g.Expect(cache.Size()).To(gomega.Equal(0))
+	if val := cache.Get(1); val != nil {
+		t.Fatalf("expected nil after expiry, got %v", *val)
+	}
+	if cache.Size() != 0 {
+		t.Fatalf("expected size 0 after expiry, got %d", cache.Size())
+	}
 
-	cache.PutWithExpiry(1, "one", time.Duration(3)*time.Second)
+	cache.PutWithExpiry(1, "one", 3*time.Second)
 	Sleep(4)
-	g.Expect(cache.Remove(1)).To(gomega.BeNil())
-	g.Expect(cache.Size()).To(gomega.Equal(0))
+	if val := cache.Remove(1); val != nil {
+		t.Fatalf("expected nil after expiry on remove, got %v", *val)
+	}
+	if cache.Size() != 0 {
+		t.Fatalf("expected size 0 after expired remove, got %d", cache.Size())
+	}
 
-	cache.PutWithExpiry(1, "one", time.Duration(3)*time.Second)
+	cache.PutWithExpiry(1, "one", 3*time.Second)
 	Sleep(4)
-	g.Expect(cache.Size()).To(gomega.Equal(0))
+	if cache.Size() != 0 {
+		t.Fatalf("expected size 0 after expiry, got %d", cache.Size())
+	}
 
-	cache.PutWithExpiry(1, "one", time.Duration(257)*time.Millisecond)
-	time.Sleep(time.Duration(258) * time.Millisecond)
-	g.Expect(cache.Size()).To(gomega.Equal(0))
+	cache.PutWithExpiry(1, "one", 257*time.Millisecond)
+	time.Sleep(258 * time.Millisecond)
+	if cache.Size() != 0 {
+		t.Fatalf("expected size 0 after millisecond expiry, got %d", cache.Size())
+	}
 
-	g.Expect(len(cache.expiryMap)).To(gomega.Equal(0))
+	expiryMap := cache.expiryMap
+	if len(expiryMap) != 0 {
+		t.Fatalf("expected expiry map to be empty, got len=%d", len(expiryMap))
+	}
 
 	fmt.Println(cache)
 }
 
 func TestBasicLocalCacheOperationsWithExpiry(t *testing.T) {
-	g := gomega.NewWithT(t)
-
 	cache := newLocalCache[int, string]("my-cache-2")
-	g.Expect(cache.Size()).To(gomega.Equal(0))
 
-	old := cache.PutWithExpiry(1, "one", time.Duration(1)*time.Second)
-	g.Expect(cache.Size()).To(gomega.Equal(1))
-	g.Expect(old).To(gomega.BeNil())
+	if cache.Size() != 0 {
+		t.Fatalf("expected cache size 0, got %d", cache.Size())
+	}
 
-	old = cache.PutWithExpiry(2, "two", time.Duration(1)*time.Second)
-	g.Expect(cache.Size()).To(gomega.Equal(2))
-	g.Expect(old).To(gomega.BeNil())
+	old := cache.PutWithExpiry(1, "one", time.Second)
+	if cache.Size() != 1 {
+		t.Fatalf("expected cache size 1 after first put, got %d", cache.Size())
+	}
+	if old != nil {
+		t.Fatalf("expected old value to be nil for first key, got %v", old)
+	}
 
-	// remove one of the entries,
+	old = cache.PutWithExpiry(2, "two", time.Second)
+	if cache.Size() != 2 {
+		t.Fatalf("expected cache size 2 after second put, got %d", cache.Size())
+	}
+	if old != nil {
+		t.Fatalf("expected old value to be nil for second key, got %v", old)
+	}
+
 	cache.Remove(1)
-	g.Expect(cache.Size()).To(gomega.Equal(1))
+	if cache.Size() != 1 {
+		t.Fatalf("expected cache size 1 after removing key 1, got %d", cache.Size())
+	}
 
-	// wait for 2 seconds for the other to expire
-	time.Sleep(time.Duration(2) * time.Second)
+	time.Sleep(2 * time.Second)
 
-	// do a Size() to force expiry
-	g.Expect(cache.Size()).To(gomega.Equal(0))
+	if cache.Size() != 0 {
+		t.Fatalf("expected cache size 0 after expiry, got %d", cache.Size())
+	}
 
-	g.Expect(len(cache.expiryMap)).To(gomega.Equal(0))
+	if len(cache.expiryMap) != 0 {
+		t.Fatalf("expected expiry map to be empty, got %d entries", len(cache.expiryMap))
+	}
 
 	fmt.Println(cache)
 }
 
 func TestBasicLocalCacheWithDefaultExpiry(t *testing.T) {
-	g := gomega.NewWithT(t)
+	cache := newLocalCache[int, string]("my-cache", withLocalCacheExpiry(2*time.Second))
 
-	cache := newLocalCache[int, string]("my-cache", withLocalCacheExpiry(time.Duration(2)*time.Second))
-	g.Expect(cache.Size()).To(gomega.Equal(0))
+	if cache.Size() != 0 {
+		t.Fatalf("expected cache size 0 initially, got %d", cache.Size())
+	}
 
 	cache.Put(1, "one")
-	g.Expect(cache.Size()).To(gomega.Equal(1))
 
-	Sleep(3)
-	g.Expect(cache.Size()).To(gomega.Equal(0))
+	if cache.Size() != 1 {
+		t.Fatalf("expected cache size 1 after put, got %d", cache.Size())
+	}
+
+	Sleep(3) // assuming this is a helper that sleeps for 3 seconds
+
+	if cache.Size() != 0 {
+		t.Fatalf("expected cache size 0 after expiry, got %d", cache.Size())
+	}
 }
 
 func TestBasicLocalCacheClear(t *testing.T) {
-	g := gomega.NewWithT(t)
+	cache := newLocalCache[int, string]("my-cache-clear", withLocalCacheExpiry(2*time.Second))
 
-	cache := newLocalCache[int, string]("my-cache-clear", withLocalCacheExpiry(time.Duration(2)*time.Second))
-	g.Expect(cache.Size()).To(gomega.Equal(0))
+	if cache.Size() != 0 {
+		t.Fatalf("expected cache size 0 initially, got %d", cache.Size())
+	}
 
 	cache.Put(1, "one")
-	g.Expect(cache.Size()).To(gomega.Equal(1))
+
+	if cache.Size() != 1 {
+		t.Fatalf("expected cache size 1 after put, got %d", cache.Size())
+	}
+
 	cache.Clear()
 
-	g.Expect(cache.Size()).To(gomega.Equal(0))
+	if cache.Size() != 0 {
+		t.Fatalf("expected cache size 0 after clear, got %d", cache.Size())
+	}
 }
 
 func TestBasicLocalCacheRelease(t *testing.T) {
-	g := gomega.NewWithT(t)
+	cache := newLocalCache[int, string]("my-cache-clear", withLocalCacheExpiry(2*time.Second))
 
-	cache := newLocalCache[int, string]("my-cache-clear", withLocalCacheExpiry(time.Duration(2)*time.Second))
-	g.Expect(cache.Size()).To(gomega.Equal(0))
+	if cache.Size() != 0 {
+		t.Fatalf("expected cache size 0 initially, got %d", cache.Size())
+	}
 
 	cache.Put(1, "one")
-	g.Expect(cache.Size()).To(gomega.Equal(1))
+
+	if cache.Size() != 1 {
+		t.Fatalf("expected cache size 1 after put, got %d", cache.Size())
+	}
+
 	cache.Release()
 
-	g.Expect(cache.Size()).To(gomega.Equal(0))
+	if cache.Size() != 0 {
+		t.Fatalf("expected cache size 0 after release, got %d", cache.Size())
+	}
 }
 
 func TestBasicLocalCacheGetAll(t *testing.T) {
-	g := gomega.NewWithT(t)
+	cache := newLocalCache[int, string]("my-cache-get-all", withLocalCacheExpiry(10*time.Second))
 
-	cache := newLocalCache[int, string]("my-cache-get-all", withLocalCacheExpiry(time.Duration(10)*time.Second))
-	g.Expect(cache.Size()).To(gomega.Equal(0))
-	g.Expect(len(cache.GetAll([]int{1, 2, 3}))).To(gomega.Equal(0))
+	if cache.Size() != 0 {
+		t.Fatalf("expected cache size 0 initially, got %d", cache.Size())
+	}
+
+	results := cache.GetAll([]int{1, 2, 3})
+	if len(results) != 0 {
+		t.Fatalf("expected empty result from GetAll, got %d", len(results))
+	}
 
 	cache.Put(1, "one")
 	cache.Put(2, "two")
 	cache.Put(3, "three")
 	cache.Put(4, "four")
 	cache.Put(5, "five")
-	g.Expect(cache.Size()).To(gomega.Equal(5))
 
-	results := cache.GetAll([]int{1, 5})
-	g.Expect(len(results)).To(gomega.Equal(2))
+	if cache.Size() != 5 {
+		t.Fatalf("expected cache size 5 after puts, got %d", cache.Size())
+	}
+
+	results = cache.GetAll([]int{1, 5})
+	if len(results) != 2 {
+		t.Fatalf("expected 2 results, got %d", len(results))
+	}
 
 	v, ok := results[1]
-	g.Expect(ok).To(gomega.Equal(true))
-	g.Expect(*v).To(gomega.Equal("one"))
+	if !ok || v == nil || *v != "one" {
+		t.Fatalf("expected results[1] to be 'one', got %v", v)
+	}
 
 	v, ok = results[5]
-	g.Expect(ok).To(gomega.Equal(true))
-	g.Expect(*v).To(gomega.Equal("five"))
+	if !ok || v == nil || *v != "five" {
+		t.Fatalf("expected results[5] to be 'five', got %v", v)
+	}
 
 	v, ok = results[6]
-	g.Expect(ok).To(gomega.Equal(false))
-	g.Expect(v).To(gomega.BeNil())
+	if ok || v != nil {
+		t.Fatalf("expected results[6] to be nil/missing, got %v", v)
+	}
 }
 
 func TestLocalCacheWithHighUnitsOnly(t *testing.T) {
-	g := gomega.NewWithT(t)
-
 	cache := newLocalCache[int, string]("my-cache-high-unit1", withLocalCacheHighUnits(100))
 
 	for i := 0; i < 100; i++ {
 		cache.Put(i, fmt.Sprintf("value-%v", i))
 	}
 
-	g.Expect(cache.Size()).To(gomega.Equal(100))
+	if cache.Size() != 100 {
+		t.Fatalf("expected size 100 after inserts, got %d", cache.Size())
+	}
 
-	// put a new entry which should cause prune of 20 entries
 	cache.Put(100, "one hundred")
 
 	expectedSize := int(math.Round(float64(float32(100) * cache.options.PruneFactor)))
+	if cache.Size() != expectedSize {
+		t.Fatalf("expected size %d after prune, got %d", expectedSize, cache.Size())
+	}
 
-	g.Expect(cache.Size()).To(gomega.Equal(expectedSize))
-	g.Expect(cache.GetCachePrunes()).To(gomega.Equal(int64(1)))
+	if cache.GetCachePrunes() != 1 {
+		t.Fatalf("expected 1 cache prune, got %d", cache.GetCachePrunes())
+	}
+
 	fmt.Println(cache)
 }
 
 func TestLocalCacheWithHighUnitsMemoryOnly(t *testing.T) {
-	g := gomega.NewWithT(t)
-
 	cache := newLocalCache[int, string]("my-cache-high-unit2", withLocalCacheHighUnitsMemory(1024*100))
 
 	for i := 0; i < 10_000; i++ {
 		cache.Put(i, fmt.Sprintf("value2-%v", i))
 	}
 
-	// cache size should be less than 10,000 as it would not all fit in under 100K
-	g.Expect(cache.Size() < 10_000).To(gomega.Equal(true))
+	if cache.Size() >= 10_000 {
+		t.Fatalf("expected cache size to be less than 10,000 due to memory constraints, got %d", cache.Size())
+	}
 
 	fmt.Println(cache)
 }
 
 func TestLocalCacheWithHighUnitsOnlyAccessTime(t *testing.T) {
-	g := gomega.NewWithT(t)
-
 	cache := newLocalCache[int, string]("my-cache-high-unit3", withLocalCacheHighUnits(100))
 
 	for i := 0; i < 100; i++ {
 		cache.Put(i, fmt.Sprintf("value3-%v", i))
 	}
 
-	g.Expect(cache.Size()).To(gomega.Equal(100))
+	if cache.Size() != 100 {
+		t.Fatalf("expected cache size 100 after inserts, got %d", cache.Size())
+	}
 
-	// access key 1, 2 and 3, when we prune we should not see these entries be removed
-	// as they were most recently accessed
+	// access keys to make them recently used
 	cache.Get(1)
 	cache.Get(2)
 	cache.Get(3)
-	time.Sleep(time.Duration(5) * time.Second)
 
-	// put a new entry which should cause prune of 20 entries
+	time.Sleep(5 * time.Second)
+
+	// add new entry to trigger prune
 	cache.Put(100, "one hundred")
 
 	expectedSize := int(math.Round(float64(float32(100) * cache.options.PruneFactor)))
+	if cache.Size() != expectedSize {
+		t.Fatalf("expected cache size %d after prune, got %d", expectedSize, cache.Size())
+	}
 
-	g.Expect(cache.Size()).To(gomega.Equal(expectedSize))
-	g.Expect(cache.GetCachePrunes()).To(gomega.Equal(int64(1)))
+	if cache.GetCachePrunes() != 1 {
+		t.Fatalf("expected 1 prune operation, got %d", cache.GetCachePrunes())
+	}
 
-	// entries 1, 2 and three should not be removed as they were accessed
-	g.Expect(cache.Get(1)).To(gomega.Not(gomega.BeNil()))
-	g.Expect(cache.Get(2)).To(gomega.Not(gomega.BeNil()))
-	g.Expect(cache.Get(3)).To(gomega.Not(gomega.BeNil()))
+	// accessed entries should still be present
+	if cache.Get(1) == nil {
+		t.Fatalf("expected key 1 to be present after prune")
+	}
+	if cache.Get(2) == nil {
+		t.Fatalf("expected key 2 to be present after prune")
+	}
+	if cache.Get(3) == nil {
+		t.Fatalf("expected key 3 to be present after prune")
+	}
 }
 
 func TestLocalCacheWithHighUnitsAndTTL(t *testing.T) {
-	g := gomega.NewWithT(t)
-
-	cache := newLocalCache[int, string]("my-cache-high-unit", withLocalCacheHighUnits(100), withLocalCacheExpiry(time.Duration(2)*time.Second))
+	cache := newLocalCache[int, string](
+		"my-cache-high-unit",
+		withLocalCacheHighUnits(100),
+		withLocalCacheExpiry(2*time.Second),
+	)
 
 	for i := 0; i < 100; i++ {
 		cache.Put(i, fmt.Sprintf("value-%v", i))
 	}
 
-	g.Expect(cache.Size()).To(gomega.Equal(100))
+	if cache.Size() != 100 {
+		t.Fatalf("expected cache size 100 after inserts, got %d", cache.Size())
+	}
 
-	// sleep for 1 second and add a new entry, entries should not be expired
-	time.Sleep(time.Duration(1) * time.Second)
+	time.Sleep(1 * time.Second)
 
 	cache.Put(100, "one hundred")
 	cache.Put(101, "one hundred and one")
 
-	g.Expect(cache.Size()).To(gomega.Equal(81))
-	g.Expect(cache.Get(100)).To(gomega.Not(gomega.BeNil()))
-	g.Expect(cache.Get(101)).To(gomega.Not(gomega.BeNil()))
+	if cache.Size() != 81 {
+		t.Fatalf("expected cache size 81 after prune, got %d", cache.Size())
+	}
+	if cache.Get(100) == nil {
+		t.Fatalf("expected key 100 to exist")
+	}
+	if cache.Get(101) == nil {
+		t.Fatalf("expected key 101 to exist")
+	}
 
-	time.Sleep(time.Duration(2) * time.Second)
-	// put 20 new entries, all the entries, all entries < 100 should be expired
+	time.Sleep(2 * time.Second)
 
 	for i := 110; i < 130; i++ {
 		cache.Put(i, fmt.Sprintf("value-%v", i))
 	}
 
-	g.Expect(cache.Size()).To(gomega.Equal(20))
+	if cache.Size() != 20 {
+		t.Fatalf("expected cache size 20 after TTL expiry and new inserts, got %d", cache.Size())
+	}
 
 	fmt.Println(cache)
 }
-
 func TestLocalCacheGoRoutines(t *testing.T) {
-	var (
-		g     = gomega.NewWithT(t)
-		cache = newLocalCache[int, string]("my-cache-2")
-		wg    sync.WaitGroup
-	)
+	cache := newLocalCache[int, string]("my-cache-2")
+	var wg sync.WaitGroup
 
 	routines := 500
 	iterations := 10_000
@@ -291,47 +388,60 @@ func TestLocalCacheGoRoutines(t *testing.T) {
 
 	wg.Wait()
 	fmt.Println("End   " + time.Now().String())
-	size := cache.Size()
 
-	g.Expect(size).To(gomega.Equal(routines * iterations))
+	size := cache.Size()
+	expected := routines * iterations
+
+	if size != expected {
+		t.Fatalf("expected cache size %d, got %d", expected, size)
+	}
 
 	fmt.Println(cache.GetStats())
 }
 
 func TestBasicLocalCacheSizeCalculation(t *testing.T) {
-	g := gomega.NewWithT(t)
 	const maxEntries = 10_000
-
 	cache := newLocalCache[int, string]("my-size-calc-size")
-	g.Expect(cache.Size()).To(gomega.Equal(0))
 
-	// add maxEntries entries, this should update the memory
+	if cache.Size() != 0 {
+		t.Fatalf("expected initial cache size 0, got %d", cache.Size())
+	}
+
+	// Add entries
 	for i := 1; i <= maxEntries; i++ {
 		cache.Put(i, fmt.Sprintf("value-%v", i))
 	}
 
-	// we should still have memory used
-	g.Expect(cache.cacheMemory > 0).To(gomega.BeTrue())
+	if cache.cacheMemory <= 0 {
+		t.Fatal("expected memory usage to be greater than 0 after initial put")
+	}
 
-	// update maxEntries entries with a bigger value, this should update the memory with the delta of the new-old
+	// Update entries with bigger values
 	for i := 1; i <= maxEntries; i++ {
 		cache.Put(i, fmt.Sprintf("new-value-bigger-%v", i))
 	}
-	g.Expect(cache.cacheMemory > 0).To(gomega.BeTrue())
 
-	// update maxEntries entries with a smaller value, this should update the memory with the delta of the new-old
+	if cache.cacheMemory <= 0 {
+		t.Fatal("expected memory usage to be greater than 0 after updating with bigger values")
+	}
+
+	// Update entries with smaller values
 	for i := 1; i <= maxEntries; i++ {
 		cache.Put(i, fmt.Sprintf("%v", i))
 	}
-	g.Expect(cache.cacheMemory > 0).To(gomega.BeTrue())
 
-	// remove each entry and the local cache size should get back to zero to show that
-	// the memory calculation is working both ways
+	if cache.cacheMemory <= 0 {
+		t.Fatal("expected memory usage to be greater than 0 after updating with smaller values")
+	}
+
+	// Remove entries and confirm memory is freed
 	for i := 1; i <= maxEntries; i++ {
 		cache.Remove(i)
 	}
 
-	g.Expect(cache.cacheMemory).Should(gomega.Equal(int64(0)))
+	if mem := cache.cacheMemory; mem != 0 {
+		t.Fatalf("expected memory usage to be 0 after removing entries, got %d", mem)
+	}
 }
 
 type expiryResults struct {
@@ -344,9 +454,6 @@ func TestNearCacheExpiry1(_ *testing.T) {
 	var results = make([]expiryResults, 0)
 
 	results = append(results, localCacheExpiryTest(time.Duration(1000)*time.Millisecond, 250_000))
-	//for ttl = 300; ttl < 1_000; ttl += 300 {
-	//	results = append(results, localCacheExpiryTest(time.Duration(ttl)*time.Millisecond, 1_000_000))
-	//}
 
 	// output results
 	for _, r := range results {
@@ -355,13 +462,23 @@ func TestNearCacheExpiry1(_ *testing.T) {
 }
 
 func TestNearCacheBuckets(t *testing.T) {
-	g := gomega.NewWithT(t)
+	tests := []struct {
+		input    time.Duration
+		expected time.Duration
+	}{
+		{254 * time.Millisecond, 0 * time.Millisecond},
+		{257 * time.Millisecond, 256 * time.Millisecond},
+		{511 * time.Millisecond, 256 * time.Millisecond},
+		{513 * time.Millisecond, 512 * time.Millisecond},
+		{800 * time.Millisecond, 768 * time.Millisecond},
+	}
 
-	g.Expect(getMillisBucket(time.Duration(254) * time.Millisecond)).To(gomega.Equal(time.Duration(0) * time.Millisecond))
-	g.Expect(getMillisBucket(time.Duration(257) * time.Millisecond)).To(gomega.Equal(time.Duration(256) * time.Millisecond))
-	g.Expect(getMillisBucket(time.Duration(511) * time.Millisecond)).To(gomega.Equal(time.Duration(256) * time.Millisecond))
-	g.Expect(getMillisBucket(time.Duration(513) * time.Millisecond)).To(gomega.Equal(time.Duration(512) * time.Millisecond))
-	g.Expect(getMillisBucket(time.Duration(800) * time.Millisecond)).To(gomega.Equal(time.Duration(768) * time.Millisecond))
+	for _, tt := range tests {
+		actual := getMillisBucket(tt.input)
+		if actual != tt.expected {
+			t.Fatalf("GetMillisBucketForTest(%v): expected %v, got %v", tt.input, tt.expected, actual)
+		}
+	}
 }
 
 func localCacheExpiryTest(ttl time.Duration, count int) expiryResults {

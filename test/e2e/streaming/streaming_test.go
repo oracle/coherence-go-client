@@ -60,7 +60,7 @@ func TestStreamingConcurrency(t *testing.T) {
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	defer session.Close()
 
-	cache := utils.GetNamedMap[int, utils.Person](g, session, "streaming-people")
+	cache := GetNamedMap[int, utils.Person](g, session, "streaming-people")
 
 	// clear and re-populate
 	g.Expect(cache.Clear(ctx)).ShouldNot(gomega.HaveOccurred())

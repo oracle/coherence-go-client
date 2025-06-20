@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024 Oracle and/or its affiliates.
+ * Copyright (c) 2023, 2025 Oracle and/or its affiliates.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * https://oss.oracle.com/licenses/upl.
  */
@@ -31,28 +31,28 @@ func TestAggregatorAgainstMapAndCache(t *testing.T) {
 		nameMap  coherence.NamedMap[int, utils.Person]
 		test     func(t *testing.T, namedCache coherence.NamedMap[int, utils.Person])
 	}{
-		{"NamedMapRunTestCount", utils.GetNamedMap[int, utils.Person](g, session, "aggregate-map"), RunTestCountAggregator},
-		{"NamedCacheRunTestCount", utils.GetNamedCache[int, utils.Person](g, session, "aggregate-cache"), RunTestCountAggregator},
-		{"NamedMapRunTestMin", utils.GetNamedMap[int, utils.Person](g, session, "aggregate-map"), RunTestMinAggregator},
-		{"NamedCacheRunTestMin", utils.GetNamedCache[int, utils.Person](g, session, "aggregate-cache"), RunTestMinAggregator},
-		{"NamedMapRunTestMax", utils.GetNamedMap[int, utils.Person](g, session, "aggregate-map"), RunTestMaxAggregator},
-		{"NamedCacheRunTestMax", utils.GetNamedCache[int, utils.Person](g, session, "aggregate-cache"), RunTestMaxAggregator},
-		{"NamedMapRunTestDistinct", utils.GetNamedMap[int, utils.Person](g, session, "aggregate-map"), RunTestDistinctAggregator},
-		{"NamedCacheRunTestDistinct", utils.GetNamedCache[int, utils.Person](g, session, "aggregate-cache"), RunTestDistinctAggregator},
-		{"NamedMapRunTestGroupBy", utils.GetNamedMap[int, utils.Person](g, session, "aggregate-map"), RunTestGroupByAggregator},
-		{"NamedCacheRunTestGroupBy", utils.GetNamedCache[int, utils.Person](g, session, "aggregate-cache"), RunTestGroupByAggregator},
-		{"NamedMapRunTestTopNAggregator", utils.GetNamedMap[int, utils.Person](g, session, "topn-map"), RunTestTopNAggregator},
-		{"NamedCacheRunTestTopNAggregator", utils.GetNamedCache[int, utils.Person](g, session, "topn-cache"), RunTestTopNAggregator},
-		{"NamedMapRunTestReducerAggregator", utils.GetNamedMap[int, utils.Person](g, session, "reducer-map"), RunTestReducerAggregator},
-		{"NamedCacheRunTestReducerAggregator", utils.GetNamedCache[int, utils.Person](g, session, "reducer-cache"), RunTestReducerAggregator},
-		{"NamedMapRunTestQueryRecorderAggregator", utils.GetNamedMap[int, utils.Person](g, session, "query-map"), RunTestQueryRecorderAggregator},
-		{"NamedCacheRunTestQueryRecorderAggregator", utils.GetNamedCache[int, utils.Person](g, session, "query-cache"), RunTestQueryRecorderAggregator},
-		{"NamedMapRunTestSum", utils.GetNamedMap[int, utils.Person](g, session, "aggregate-map"), RunTestSumAggregator},
-		{"NamedCacheRunTestSum", utils.GetNamedCache[int, utils.Person](g, session, "aggregate-cache"), RunTestSumAggregator},
-		{"NamedMapRunTestAverage", utils.GetNamedMap[int, utils.Person](g, session, "aggregate-map"), RunTestAverageAggregator},
-		{"NamedCacheRunTestAverage", utils.GetNamedCache[int, utils.Person](g, session, "aggregate-cache"), RunTestAverageAggregator},
-		{"NamedMapRunTestPriorityAggregator", utils.GetNamedMap[int, utils.Person](g, session, "priority-map"), RunTestPriorityAggregator},
-		{"NamedCacheRunTestPriorityAggregator", utils.GetNamedCache[int, utils.Person](g, session, "priority-cache"), RunTestPriorityAggregator},
+		{"NamedMapRunTestCount", GetNamedMap[int, utils.Person](g, session, "aggregate-map"), RunTestCountAggregator},
+		{"NamedCacheRunTestCount", GetNamedCache[int, utils.Person](g, session, "aggregate-cache"), RunTestCountAggregator},
+		{"NamedMapRunTestMin", GetNamedMap[int, utils.Person](g, session, "aggregate-map"), RunTestMinAggregator},
+		{"NamedCacheRunTestMin", GetNamedCache[int, utils.Person](g, session, "aggregate-cache"), RunTestMinAggregator},
+		{"NamedMapRunTestMax", GetNamedMap[int, utils.Person](g, session, "aggregate-map"), RunTestMaxAggregator},
+		{"NamedCacheRunTestMax", GetNamedCache[int, utils.Person](g, session, "aggregate-cache"), RunTestMaxAggregator},
+		{"NamedMapRunTestDistinct", GetNamedMap[int, utils.Person](g, session, "aggregate-map"), RunTestDistinctAggregator},
+		{"NamedCacheRunTestDistinct", GetNamedCache[int, utils.Person](g, session, "aggregate-cache"), RunTestDistinctAggregator},
+		{"NamedMapRunTestGroupBy", GetNamedMap[int, utils.Person](g, session, "aggregate-map"), RunTestGroupByAggregator},
+		{"NamedCacheRunTestGroupBy", GetNamedCache[int, utils.Person](g, session, "aggregate-cache"), RunTestGroupByAggregator},
+		{"NamedMapRunTestTopNAggregator", GetNamedMap[int, utils.Person](g, session, "topn-map"), RunTestTopNAggregator},
+		{"NamedCacheRunTestTopNAggregator", GetNamedCache[int, utils.Person](g, session, "topn-cache"), RunTestTopNAggregator},
+		{"NamedMapRunTestReducerAggregator", GetNamedMap[int, utils.Person](g, session, "reducer-map"), RunTestReducerAggregator},
+		{"NamedCacheRunTestReducerAggregator", GetNamedCache[int, utils.Person](g, session, "reducer-cache"), RunTestReducerAggregator},
+		{"NamedMapRunTestQueryRecorderAggregator", GetNamedMap[int, utils.Person](g, session, "query-map"), RunTestQueryRecorderAggregator},
+		{"NamedCacheRunTestQueryRecorderAggregator", GetNamedCache[int, utils.Person](g, session, "query-cache"), RunTestQueryRecorderAggregator},
+		{"NamedMapRunTestSum", GetNamedMap[int, utils.Person](g, session, "aggregate-map"), RunTestSumAggregator},
+		{"NamedCacheRunTestSum", GetNamedCache[int, utils.Person](g, session, "aggregate-cache"), RunTestSumAggregator},
+		{"NamedMapRunTestAverage", GetNamedMap[int, utils.Person](g, session, "aggregate-map"), RunTestAverageAggregator},
+		{"NamedCacheRunTestAverage", GetNamedCache[int, utils.Person](g, session, "aggregate-cache"), RunTestAverageAggregator},
+		{"NamedMapRunTestPriorityAggregator", GetNamedMap[int, utils.Person](g, session, "priority-map"), RunTestPriorityAggregator},
+		{"NamedCacheRunTestPriorityAggregator", GetNamedCache[int, utils.Person](g, session, "priority-cache"), RunTestPriorityAggregator},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.testName, func(t *testing.T) {

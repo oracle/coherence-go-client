@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2024 Oracle and/or its affiliates.
+ * Copyright (c) 2022, 2025 Oracle and/or its affiliates.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * https://oss.oracle.com/licenses/upl.
  */
@@ -30,19 +30,19 @@ func TestPutWithExpiry(t *testing.T) {
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	defer session.Close()
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-	namedCache := utils.GetNamedCache[int, utils.Person](g, session, "put-with-expiry")
+	namedCache := GetNamedCache[int, utils.Person](g, session, "put-with-expiry")
 
 	defer session.Close()
 
 	oldValue, err = namedCache.PutWithExpiry(ctx, person1.ID, person1, time.Duration(5)*time.Second)
 	g.Expect(err).NotTo(gomega.HaveOccurred())
 	g.Expect(oldValue).To(gomega.BeNil())
-	utils.AssertSize[int, utils.Person](g, namedCache, 1)
+	AssertSize[int, utils.Person](g, namedCache, 1)
 
 	// sleep for 6 seconds to allow entry to expire
 	time.Sleep(6 * time.Second)
 
-	utils.AssertSize[int, utils.Person](g, namedCache, 0)
+	AssertSize[int, utils.Person](g, namedCache, 0)
 
 	// check that expiry is not > 2147483647 or Integer.MAX_VALUE in Java
 	_, err = namedCache.PutWithExpiry(ctx, person1.ID, person1, time.Duration(2147483647+1)*time.Millisecond)
@@ -61,7 +61,7 @@ func TestPutAllWithExpiry(t *testing.T) {
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	defer session.Close()
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-	namedCache := utils.GetNamedCache[int, utils.Person](g, session, "put-all-with-expiry")
+	namedCache := GetNamedCache[int, utils.Person](g, session, "put-all-with-expiry")
 
 	err = namedCache.PutAllWithExpiry(ctx, peopleData, time.Duration(4)*time.Second)
 	if namedCache.GetSession().GetProtocolVersion() == 0 {
@@ -114,12 +114,12 @@ func TestPutWithExpiryUsingCacheOption(t *testing.T) {
 	_, err = namedCache.Put(ctx, person1.ID, person1)
 	g.Expect(err).NotTo(gomega.HaveOccurred())
 	g.Expect(oldValue).To(gomega.BeNil())
-	utils.AssertSize[int, utils.Person](g, namedCache, 1)
+	AssertSize[int, utils.Person](g, namedCache, 1)
 
 	// sleep for 6 seconds to allow entry to expire
 	time.Sleep(6 * time.Second)
 
-	utils.AssertSize[int, utils.Person](g, namedCache, 0)
+	AssertSize[int, utils.Person](g, namedCache, 0)
 
 	// issue a PutWithExpiry which should override the default expiry
 	_, err = namedCache.PutWithExpiry(ctx, person1.ID, person1, time.Duration(10)*time.Second)
@@ -128,11 +128,11 @@ func TestPutWithExpiryUsingCacheOption(t *testing.T) {
 	// sleep for 6 seconds, the entry should still be present
 	time.Sleep(6 * time.Second)
 
-	utils.AssertSize[int, utils.Person](g, namedCache, 1)
+	AssertSize[int, utils.Person](g, namedCache, 1)
 
 	// sleep for 6 seconds, the entry should now honour the 10-second expiry
 	time.Sleep(6 * time.Second)
-	utils.AssertSize[int, utils.Person](g, namedCache, 0)
+	AssertSize[int, utils.Person](g, namedCache, 0)
 }
 
 // TestBooleanAndFilters tests to ensure that boolean values are serialized correctly for filters.
@@ -149,7 +149,7 @@ func TestBooleanAndFilters(t *testing.T) {
 
 	session, err := utils.GetSession()
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-	namedCache := utils.GetNamedCache[int, utils.BooleanTest](g, session, "bool-test")
+	namedCache := GetNamedCache[int, utils.BooleanTest](g, session, "bool-test")
 	defer session.Close()
 
 	_, err = namedCache.Put(ctx, test1.ID, test1)
@@ -189,7 +189,7 @@ func TestTouchProcessor(t *testing.T) {
 
 	session, err := utils.GetSession()
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-	namedCache := utils.GetNamedCache[int, utils.Person](g, session, "touch")
+	namedCache := GetNamedCache[int, utils.Person](g, session, "touch")
 
 	defer session.Close()
 
@@ -197,7 +197,7 @@ func TestTouchProcessor(t *testing.T) {
 	_, err = namedCache.Put(ctx, person1.ID, person1)
 	g.Expect(err).NotTo(gomega.HaveOccurred())
 	g.Expect(oldValue).To(gomega.BeNil())
-	utils.AssertSize[int, utils.Person](g, namedCache, 1)
+	AssertSize[int, utils.Person](g, namedCache, 1)
 
 	// sleep for 6 seconds and the entry should still be there
 	time.Sleep(6 * time.Second)

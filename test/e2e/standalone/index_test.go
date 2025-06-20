@@ -31,8 +31,8 @@ func TestIndexAgainstMapAndCache(t *testing.T) {
 		nameMap  coherence.NamedMap[int, utils.Person]
 		test     func(t *testing.T, namedCache coherence.NamedMap[int, utils.Person])
 	}{
-		{"NamedMapRunTestIndex", utils.GetNamedMap[int, utils.Person](g, session, "index-map"), RunTestIndex},
-		{"NamedCacheRunTestIndex", utils.GetNamedCache[int, utils.Person](g, session, "index-cache"), RunTestIndex},
+		{"NamedMapRunTestIndex", GetNamedMap[int, utils.Person](g, session, "index-map"), RunTestIndex},
+		{"NamedCacheRunTestIndex", GetNamedCache[int, utils.Person](g, session, "index-cache"), RunTestIndex},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.testName, func(t *testing.T) {

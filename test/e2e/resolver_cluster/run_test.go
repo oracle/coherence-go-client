@@ -10,7 +10,6 @@ import (
 	"context"
 	"github.com/onsi/gomega"
 	"github.com/oracle/coherence-go-client/v2/coherence"
-	"github.com/oracle/coherence-go-client/v2/test/utils"
 	"testing"
 )
 
@@ -50,5 +49,20 @@ func TestConnectingUsingNSResolverMultipleClusters(t *testing.T) {
 	g.Expect(err).To(gomega.Not(gomega.HaveOccurred()))
 	defer session.Close()
 
-	utils.RunNSTestWithNamedMap(ctx, g, session, "grpc-ns-test-cluster")
+	RunNSTestWithNamedMap(ctx, g, session, "grpc-ns-test-cluster")
+}
+
+func RunNSTestWithNamedMap(ctx context.Context, g *gomega.WithT, session *coherence.Session, cache string) {
+	namedMap, err := coherence.GetNamedMap[string, string](session, cache)
+	g.Expect(err).To(gomega.Not(gomega.HaveOccurred()))
+	defer func() {
+		_ = namedMap.Destroy(ctx)
+	}()
+
+	_, err = namedMap.Put(ctx, "one", "ONE")
+	g.Expect(err).To(gomega.Not(gomega.HaveOccurred()))
+
+	size, err := namedMap.Size(ctx)
+	g.Expect(err).To(gomega.Not(gomega.HaveOccurred()))
+	g.Expect(size).To(gomega.Equal(1))
 }
