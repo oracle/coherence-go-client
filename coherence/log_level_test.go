@@ -8,8 +8,8 @@ package coherence
 
 import (
 	"bytes"
-	"github.com/onsi/gomega"
 	"log"
+	"strings"
 	"testing"
 )
 
@@ -46,22 +46,21 @@ func TestErrorLogLevel(t *testing.T) {
 }
 
 func runLogLevelTest(t *testing.T, messageLevel, testLogLevel logLevel, expectOutput bool) {
-	g := gomega.NewWithT(t)
 	const message = "MESSAGE"
-
 	var buf bytes.Buffer
 
 	origOutput := log.Writer()
 	log.SetOutput(&buf)
 	defer log.SetOutput(origOutput)
-	setLogLevel(testLogLevel.String())
 
+	setLogLevel(testLogLevel.String())
 	logMessage(messageLevel, message)
 	output := buf.String()
 
-	if expectOutput {
-		g.Expect(output).To(gomega.ContainSubstring(message))
-	} else {
-		g.Expect(output).To(gomega.Not(gomega.ContainSubstring(message)))
+	if expectOutput && !strings.Contains(output, message) {
+		t.Fatalf("expected output to contain %q but it didn't", message)
+	}
+	if !expectOutput && strings.Contains(output, message) {
+		t.Fatalf("expected output to NOT contain %q but it did", message)
 	}
 }

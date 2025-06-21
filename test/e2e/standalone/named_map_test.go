@@ -59,44 +59,44 @@ func TestBasicCrudOperationsVariousTypes(t *testing.T) {
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	defer session.Close()
 
-	utils.RunKeyValueTest[int, string](g, getNewNamedMap[int, string](g, session, "c1"), 1, "Tim")
-	utils.RunKeyValueTest[int, utils.Person](g, getNewNamedMap[int, utils.Person](g, session, "c2"), 1, utils.Person{ID: 1, Name: "Tim"})
-	utils.RunKeyValueTest[int, float32](g, getNewNamedMap[int, float32](g, session, "c3"), 1, float32(1.123))
-	utils.RunKeyValueTest[int, float64](g, getNewNamedMap[int, float64](g, session, "c4"), 1, 1.123)
-	utils.RunKeyValueTest[int, int](g, getNewNamedMap[int, int](g, session, "c5"), 1, 1)
-	utils.RunKeyValueTest[int, int16](g, getNewNamedMap[int, int16](g, session, "c7"), 1, 10)
-	utils.RunKeyValueTest[int, int32](g, getNewNamedMap[int, int32](g, session, "c8"), 1, 1333)
-	utils.RunKeyValueTest[int, int64](g, getNewNamedMap[int, int64](g, session, "c9"), 1, 1333)
-	utils.RunKeyValueTest[int, bool](g, getNewNamedMap[int, bool](g, session, "c10"), 1, false)
-	utils.RunKeyValueTest[int, bool](g, getNewNamedMap[int, bool](g, session, "c11"), 1, true)
-	utils.RunKeyValueTest[int, byte](g, getNewNamedMap[int, byte](g, session, "c12"), 1, byte(22))
-	utils.RunKeyValueTest[string, utils.Person](g, getNewNamedMap[string, utils.Person](g, session, "c13"), "k1", utils.Person{ID: 1, Name: "Tim"})
-	utils.RunKeyValueTest[string, string](g, getNewNamedMap[string, string](g, session, "c14"), "k1", "value1")
-	utils.RunKeyValueTest[int, utils.Person](g, getNewNamedMap[int, utils.Person](g, session, "c15"), 1,
+	RunKeyValueTest[int, string](g, getNewNamedMap[int, string](g, session, "c1"), 1, "Tim")
+	RunKeyValueTest[int, utils.Person](g, getNewNamedMap[int, utils.Person](g, session, "c2"), 1, utils.Person{ID: 1, Name: "Tim"})
+	RunKeyValueTest[int, float32](g, getNewNamedMap[int, float32](g, session, "c3"), 1, float32(1.123))
+	RunKeyValueTest[int, float64](g, getNewNamedMap[int, float64](g, session, "c4"), 1, 1.123)
+	RunKeyValueTest[int, int](g, getNewNamedMap[int, int](g, session, "c5"), 1, 1)
+	RunKeyValueTest[int, int16](g, getNewNamedMap[int, int16](g, session, "c7"), 1, 10)
+	RunKeyValueTest[int, int32](g, getNewNamedMap[int, int32](g, session, "c8"), 1, 1333)
+	RunKeyValueTest[int, int64](g, getNewNamedMap[int, int64](g, session, "c9"), 1, 1333)
+	RunKeyValueTest[int, bool](g, getNewNamedMap[int, bool](g, session, "c10"), 1, false)
+	RunKeyValueTest[int, bool](g, getNewNamedMap[int, bool](g, session, "c11"), 1, true)
+	RunKeyValueTest[int, byte](g, getNewNamedMap[int, byte](g, session, "c12"), 1, byte(22))
+	RunKeyValueTest[string, utils.Person](g, getNewNamedMap[string, utils.Person](g, session, "c13"), "k1", utils.Person{ID: 1, Name: "Tim"})
+	RunKeyValueTest[string, string](g, getNewNamedMap[string, string](g, session, "c14"), "k1", "value1")
+	RunKeyValueTest[int, utils.Person](g, getNewNamedMap[int, utils.Person](g, session, "c15"), 1,
 		utils.Person{ID: 1, Name: "Tim", HomeAddress: utils.Address{Address1: "a1", Address2: "a2", City: "Perth", State: "WA", PostCode: 6000}})
-	utils.RunKeyValueTest[int, []string](g, getNewNamedMap[int, []string](g, session, "c16"), 1,
+	RunKeyValueTest[int, []string](g, getNewNamedMap[int, []string](g, session, "c16"), 1,
 		[]string{"a", "b", "c"})
-	utils.RunKeyValueTest[int, map[int]string](g, getNewNamedMap[int, map[int]string](g, session, "c17"), 1,
+	RunKeyValueTest[int, map[int]string](g, getNewNamedMap[int, map[int]string](g, session, "c17"), 1,
 		map[int]string{1: "one", 2: "two", 3: "three"})
 
-	utils.RunKeyValueTest[int, string](g, getNewNamedCache[int, string](g, session, "c1"), 1, "Tim")
-	utils.RunKeyValueTest[int, utils.Person](g, getNewNamedCache[int, utils.Person](g, session, "c2"), 1, utils.Person{ID: 1, Name: "Tim"})
-	utils.RunKeyValueTest[int, float32](g, getNewNamedCache[int, float32](g, session, "c3"), 1, float32(1.123))
-	utils.RunKeyValueTest[int, float64](g, getNewNamedCache[int, float64](g, session, "c4"), 1, 1.123)
-	utils.RunKeyValueTest[int, int](g, getNewNamedCache[int, int](g, session, "c5"), 1, 1)
-	utils.RunKeyValueTest[int, int16](g, getNewNamedCache[int, int16](g, session, "c7"), 1, 10)
-	utils.RunKeyValueTest[int, int32](g, getNewNamedCache[int, int32](g, session, "c8"), 1, 1333)
-	utils.RunKeyValueTest[int, int64](g, getNewNamedCache[int, int64](g, session, "c9"), 1, 1333)
-	utils.RunKeyValueTest[int, bool](g, getNewNamedCache[int, bool](g, session, "c10"), 1, false)
-	utils.RunKeyValueTest[int, bool](g, getNewNamedCache[int, bool](g, session, "c11"), 1, true)
-	utils.RunKeyValueTest[int, byte](g, getNewNamedCache[int, byte](g, session, "c12"), 1, byte(22))
-	utils.RunKeyValueTest[string, utils.Person](g, getNewNamedCache[string, utils.Person](g, session, "c13"), "k1", utils.Person{ID: 1, Name: "Tim"})
-	utils.RunKeyValueTest[string, string](g, getNewNamedCache[string, string](g, session, "c14"), "k1", "value1")
-	utils.RunKeyValueTest[int, utils.Person](g, getNewNamedCache[int, utils.Person](g, session, "c15"), 1,
+	RunKeyValueTest[int, string](g, getNewNamedCache[int, string](g, session, "c1"), 1, "Tim")
+	RunKeyValueTest[int, utils.Person](g, getNewNamedCache[int, utils.Person](g, session, "c2"), 1, utils.Person{ID: 1, Name: "Tim"})
+	RunKeyValueTest[int, float32](g, getNewNamedCache[int, float32](g, session, "c3"), 1, float32(1.123))
+	RunKeyValueTest[int, float64](g, getNewNamedCache[int, float64](g, session, "c4"), 1, 1.123)
+	RunKeyValueTest[int, int](g, getNewNamedCache[int, int](g, session, "c5"), 1, 1)
+	RunKeyValueTest[int, int16](g, getNewNamedCache[int, int16](g, session, "c7"), 1, 10)
+	RunKeyValueTest[int, int32](g, getNewNamedCache[int, int32](g, session, "c8"), 1, 1333)
+	RunKeyValueTest[int, int64](g, getNewNamedCache[int, int64](g, session, "c9"), 1, 1333)
+	RunKeyValueTest[int, bool](g, getNewNamedCache[int, bool](g, session, "c10"), 1, false)
+	RunKeyValueTest[int, bool](g, getNewNamedCache[int, bool](g, session, "c11"), 1, true)
+	RunKeyValueTest[int, byte](g, getNewNamedCache[int, byte](g, session, "c12"), 1, byte(22))
+	RunKeyValueTest[string, utils.Person](g, getNewNamedCache[string, utils.Person](g, session, "c13"), "k1", utils.Person{ID: 1, Name: "Tim"})
+	RunKeyValueTest[string, string](g, getNewNamedCache[string, string](g, session, "c14"), "k1", "value1")
+	RunKeyValueTest[int, utils.Person](g, getNewNamedCache[int, utils.Person](g, session, "c15"), 1,
 		utils.Person{ID: 1, Name: "Tim", HomeAddress: utils.Address{Address1: "a1", Address2: "a2", City: "Perth", State: "WA", PostCode: 6000}})
-	utils.RunKeyValueTest[int, []string](g, getNewNamedCache[int, []string](g, session, "c16"), 1,
+	RunKeyValueTest[int, []string](g, getNewNamedCache[int, []string](g, session, "c16"), 1,
 		[]string{"a", "b", "c"})
-	utils.RunKeyValueTest[int, map[int]string](g, getNewNamedCache[int, map[int]string](g, session, "c17"), 1,
+	RunKeyValueTest[int, map[int]string](g, getNewNamedCache[int, map[int]string](g, session, "c17"), 1,
 		map[int]string{1: "one", 2: "two", 3: "three"})
 }
 
@@ -161,8 +161,8 @@ func TestBasicCrudOperationsVariousTypesWithStructKey(t *testing.T) {
 
 	account := Account{AccountID: 100, AccountType: "savings", Name: "John Doe", Balance: 100_000}
 
-	utils.RunKeyValueTest[AccountKey, Account](g, getNewNamedMap[AccountKey, Account](g, session, "key-map"), account.GetKey(), account)
-	utils.RunKeyValueTest[AccountKey, Account](g, getNewNamedCache[AccountKey, Account](g, session, "key-cache"), account.GetKey(), account)
+	RunKeyValueTest[AccountKey, Account](g, getNewNamedMap[AccountKey, Account](g, session, "key-map"), account.GetKey(), account)
+	RunKeyValueTest[AccountKey, Account](g, getNewNamedCache[AccountKey, Account](g, session, "key-cache"), account.GetKey(), account)
 }
 
 // TestInvocationTimeoutAndTruncate tests running an entry processor with a timeout and then truncate caching.
@@ -224,57 +224,57 @@ func TestBasicOperationsAgainstMapAndCache(t *testing.T) {
 		nameMap  coherence.NamedMap[int, utils.Person]
 		test     func(t *testing.T, namedCache coherence.NamedMap[int, utils.Person])
 	}{
-		{"NamedMapCrudTest", utils.GetNamedMap[int, utils.Person](g, session, "people-map"), RunTestBasicCrudOperations},
-		{"NamedCacheCrudTest", utils.GetNamedCache[int, utils.Person](g, session, "people-cache"), RunTestBasicCrudOperations},
-		{"NamedMapRunTestGetOrDefault", utils.GetNamedMap[int, utils.Person](g, session, "get-or-default-map"), RunTestGetOrDefault},
-		{"NamedCacheRunTestGetOrDefault", utils.GetNamedCache[int, utils.Person](g, session, "get-or-default-cache"), RunTestGetOrDefault},
-		{"NamedMapRunTestContainsKey", utils.GetNamedMap[int, utils.Person](g, session, "contains-key-map"), RunTestContainsKey},
-		{"NamedCacheRunTestContainsKey", utils.GetNamedCache[int, utils.Person](g, session, "contains-key-cache"), RunTestContainsKey},
-		{"NamedMapRunTestPutIfAbsent", utils.GetNamedMap[int, utils.Person](g, session, "put-if-absent-map"), RunTestPutIfAbsent},
-		{"NamedCacheRunTestPutIfAbsent", utils.GetNamedCache[int, utils.Person](g, session, "put-of-absent-cache"), RunTestPutIfAbsent},
-		{"NamedMapRunTestClearAndIsEmpty", utils.GetNamedMap[int, utils.Person](g, session, "clear-map"), RunTestClearAndIsEmpty},
-		{"NamedCacheRunTestClearAndIsEmpty", utils.GetNamedCache[int, utils.Person](g, session, "clear-cache"), RunTestClearAndIsEmpty},
-		{"NamedMapRunTestTruncateAndDestroy", utils.GetNamedMap[int, utils.Person](g, session, "truncate-map"), RunTestTruncateAndDestroy},
-		{"NamedCacheRunTestTruncateAndDestroy", utils.GetNamedCache[int, utils.Person](g, session, "truncate-cache"), RunTestTruncateAndDestroy},
-		{"NamedMapRunTestReplace", utils.GetNamedMap[int, utils.Person](g, session, "replace-map"), RunTestReplace},
-		{"NamedCacheRunTestReplace", utils.GetNamedCache[int, utils.Person](g, session, "replace-cache"), RunTestReplace},
-		{"NamedMapRunTestReplaceMapping", utils.GetNamedMap[int, utils.Person](g, session, "replace-mapping-map"), RunTestReplaceMapping},
-		{"NamedCacheRunTestReplaceMapping", utils.GetNamedCache[int, utils.Person](g, session, "replace-mapping-cache"), RunTestReplaceMapping},
-		{"NamedMapRunTestRemoveMapping", utils.GetNamedMap[int, utils.Person](g, session, "remove-mapping-map"), RunTestRemoveMapping},
-		{"NamedCacheRunTestRemoveMapping", utils.GetNamedCache[int, utils.Person](g, session, "remove-mapping-cache"), RunTestRemoveMapping},
-		{"NamedMapRunTestPutAll", utils.GetNamedMap[int, utils.Person](g, session, "put-all-map"), RunTestPutAll},
-		{"NamedCacheRunTestPutAll", utils.GetNamedCache[int, utils.Person](g, session, "put-all-cache"), RunTestPutAll},
-		{"NamedMapRunTestContainsValue", utils.GetNamedMap[int, utils.Person](g, session, "contains-value-map"), RunTestContainsValue},
-		{"NamedCacheRunTestContainsValue", utils.GetNamedCache[int, utils.Person](g, session, "contains-value-cache"), RunTestContainsValue},
-		{"NamedMapRunTestContainsEntry", utils.GetNamedMap[int, utils.Person](g, session, "contains-entry-map"), RunTestContainsEntry},
-		{"NamedCacheRunTestContainsEntry", utils.GetNamedCache[int, utils.Person](g, session, "contains-entry-cache"), RunTestContainsEntry},
-		{"NamedMapRunTestValuesFilter", utils.GetNamedMap[int, utils.Person](g, session, "values-filter-map"), RunTestValuesFilter},
-		{"NamedCacheRunTestValuesFilter", utils.GetNamedCache[int, utils.Person](g, session, "values-filter-cache"), RunTestValuesFilter},
-		{"NamedMapRunTestEntrySetFilter", utils.GetNamedMap[int, utils.Person](g, session, "entryset-filter-map"), RunTestEntrySetFilter},
-		{"NamedCacheRunTestEntrySetFilter", utils.GetNamedCache[int, utils.Person](g, session, "entryset-filter-cache"), RunTestEntrySetFilter},
-		{"NamedMapRunTestEntrySetFilterWithComparator", utils.GetNamedMap[int, utils.Person](g, session, "entryset-filter-map-comparator"), RunTestEntrySetFilterWithComparator},
-		{"NamedCacheRunTestEntrySetFilterWithComparator", utils.GetNamedCache[int, utils.Person](g, session, "entryset-filter-cache-comparator"), RunTestEntrySetFilterWithComparator},
-		{"NamedCacheRunTestEntrySetFilterWithComparatorStream", utils.GetNamedCache[int, utils.Person](g, session, "entryset-filter-cache-comparator-stream"), RunTestEntrySetFilterWithComparatorStream},
-		{"NamedMapRunTestKeySetFilter", utils.GetNamedMap[int, utils.Person](g, session, "keyset-map"), RunTestKeySetFilter},
-		{"NamedCacheRunTestKeySetFilter", utils.GetNamedCache[int, utils.Person](g, session, "keyset-cache"), RunTestKeySetFilter},
-		{"NamedMapRunTestGetAll", utils.GetNamedMap[int, utils.Person](g, session, "getall-filter-map"), RunTestGetAll},
-		{"NamedCacheRunTestGetAll", utils.GetNamedCache[int, utils.Person](g, session, "getall-filter-cache"), RunTestGetAll},
-		{"NamedMapRunTestInvokeAll", utils.GetNamedMap[int, utils.Person](g, session, "invokeall-keys-map"), RunTestInvokeAllKeysAndFilter},
-		{"NamedCacheRunTestInvokeAll", utils.GetNamedCache[int, utils.Person](g, session, "invokeall-keys-cache"), RunTestInvokeAllKeysAndFilter},
-		{"NamedMapRunTestKeySet", utils.GetNamedMap[int, utils.Person](g, session, "keyset-map"), RunTestKeySetLong},
-		{"NamedCacheRunTestKeySet", utils.GetNamedCache[int, utils.Person](g, session, "keyset-cache"), RunTestKeySetLong},
-		{"NamedMapRunTestKeySetShort", utils.GetNamedMap[int, utils.Person](g, session, "keyset-map-short"), RunTestKeySetShort},
-		{"NamedCacheRunTestKeySetShort", utils.GetNamedCache[int, utils.Person](g, session, "keyset-cache-short"), RunTestKeySetShort},
-		{"NamedMapRunTestEntrySet", utils.GetNamedMap[int, utils.Person](g, session, "entryset-map"), RunTestEntrySetLong},
-		{"NamedCacheRunTestEntrySet", utils.GetNamedCache[int, utils.Person](g, session, "entryset-cache"), RunTestEntrySetLong},
-		{"NamedMapRunTestEntrySetShort", utils.GetNamedMap[int, utils.Person](g, session, "entryset-map-short"), RunTestEntrySetShort},
-		{"NamedCacheRunTestEntrySetShort", utils.GetNamedCache[int, utils.Person](g, session, "entryset-cache-short"), RunTestEntrySetShort},
-		{"NamedMapRunTestValues", utils.GetNamedMap[int, utils.Person](g, session, "values-map-short"), RunTestValuesShort},
-		{"NamedCacheRunTestValues", utils.GetNamedCache[int, utils.Person](g, session, "values-cache-short"), RunTestValuesShort},
-		{"NamedMapRunTestValues", utils.GetNamedMap[int, utils.Person](g, session, "values-map"), RunTestValuesLong},
-		{"NamedCacheRunTestValues", utils.GetNamedCache[int, utils.Person](g, session, "values-cache"), RunTestValuesLong},
-		{"NamedMapRunTestIsReady", utils.GetNamedMap[int, utils.Person](g, session, "is-ready-map"), RunTestIsReady},
-		{"NamedCacheRunTestIsReady", utils.GetNamedCache[int, utils.Person](g, session, "is-ready-cache"), RunTestIsReady},
+		{"NamedMapCrudTest", GetNamedMap[int, utils.Person](g, session, "people-map"), RunTestBasicCrudOperations},
+		{"NamedCacheCrudTest", GetNamedCache[int, utils.Person](g, session, "people-cache"), RunTestBasicCrudOperations},
+		{"NamedMapRunTestGetOrDefault", GetNamedMap[int, utils.Person](g, session, "get-or-default-map"), RunTestGetOrDefault},
+		{"NamedCacheRunTestGetOrDefault", GetNamedCache[int, utils.Person](g, session, "get-or-default-cache"), RunTestGetOrDefault},
+		{"NamedMapRunTestContainsKey", GetNamedMap[int, utils.Person](g, session, "contains-key-map"), RunTestContainsKey},
+		{"NamedCacheRunTestContainsKey", GetNamedCache[int, utils.Person](g, session, "contains-key-cache"), RunTestContainsKey},
+		{"NamedMapRunTestPutIfAbsent", GetNamedMap[int, utils.Person](g, session, "put-if-absent-map"), RunTestPutIfAbsent},
+		{"NamedCacheRunTestPutIfAbsent", GetNamedCache[int, utils.Person](g, session, "put-of-absent-cache"), RunTestPutIfAbsent},
+		{"NamedMapRunTestClearAndIsEmpty", GetNamedMap[int, utils.Person](g, session, "clear-map"), RunTestClearAndIsEmpty},
+		{"NamedCacheRunTestClearAndIsEmpty", GetNamedCache[int, utils.Person](g, session, "clear-cache"), RunTestClearAndIsEmpty},
+		{"NamedMapRunTestTruncateAndDestroy", GetNamedMap[int, utils.Person](g, session, "truncate-map"), RunTestTruncateAndDestroy},
+		{"NamedCacheRunTestTruncateAndDestroy", GetNamedCache[int, utils.Person](g, session, "truncate-cache"), RunTestTruncateAndDestroy},
+		{"NamedMapRunTestReplace", GetNamedMap[int, utils.Person](g, session, "replace-map"), RunTestReplace},
+		{"NamedCacheRunTestReplace", GetNamedCache[int, utils.Person](g, session, "replace-cache"), RunTestReplace},
+		{"NamedMapRunTestReplaceMapping", GetNamedMap[int, utils.Person](g, session, "replace-mapping-map"), RunTestReplaceMapping},
+		{"NamedCacheRunTestReplaceMapping", GetNamedCache[int, utils.Person](g, session, "replace-mapping-cache"), RunTestReplaceMapping},
+		{"NamedMapRunTestRemoveMapping", GetNamedMap[int, utils.Person](g, session, "remove-mapping-map"), RunTestRemoveMapping},
+		{"NamedCacheRunTestRemoveMapping", GetNamedCache[int, utils.Person](g, session, "remove-mapping-cache"), RunTestRemoveMapping},
+		{"NamedMapRunTestPutAll", GetNamedMap[int, utils.Person](g, session, "put-all-map"), RunTestPutAll},
+		{"NamedCacheRunTestPutAll", GetNamedCache[int, utils.Person](g, session, "put-all-cache"), RunTestPutAll},
+		{"NamedMapRunTestContainsValue", GetNamedMap[int, utils.Person](g, session, "contains-value-map"), RunTestContainsValue},
+		{"NamedCacheRunTestContainsValue", GetNamedCache[int, utils.Person](g, session, "contains-value-cache"), RunTestContainsValue},
+		{"NamedMapRunTestContainsEntry", GetNamedMap[int, utils.Person](g, session, "contains-entry-map"), RunTestContainsEntry},
+		{"NamedCacheRunTestContainsEntry", GetNamedCache[int, utils.Person](g, session, "contains-entry-cache"), RunTestContainsEntry},
+		{"NamedMapRunTestValuesFilter", GetNamedMap[int, utils.Person](g, session, "values-filter-map"), RunTestValuesFilter},
+		{"NamedCacheRunTestValuesFilter", GetNamedCache[int, utils.Person](g, session, "values-filter-cache"), RunTestValuesFilter},
+		{"NamedMapRunTestEntrySetFilter", GetNamedMap[int, utils.Person](g, session, "entryset-filter-map"), RunTestEntrySetFilter},
+		{"NamedCacheRunTestEntrySetFilter", GetNamedCache[int, utils.Person](g, session, "entryset-filter-cache"), RunTestEntrySetFilter},
+		{"NamedMapRunTestEntrySetFilterWithComparator", GetNamedMap[int, utils.Person](g, session, "entryset-filter-map-comparator"), RunTestEntrySetFilterWithComparator},
+		{"NamedCacheRunTestEntrySetFilterWithComparator", GetNamedCache[int, utils.Person](g, session, "entryset-filter-cache-comparator"), RunTestEntrySetFilterWithComparator},
+		{"NamedCacheRunTestEntrySetFilterWithComparatorStream", GetNamedCache[int, utils.Person](g, session, "entryset-filter-cache-comparator-stream"), RunTestEntrySetFilterWithComparatorStream},
+		{"NamedMapRunTestKeySetFilter", GetNamedMap[int, utils.Person](g, session, "keyset-map"), RunTestKeySetFilter},
+		{"NamedCacheRunTestKeySetFilter", GetNamedCache[int, utils.Person](g, session, "keyset-cache"), RunTestKeySetFilter},
+		{"NamedMapRunTestGetAll", GetNamedMap[int, utils.Person](g, session, "getall-filter-map"), RunTestGetAll},
+		{"NamedCacheRunTestGetAll", GetNamedCache[int, utils.Person](g, session, "getall-filter-cache"), RunTestGetAll},
+		{"NamedMapRunTestInvokeAll", GetNamedMap[int, utils.Person](g, session, "invokeall-keys-map"), RunTestInvokeAllKeysAndFilter},
+		{"NamedCacheRunTestInvokeAll", GetNamedCache[int, utils.Person](g, session, "invokeall-keys-cache"), RunTestInvokeAllKeysAndFilter},
+		{"NamedMapRunTestKeySet", GetNamedMap[int, utils.Person](g, session, "keyset-map"), RunTestKeySetLong},
+		{"NamedCacheRunTestKeySet", GetNamedCache[int, utils.Person](g, session, "keyset-cache"), RunTestKeySetLong},
+		{"NamedMapRunTestKeySetShort", GetNamedMap[int, utils.Person](g, session, "keyset-map-short"), RunTestKeySetShort},
+		{"NamedCacheRunTestKeySetShort", GetNamedCache[int, utils.Person](g, session, "keyset-cache-short"), RunTestKeySetShort},
+		{"NamedMapRunTestEntrySet", GetNamedMap[int, utils.Person](g, session, "entryset-map"), RunTestEntrySetLong},
+		{"NamedCacheRunTestEntrySet", GetNamedCache[int, utils.Person](g, session, "entryset-cache"), RunTestEntrySetLong},
+		{"NamedMapRunTestEntrySetShort", GetNamedMap[int, utils.Person](g, session, "entryset-map-short"), RunTestEntrySetShort},
+		{"NamedCacheRunTestEntrySetShort", GetNamedCache[int, utils.Person](g, session, "entryset-cache-short"), RunTestEntrySetShort},
+		{"NamedMapRunTestValues", GetNamedMap[int, utils.Person](g, session, "values-map-short"), RunTestValuesShort},
+		{"NamedCacheRunTestValues", GetNamedCache[int, utils.Person](g, session, "values-cache-short"), RunTestValuesShort},
+		{"NamedMapRunTestValues", GetNamedMap[int, utils.Person](g, session, "values-map"), RunTestValuesLong},
+		{"NamedCacheRunTestValues", GetNamedCache[int, utils.Person](g, session, "values-cache"), RunTestValuesLong},
+		{"NamedMapRunTestIsReady", GetNamedMap[int, utils.Person](g, session, "is-ready-map"), RunTestIsReady},
+		{"NamedCacheRunTestIsReady", GetNamedCache[int, utils.Person](g, session, "is-ready-cache"), RunTestIsReady},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.testName, func(t *testing.T) {
@@ -353,7 +353,7 @@ func RunTestBasicCrudOperations(t *testing.T, namedMap coherence.NamedMap[int, u
 	result, err = namedMap.Get(ctx, person1.ID)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	g.Expect(result).To(gomega.Not(gomega.BeNil()))
-	utils.AssertPersonResult(g, *result, person1)
+	AssertPersonResult(g, *result, person1)
 
 	// update the name to "Timothy"
 	person1.Name = "Timothy"
@@ -364,11 +364,11 @@ func RunTestBasicCrudOperations(t *testing.T, namedMap coherence.NamedMap[int, u
 
 	result, err = namedMap.Get(ctx, person1.ID)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-	utils.AssertPersonResult(g, *result, person1)
+	AssertPersonResult(g, *result, person1)
 
 	oldValue, err = namedMap.Remove(ctx, person1.ID)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-	utils.AssertPersonResult(g, *oldValue, person1)
+	AssertPersonResult(g, *oldValue, person1)
 }
 
 func TestMultipleCallsToNamedMap(t *testing.T) {
@@ -411,7 +411,7 @@ func TestMultipleCallsToNamedMap(t *testing.T) {
 	namedMap3, err := coherence.GetNamedMap[int, utils.Person](session, "map-2")
 	g.Expect(err).NotTo(gomega.HaveOccurred())
 
-	utils.AssertSize(g, namedMap3, 0)
+	AssertSize(g, namedMap3, 0)
 
 	// try and retrieve a NamedMap that is for the same cache but different type, this should cause error
 	_, err = coherence.GetNamedMap[int, string](session, "map-2")
@@ -488,7 +488,7 @@ func RunTestGetOrDefault(t *testing.T, namedMap coherence.NamedMap[int, utils.Pe
 	result, err = namedMap.GetOrDefault(ctx, 10, utils.Person{ID: 111, Name: "Not this one"})
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	g.Expect(result).To(gomega.Not(gomega.BeNil()))
-	utils.AssertPersonResult(g, *result, person1)
+	AssertPersonResult(g, *result, person1)
 }
 
 func RunTestContainsKey(t *testing.T, namedMap coherence.NamedMap[int, utils.Person]) {
@@ -605,14 +605,14 @@ func RunTestPutIfAbsent(t *testing.T, namedMap coherence.NamedMap[int, utils.Per
 	g.Expect(result).To(gomega.Not(gomega.BeNil()))
 
 	// assert the Value returned is the existing entry
-	utils.AssertPersonResult(g, *result, person1)
+	AssertPersonResult(g, *result, person1)
 
 	// ensure a Get for the person1.ID returns the original person
 	// and not the attempted update
 	result, err = namedMap.Get(ctx, person1.ID)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	g.Expect(result).To(gomega.Not(gomega.BeNil()))
-	utils.AssertPersonResult(g, *result, person1)
+	AssertPersonResult(g, *result, person1)
 }
 
 func RunTestClearAndIsEmpty(t *testing.T, namedMap coherence.NamedMap[int, utils.Person]) {
@@ -682,13 +682,13 @@ func RunTestReplace(t *testing.T, namedMap coherence.NamedMap[int, utils.Person]
 	g.Expect(err).NotTo(gomega.HaveOccurred())
 	g.Expect(oldValue).To(gomega.BeNil())
 
-	utils.AssertSize(g, namedMap, 1)
+	AssertSize(g, namedMap, 1)
 
 	// this should work as it's mapped to any Value
 	oldValue, err = namedMap.Replace(ctx, 1, personReplace)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	g.Expect(oldValue).To(gomega.Not(gomega.BeNil()))
-	utils.AssertPersonResult(g, *oldValue, person1)
+	AssertPersonResult(g, *oldValue, person1)
 }
 
 func RunTestReplaceMapping(t *testing.T, namedMap coherence.NamedMap[int, utils.Person]) {
@@ -713,7 +713,7 @@ func RunTestReplaceMapping(t *testing.T, namedMap coherence.NamedMap[int, utils.
 	g.Expect(err).NotTo(gomega.HaveOccurred())
 	g.Expect(oldValue).To(gomega.BeNil())
 
-	utils.AssertSize(g, namedMap, 1)
+	AssertSize(g, namedMap, 1)
 
 	// value exists but doesn't match so should return false
 	result, err = namedMap.ReplaceMapping(ctx, 1, personReplace, person1)
@@ -749,13 +749,13 @@ func RunTestRemoveMapping(t *testing.T, namedMap coherence.NamedMap[int, utils.P
 	// add a Key with a Value that will not match
 	_, err = namedMap.Put(ctx, 1, person2)
 	g.Expect(err).NotTo(gomega.HaveOccurred())
-	utils.AssertSize(g, namedMap, 1)
+	AssertSize(g, namedMap, 1)
 
 	// remove a mapping that doesn't match
 	removed, err = namedMap.RemoveMapping(ctx, 1, person1)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	g.Expect(removed).Should(gomega.Equal(false))
-	utils.AssertSize(g, namedMap, 1)
+	AssertSize(g, namedMap, 1)
 
 	// set the Key to a Value that will match
 	_, err = namedMap.Put(ctx, 1, person1)
@@ -764,7 +764,7 @@ func RunTestRemoveMapping(t *testing.T, namedMap coherence.NamedMap[int, utils.P
 	removed, err = namedMap.RemoveMapping(ctx, 1, person1)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	g.Expect(removed).Should(gomega.Equal(true))
-	utils.AssertSize(g, namedMap, 0)
+	AssertSize(g, namedMap, 0)
 }
 
 var peopleData = map[int]utils.Person{
@@ -915,7 +915,7 @@ func RunTestEntrySetFilterWithComparatorStream(t *testing.T, namedMap coherence.
 		return
 	}
 
-	utils.ClearNamedMap(g, namedMap)
+	ClearNamedMap(g, namedMap)
 
 	// populate the cache
 	for i := 1; i <= maxPeople; i++ {
@@ -927,7 +927,7 @@ func RunTestEntrySetFilterWithComparatorStream(t *testing.T, namedMap coherence.
 		g.Expect(err).NotTo(gomega.HaveOccurred())
 
 	}
-	utils.AssertSize(g, namedMap, maxPeople)
+	AssertSize(g, namedMap, maxPeople)
 
 	// only retrieve 300 entries and then skip out
 	ch := coherence.EntrySetFilterWithComparator(ctx, namedMap, filters.Always(), comparatorAscending)

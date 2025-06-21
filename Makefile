@@ -404,8 +404,8 @@ test: test-clean gotestsum $(BUILD_PROPS) ## Run the unit tests
 # ----------------------------------------------------------------------------------------------------------------------
 .PHONY: test-e2e-standalone
 test-e2e-standalone: test-clean test gotestsum $(BUILD_PROPS) ## Run e2e tests with Coherence
-	CGO_ENABLED=0 $(GOTESTSUM) --format testname --junitfile $(TEST_LOGS_DIR)/go-client-test.xml \
-	  -- $(GO_TEST_FLAGS) -v -coverprofile=$(COVERAGE_DIR)/cover-functional.out -v ./test/e2e/standalone/... -coverpkg=github.com/oracle/coherence-go-client/v2/coherence/...
+	cd test && CGO_ENABLED=0 $(GOTESTSUM) --format testname --junitfile $(TEST_LOGS_DIR)/go-client-test.xml \
+	  -- $(GO_TEST_FLAGS) -v -coverprofile=$(COVERAGE_DIR)/cover-functional.out -v ./e2e/standalone/... -coverpkg=github.com/oracle/coherence-go-client/v2/coherence/...
 	go tool cover -func=$(COVERAGE_DIR)/cover-functional.out | grep -v '0.0%'
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -413,16 +413,16 @@ test-e2e-standalone: test-clean test gotestsum $(BUILD_PROPS) ## Run e2e tests w
 # ----------------------------------------------------------------------------------------------------------------------
 .PHONY: test-e2e-streaming
 test-e2e-streaming: test-clean test gotestsum $(BUILD_PROPS) ## Run e2e tests with Coherence
-	CGO_ENABLED=0 $(GOTESTSUM) --format testname --junitfile $(TEST_LOGS_DIR)/go-streaming-test.xml \
-	  -- $(GO_TEST_FLAGS) -v -coverprofile=$(COVERAGE_DIR)/cover-functional.out -v ./test/e2e/streaming/... -coverpkg=github.com/oracle/coherence-go-client/v2/coherence/...
+	cd test && CGO_ENABLED=0 $(GOTESTSUM) --format testname --junitfile $(TEST_LOGS_DIR)/go-streaming-test.xml \
+	  -- $(GO_TEST_FLAGS) -v -coverprofile=$(COVERAGE_DIR)/cover-functional.out -v ./e2e/streaming/... -coverpkg=github.com/oracle/coherence-go-client/v2/coherence/...
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Executes the Go end to end tests for standalone Coherence with Scope set
 # ----------------------------------------------------------------------------------------------------------------------
 .PHONY: test-e2e-standalone-scope
 test-e2e-standalone-scope: test-clean test gotestsum $(BUILD_PROPS) ## Run e2e tests with Coherence with Scope set
-	CGO_ENABLED=0 $(GOTESTSUM) --format testname --junitfile $(TEST_LOGS_DIR)/go-client-test-scope.xml \
-	  -- $(GO_TEST_FLAGS) -v -coverprofile=$(COVERAGE_DIR)/cover-functional-scope.out -v ./test/e2e/scope/... -coverpkg=github.com/oracle/coherence-go-client/v2/coherence/...
+	cd test && CGO_ENABLED=0 $(GOTESTSUM) --format testname --junitfile $(TEST_LOGS_DIR)/go-client-test-scope.xml \
+	  -- $(GO_TEST_FLAGS) -v -coverprofile=$(COVERAGE_DIR)/cover-functional-scope.out -v ./e2e/scope/... -coverpkg=github.com/oracle/coherence-go-client/v2/coherence/...
 	go tool cover -func=$(COVERAGE_DIR)/cover-functional-scope.out | grep -v '0.0%'
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -430,8 +430,8 @@ test-e2e-standalone-scope: test-clean test gotestsum $(BUILD_PROPS) ## Run e2e t
 # ----------------------------------------------------------------------------------------------------------------------
 .PHONY: test-e2e-standalone-queues
 test-e2e-standalone-queues: test-clean test gotestsum $(BUILD_PROPS) ## Run e2e tests with Coherence queues
-	CGO_ENABLED=0 $(GOTESTSUM) --format testname --junitfile $(TEST_LOGS_DIR)/go-client-test-queues.xml \
-	  -- $(GO_TEST_FLAGS) -v -coverprofile=$(COVERAGE_DIR)/cover-functional-queues.out -v ./test/e2e/queues/... -coverpkg=github.com/oracle/coherence-go-client/v2/coherence/...
+	cd test && CGO_ENABLED=0 $(GOTESTSUM) --format testname --junitfile $(TEST_LOGS_DIR)/go-client-test-queues.xml \
+	  -- $(GO_TEST_FLAGS) -v -coverprofile=$(COVERAGE_DIR)/cover-functional-queues.out -v ./e2e/queues/... -coverpkg=github.com/oracle/coherence-go-client/v2/coherence/...
 	go tool cover -func=$(COVERAGE_DIR)/cover-functional-queues.out | grep -v '0.0%'
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -439,8 +439,8 @@ test-e2e-standalone-queues: test-clean test gotestsum $(BUILD_PROPS) ## Run e2e 
 # ----------------------------------------------------------------------------------------------------------------------
 .PHONY: test-v1-base
 test-v1-base: test-clean test gotestsum $(BUILD_PROPS) ## Run e2e tests with Coherence
-	CGO_ENABLED=0 $(GOTESTSUM) --format testname --junitfile $(TEST_LOGS_DIR)/go-client-test-v1.xml \
-	  -- $(GO_TEST_FLAGS) -v -coverprofile=$(COVERAGE_DIR)/cover-functional-v1.out -v ./test/v1/base/... -coverpkg=github.com/oracle/coherence-go-client/v2/coherence/...
+	cd test && CGO_ENABLED=0 $(GOTESTSUM) --format testname --junitfile $(TEST_LOGS_DIR)/go-client-test-v1.xml \
+	  -- $(GO_TEST_FLAGS) -v -coverprofile=$(COVERAGE_DIR)/cover-functional-v1.out -v ./v1/base/... -coverpkg=github.com/oracle/coherence-go-client/v2/coherence/...
 	go tool cover -func=$(COVERAGE_DIR)/cover-functional-v1.out | grep -v '0.0%'
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -516,8 +516,8 @@ test-clean: gotestsum ## Clean the go test cache
 test-discovery: test-clean gotestsum $(BUILD_PROPS) ## Run Discovery tests with Coherence
 	make test-coherence-shutdown || true
 	make test-coherence-startup
-	CGO_ENABLED=0 $(GOTESTSUM) --format testname --junitfile $(TEST_LOGS_DIR)/cohctl-test-discovery.xml \
-	  -- $(GO_TEST_FLAGS) -v  ./test/e2e/discovery/...
+	cd test && CGO_ENABLED=0 $(GOTESTSUM) --format testname --junitfile $(TEST_LOGS_DIR)/cohctl-test-discovery.xml \
+	  -- $(GO_TEST_FLAGS) -v  ./e2e/discovery/...
 	make test-coherence-shutdown
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -528,8 +528,8 @@ test-perf: test-clean gotestsum $(BUILD_PROPS) ## Run Discovery tests with Coher
 	./scripts/perf-cluster.sh $(TEST_LOGS_DIR)/cli $(COHERENCE_VERSION) stop || true
 	mkdir -p $(TEST_LOGS_DIR)/cli
 	./scripts/perf-cluster.sh $(TEST_LOGS_DIR)/cli $(COHERENCE_VERSION) start
-	CGO_ENABLED=0 $(GOTESTSUM) --format testname --junitfile $(TEST_LOGS_DIR)/cohctl-test-perf.xml \
-	  -- $(GO_TEST_FLAGS) -v  ./test/e2e/perf/...
+	cd test && CGO_ENABLED=0 $(GOTESTSUM) --format testname --junitfile $(TEST_LOGS_DIR)/cohctl-test-perf.xml \
+	  -- $(GO_TEST_FLAGS) -v  ./e2e/perf/...
 	./scripts/perf-cluster.sh $(TEST_LOGS_DIR)/cli $(COHERENCE_VERSION) stop || true
 	rm -rf $(TEST_LOGS_DIR)/cli/*
 
@@ -538,8 +538,8 @@ test-perf: test-clean gotestsum $(BUILD_PROPS) ## Run Discovery tests with Coher
 # ----------------------------------------------------------------------------------------------------------------------
 .PHONY: test-resolver
 test-resolver: test-clean gotestsum $(BUILD_PROPS) ## Run Resolver tests with Coherence
-	COHERENCE_RESOLVER_DEBUG=true CGO_ENABLED=0 $(GOTESTSUM) --format testname --junitfile $(TEST_LOGS_DIR)/cohctl-test-resover.xml \
-	  -- $(GO_TEST_FLAGS) -v  ./test/e2e/resolver/...
+	cd test && COHERENCE_RESOLVER_DEBUG=true CGO_ENABLED=0 $(GOTESTSUM) --format testname --junitfile $(TEST_LOGS_DIR)/cohctl-test-resover.xml \
+	  -- $(GO_TEST_FLAGS) -v  ./e2e/resolver/...
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Executes the Go resolver cluster tests for standalone Coherence
@@ -548,8 +548,8 @@ test-resolver: test-clean gotestsum $(BUILD_PROPS) ## Run Resolver tests with Co
 test-resolver-cluster: test-clean gotestsum $(BUILD_PROPS) ## Run Resolver tests with Coherence
 	make test-coherence-shutdown || true
 	make test-coherence-startup
-	COHERENCE_RESOLVER_DEBUG=true CGO_ENABLED=0 $(GOTESTSUM) --format testname --junitfile $(TEST_LOGS_DIR)/cohctl-test-resover-cluster.xml \
-	  -- $(GO_TEST_FLAGS) -v  ./test/e2e/resolver_cluster/...
+	cd test && COHERENCE_RESOLVER_DEBUG=true CGO_ENABLED=0 $(GOTESTSUM) --format testname --junitfile $(TEST_LOGS_DIR)/cohctl-test-resover-cluster.xml \
+	  -- $(GO_TEST_FLAGS) -v  ./e2e/resolver_cluster/...
 	make test-coherence-shutdown
 
 # ----------------------------------------------------------------------------------------------------------------------

@@ -8,107 +8,131 @@ package coherence
 
 import (
 	"context"
-	"github.com/onsi/gomega"
 	"strconv"
 	"testing"
 	"time"
 )
 
 func TestSessionValidation(t *testing.T) {
-	var (
-		g   = gomega.NewWithT(t)
-		err error
-		ctx = context.Background()
-	)
+	ctx := context.Background()
 
-	_, err = NewSession(ctx, WithFormat("not-json"))
-	g.Expect(err).To(gomega.Equal(ErrInvalidFormat))
+	_, err := NewSession(ctx, WithFormat("not-json"))
+	if err != ErrInvalidFormat {
+		t.Fatalf("expected ErrInvalidFormat, got %v", err)
+	}
 
 	// test default timeout
-	timeout, _ := strconv.ParseInt(defaultRequestTimeout, 10, 64)
+	timeout, err := strconv.ParseInt(defaultRequestTimeout, 10, 64)
+	if err != nil {
+		t.Fatalf("failed to parse default request timeout: %v", err)
+	}
+
 	s, err := NewSession(ctx)
-	g.Expect(err).To(gomega.Not(gomega.HaveOccurred()))
-	g.Expect(s.sessOpts.RequestTimeout).To(gomega.Equal(time.Duration(timeout) * time.Millisecond))
+	if err != nil {
+		t.Fatalf("unexpected error creating default session: %v", err)
+	}
+	if got := s.sessOpts.RequestTimeout; got != time.Duration(timeout)*time.Millisecond {
+		t.Fatalf("expected default timeout %v, got %v", time.Duration(timeout)*time.Millisecond, got)
+	}
 
 	// test setting a request timeout
-	s, err = NewSession(ctx, WithRequestTimeout(time.Duration(33)*time.Millisecond))
-	g.Expect(err).To(gomega.Not(gomega.HaveOccurred()))
-	g.Expect(s.sessOpts.RequestTimeout).To(gomega.Equal(time.Duration(33) * time.Millisecond))
+	s, err = NewSession(ctx, WithRequestTimeout(33*time.Millisecond))
+	if err != nil {
+		t.Fatalf("unexpected error setting request timeout: %v", err)
+	}
+	if got := s.sessOpts.RequestTimeout; got != 33*time.Millisecond {
+		t.Fatalf("expected request timeout 33ms, got %v", got)
+	}
 
 	// test setting a disconnected timeout
-	s, err = NewSession(ctx, WithDisconnectTimeout(time.Duration(34)*time.Millisecond))
-	g.Expect(err).To(gomega.Not(gomega.HaveOccurred()))
-	g.Expect(s.sessOpts.DisconnectTimeout).To(gomega.Equal(time.Duration(34) * time.Millisecond))
+	s, err = NewSession(ctx, WithDisconnectTimeout(34*time.Millisecond))
+	if err != nil {
+		t.Fatalf("unexpected error setting disconnect timeout: %v", err)
+	}
+	if got := s.sessOpts.DisconnectTimeout; got != 34*time.Millisecond {
+		t.Fatalf("expected disconnect timeout 34ms, got %v", got)
+	}
 
 	// test setting a ready timeout
-	s, err = NewSession(ctx, WithReadyTimeout(time.Duration(35)*time.Millisecond))
-	g.Expect(err).To(gomega.Not(gomega.HaveOccurred()))
-	g.Expect(s.sessOpts.ReadyTimeout).To(gomega.Equal(time.Duration(35) * time.Millisecond))
+	s, err = NewSession(ctx, WithReadyTimeout(35*time.Millisecond))
+	if err != nil {
+		t.Fatalf("unexpected error setting ready timeout: %v", err)
+	}
+	if got := s.sessOpts.ReadyTimeout; got != 35*time.Millisecond {
+		t.Fatalf("expected ready timeout 35ms, got %v", got)
+	}
 }
 
 func TestSessionEnvValidation(t *testing.T) {
-	var (
-		g   = gomega.NewWithT(t)
-		err error
-		ctx = context.Background()
-	)
+	ctx := context.Background()
 
-	// test default timeout
 	t.Setenv("COHERENCE_CLIENT_REQUEST_TIMEOUT", "5000")
 	s, err := NewSession(ctx)
-	g.Expect(err).To(gomega.Not(gomega.HaveOccurred()))
-	g.Expect(s.sessOpts.RequestTimeout).To(gomega.Equal(time.Duration(5000) * time.Millisecond))
+	if err != nil {
+		t.Fatalf("unexpected error creating session: %v", err)
+	}
+	if got := s.sessOpts.RequestTimeout; got != 5000*time.Millisecond {
+		t.Fatalf("expected request timeout 5000ms, got %v", got)
+	}
 
-	// test setting a disconnected timeout
 	t.Setenv("COHERENCE_SESSION_DISCONNECT_TIMEOUT", "6000")
 	s, err = NewSession(ctx)
-	g.Expect(err).To(gomega.Not(gomega.HaveOccurred()))
-	g.Expect(s.sessOpts.DisconnectTimeout).To(gomega.Equal(time.Duration(6000) * time.Millisecond))
+	if err != nil {
+		t.Fatalf("unexpected error creating session with disconnect timeout: %v", err)
+	}
+	if got := s.sessOpts.DisconnectTimeout; got != 6000*time.Millisecond {
+		t.Fatalf("expected disconnect timeout 6000ms, got %v", got)
+	}
 
-	// test setting a ready timeout
 	t.Setenv("COHERENCE_READY_TIMEOUT", "7000")
 	s, err = NewSession(ctx)
-	g.Expect(err).To(gomega.Not(gomega.HaveOccurred()))
-	g.Expect(s.sessOpts.ReadyTimeout).To(gomega.Equal(time.Duration(7000) * time.Millisecond))
+	if err != nil {
+		t.Fatalf("unexpected error creating session with ready timeout: %v", err)
+	}
+	if got := s.sessOpts.ReadyTimeout; got != 7000*time.Millisecond {
+		t.Fatalf("expected ready timeout 7000ms, got %v", got)
+	}
 }
 
 func TestSessionEnvDebug(t *testing.T) {
-	var (
-		g   = gomega.NewWithT(t)
-		ctx = context.Background()
-	)
+	ctx := context.Background()
 	t.Setenv(envSessionDebug, "true")
+
 	_, err := NewSession(ctx)
-	g.Expect(err).To(gomega.Not(gomega.HaveOccurred()))
+	if err != nil {
+		t.Fatalf("expected no error creating session with debug env, got: %v", err)
+	}
 }
 
 func TestConnectionOverride(t *testing.T) {
-	var (
-		g   = gomega.NewWithT(t)
-		ctx = context.Background()
-	)
+	ctx := context.Background()
 	t.Setenv(envHostName, "localhost:12345")
+
 	s, err := NewSession(ctx)
-	g.Expect(err).To(gomega.Not(gomega.HaveOccurred()))
-	g.Expect(s.sessOpts.Address).To(gomega.Equal("localhost:12345"))
+	if err != nil {
+		t.Fatalf("expected no error creating session, got: %v", err)
+	}
+
+	if s.sessOpts.Address != "localhost:12345" {
+		t.Fatalf("expected address to be 'localhost:12345', got: %s", s.sessOpts.Address)
+	}
 }
 
 func TestInvalidFormat(t *testing.T) {
-	var (
-		g   = gomega.NewWithT(t)
-		ctx = context.Background()
-	)
+	ctx := context.Background()
+
 	_, err := NewSession(ctx, WithFormat("abc"))
-	g.Expect(err).To(gomega.HaveOccurred())
+	if err == nil {
+		t.Fatal("expected error when using invalid format, got nil")
+	}
 }
 
 func TestSessionTimeout(t *testing.T) {
-	var (
-		g   = gomega.NewWithT(t)
-		ctx = context.Background()
-	)
-
+	ctx := context.Background()
 	t.Setenv(envRequestTimeout, "-1")
+
 	_, err := NewSession(ctx)
-	g.Expect(err).To(gomega.HaveOccurred())
+	if err == nil {
+		t.Fatal("expected error due to invalid request timeout, got nil")
+	}
 }

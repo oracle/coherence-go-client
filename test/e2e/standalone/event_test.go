@@ -74,8 +74,8 @@ func TestMapAndLifecycleEventsAll(t *testing.T) {
 	g, session := initTest(t)
 	defer session.Close()
 
-	namedCache := utils.GetNamedCache[string, string](g, session, "test-events-all-cache")
-	namedMap := utils.GetNamedMap[string, string](g, session, "test-events-all-map")
+	namedCache := GetNamedCache[string, string](g, session, "test-events-all-cache")
+	namedMap := GetNamedMap[string, string](g, session, "test-events-all-map")
 
 	runBasicTests(g, namedCache, namedCache.Name(), &expected, -1)
 	runBasicTests(g, namedMap, namedMap.Name(), &expected, -1)
@@ -85,8 +85,8 @@ func TestMapAndLifecycleEventsAll1(t *testing.T) {
 	g, session := initTest(t)
 	defer session.Close()
 
-	namedCache := utils.GetNamedCache[string, string](g, session, "test-lifecycle-release-cache")
-	namedMap := utils.GetNamedMap[string, string](g, session, "test-lifecycle-release-map")
+	namedCache := GetNamedCache[string, string](g, session, "test-lifecycle-release-cache")
+	namedMap := GetNamedMap[string, string](g, session, "test-lifecycle-release-map")
 
 	runReleasedLifecycleTests(g, namedMap)
 	runReleasedLifecycleTests(g, namedCache)
@@ -96,8 +96,8 @@ func TestMapAndLifecycleEventsAll2(t *testing.T) {
 	g, session := initTest(t)
 	defer session.Close()
 
-	namedCache := utils.GetNamedCache[string, string](g, session, "test-lifecycle-all-cache-multi")
-	namedMap := utils.GetNamedMap[string, string](g, session, "test-lifecycle-all-map-multi")
+	namedCache := GetNamedCache[string, string](g, session, "test-lifecycle-all-cache-multi")
+	namedMap := GetNamedMap[string, string](g, session, "test-lifecycle-all-map-multi")
 
 	runMultipleLifecycleTests(g, namedMap)
 	runMultipleLifecycleTests(g, namedCache)
@@ -107,8 +107,8 @@ func TestMapAndLifecycleEventsAll3(t *testing.T) {
 	g, session := initTest(t)
 	defer session.Close()
 
-	namedCache := utils.GetNamedCache[string, string](g, session, "test-lifecycle-all-cache")
-	namedMap := utils.GetNamedMap[string, string](g, session, "test-lifecycle-all-map")
+	namedCache := GetNamedCache[string, string](g, session, "test-lifecycle-all-cache")
+	namedMap := GetNamedMap[string, string](g, session, "test-lifecycle-all-map")
 
 	runBasicLifecycleTests(g, namedMap, namedMap.Name())
 	runBasicLifecycleTests(g, namedCache, namedCache.Name())
@@ -123,8 +123,8 @@ func TestMapAndLifecycleEventsAll4(t *testing.T) {
 		t.Skip("Skip for gRPC v0")
 	}
 
-	namedCache := utils.GetNamedCache[string, string](g, session, "test-lifecycle-all-cache")
-	namedMap := utils.GetNamedMap[string, string](g, session, "test-lifecycle-all-map")
+	namedCache := GetNamedCache[string, string](g, session, "test-lifecycle-all-cache")
+	namedMap := GetNamedMap[string, string](g, session, "test-lifecycle-all-map")
 
 	runMultipleLifecycleTests(g, namedMap)
 	runMultipleLifecycleTests(g, namedCache)
@@ -134,7 +134,7 @@ func TestExpiringEvents(t *testing.T) {
 	g, session := initTest(t)
 	defer session.Close()
 
-	runTestExpiringEvents(g, utils.GetNamedCache[string, string](g, session, "test-expiring-events-cache"))
+	runTestExpiringEvents(g, GetNamedCache[string, string](g, session, "test-expiring-events-cache"))
 }
 
 // TestEventDisconnect tests to ensure that if we get a disconnect, then we can rec-connect and
@@ -149,12 +149,12 @@ func TestEventDisconnect(t *testing.T) {
 		t.Skip("Skip for gRPC v0")
 	}
 
-	namedCache := utils.GetNamedCache[string, string](g, session, "test-reconnect-cache")
+	namedCache := GetNamedCache[string, string](g, session, "test-reconnect-cache")
 	g.Expect(namedCache.Clear(ctx)).To(gomega.BeNil())
 
 	RunTestReconnect(g, namedCache, true)
 
-	namedMap := utils.GetNamedMap[string, string](g, session, "test-reconnect-map")
+	namedMap := GetNamedMap[string, string](g, session, "test-reconnect-map")
 	g.Expect(namedMap.Clear(ctx)).To(gomega.BeNil())
 	RunTestReconnect(g, namedMap, true)
 }
@@ -177,10 +177,10 @@ func TestEventDisconnectWithReadyTimeoutDelay(t *testing.T) {
 		t.Skip("Skip for gRPC v0")
 	}
 
-	namedCache := utils.GetNamedCache[string, string](g, session, "test-reconnect-cache")
+	namedCache := GetNamedCache[string, string](g, session, "test-reconnect-cache")
 	RunTestReconnect(g, namedCache, false)
 
-	namedMap := utils.GetNamedMap[string, string](g, session, "test-reconnect-map")
+	namedMap := GetNamedMap[string, string](g, session, "test-reconnect-map")
 	RunTestReconnect(g, namedMap, false)
 }
 
@@ -203,8 +203,8 @@ func TestMapEventInsertsOnly(t *testing.T) {
 	g, session := initTest(t)
 	defer session.Close()
 
-	namedCache := utils.GetNamedCache[string, string](g, session, "test-events-inserts-only-cache")
-	namedMap := utils.GetNamedMap[string, string](g, session, "test-events-inserts-only-map")
+	namedCache := GetNamedCache[string, string](g, session, "test-events-inserts-only-cache")
+	namedMap := GetNamedMap[string, string](g, session, "test-events-inserts-only-map")
 
 	runBasicTests(g, namedCache, namedCache.Name(), &expected, filters.MaskInserted)
 	runBasicTests(g, namedMap, namedMap.Name(), &expected, filters.MaskInserted)
@@ -230,8 +230,8 @@ func TestMapEventUpdatesOnly(t *testing.T) {
 	g, session := initTest(t)
 	defer session.Close()
 
-	namedCache := utils.GetNamedCache[string, string](g, session, "test-events-updates-only-cache")
-	namedMap := utils.GetNamedMap[string, string](g, session, "test-events-updates-only-map")
+	namedCache := GetNamedCache[string, string](g, session, "test-events-updates-only-cache")
+	namedMap := GetNamedMap[string, string](g, session, "test-events-updates-only-map")
 
 	runBasicTests(g, namedCache, namedCache.Name(), &expected, filters.MaskUpdated)
 	runBasicTests(g, namedMap, namedMap.Name(), &expected, filters.MaskUpdated)
@@ -257,8 +257,8 @@ func TestMapEventDeletesOnly(t *testing.T) {
 	g, session := initTest(t)
 	defer session.Close()
 
-	namedCache := utils.GetNamedCache[string, string](g, session, "test-events-deletes-only-cache")
-	namedMap := utils.GetNamedMap[string, string](g, session, "test-events-deletes-only-map")
+	namedCache := GetNamedCache[string, string](g, session, "test-events-deletes-only-cache")
+	namedMap := GetNamedMap[string, string](g, session, "test-events-deletes-only-map")
 
 	runBasicTests(g, namedCache, namedCache.Name(), &expected, filters.MaskDeleted)
 	runBasicTests(g, namedMap, namedMap.Name(), &expected, filters.MaskDeleted)
@@ -271,8 +271,8 @@ func TestMapEventMultipleListeners(t *testing.T) {
 	defer session.Close()
 
 	testMaps := []coherence.NamedMap[string, string]{
-		utils.GetNamedCache[string, string](g, session, "event-multiple-listeners-cache"),
-		utils.GetNamedMap[string, string](g, session, "event-multiple-listeners-map"),
+		GetNamedCache[string, string](g, session, "event-multiple-listeners-cache"),
+		GetNamedMap[string, string](g, session, "event-multiple-listeners-map"),
 	}
 
 	// run tests against NamedMap and NamedCache
@@ -471,7 +471,7 @@ func TestCustomFilterListener(t *testing.T) {
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	defer session.Close()
 
-	cache := utils.GetNamedCache[string, utils.Person](g, session, "event-filter-listener")
+	cache := GetNamedCache[string, utils.Person](g, session, "event-filter-listener")
 	defer func(cache coherence.NamedCache[string, utils.Person], ctx context.Context) {
 		err := cache.Destroy(ctx)
 		if err != nil {
@@ -528,7 +528,7 @@ func TestKeyListener(t *testing.T) {
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	defer session.Close()
 
-	cache := utils.GetNamedCache[string, utils.Person](g, session, "event-key-listener")
+	cache := GetNamedCache[string, utils.Person](g, session, "event-key-listener")
 	defer func(cache coherence.NamedCache[string, utils.Person], ctx context.Context) {
 		err := cache.Destroy(ctx)
 		if err != nil {
@@ -584,7 +584,7 @@ func TestLiteListeners(t *testing.T) {
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	defer session.Close()
 
-	cache := utils.GetNamedCache[string, utils.Person](g, session, "event-lite-listener")
+	cache := GetNamedCache[string, utils.Person](g, session, "event-lite-listener")
 	defer func(cache coherence.NamedCache[string, utils.Person], ctx context.Context) {
 		err := cache.Destroy(ctx)
 		if err != nil {

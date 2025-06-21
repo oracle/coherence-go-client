@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2024 Oracle and/or its affiliates.
+ * Copyright (c) 2022, 2025 Oracle and/or its affiliates.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * https://oss.oracle.com/licenses/upl.
  */
@@ -13,7 +13,6 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"github.com/onsi/gomega"
 	"github.com/oracle/coherence-go-client/v2/coherence"
 	"io"
 	"log"
@@ -117,33 +116,6 @@ func RunTest(m *testing.M, grpcPort, httpPort, restPort int, startup bool) {
 		_, _ = DockerComposeDown(fileName)
 	}
 	os.Exit(exitCode)
-}
-
-// CreateTempDirectory creates a temporary directory
-func CreateTempDirectory(pattern string) string {
-	dir, err := os.MkdirTemp("", pattern)
-	if err != nil {
-		fmt.Println("Unable to create temporary directory " + err.Error())
-	}
-	defer os.RemoveAll(dir)
-
-	return dir
-}
-
-// FileExistsInDirectory returns true if a file exists in a directory
-func FileExistsInDirectory(dir string, file string) bool {
-	files, err := os.ReadDir(dir)
-
-	if err != nil {
-		return false
-	}
-
-	for _, f := range files {
-		if f.Name() == file {
-			return true
-		}
-	}
-	return false
 }
 
 // GetFilePath returns the file path of a file
@@ -491,49 +463,6 @@ func validateFilePath(file string) error {
 	return fmt.Errorf("%s is not a valid file", file)
 }
 
-func GetNamedMapWithScope[K comparable, V any](g *gomega.WithT, session *coherence.Session, cacheName, _ string) coherence.NamedMap[K, V] {
-	namedCache, err := coherence.GetNamedMap[K, V](session, cacheName)
-	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-	err = namedCache.Clear(localCtx)
-	g.Expect(err).NotTo(gomega.HaveOccurred())
-
-	return namedCache
-}
-
-func GetNamedCacheWithScope[K comparable, V any](g *gomega.WithT, session *coherence.Session, cacheName, _ string) coherence.NamedCache[K, V] {
-	namedCache, err := coherence.GetNamedCache[K, V](session, cacheName)
-	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-	err = namedCache.Clear(localCtx)
-	g.Expect(err).NotTo(gomega.HaveOccurred())
-
-	return namedCache
-}
-
-func GetNamedMap[K comparable, V any](g *gomega.WithT, session *coherence.Session, cacheName string) coherence.NamedMap[K, V] {
-	return GetNamedMapWithScope[K, V](g, session, cacheName, "")
-}
-
-func GetNamedCache[K comparable, V any](g *gomega.WithT, session *coherence.Session, cacheName string) coherence.NamedCache[K, V] {
-	return GetNamedCacheWithScope[K, V](g, session, cacheName, "")
-}
-
-func AssertSize[K comparable, V any](g *gomega.WithT, namedMap coherence.NamedMap[K, V], expectedSize int) {
-	size, err := namedMap.Size(localCtx)
-	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-	g.Expect(size).To(gomega.Equal(expectedSize))
-}
-
-func ClearNamedMap[K comparable, V any](g *gomega.WithT, namedCache coherence.NamedMap[K, V]) {
-	err := namedCache.Clear(localCtx)
-	g.Expect(err).NotTo(gomega.HaveOccurred())
-}
-
-func AssertPersonResult(g *gomega.WithT, result Person, expectedValue Person) {
-	g.Expect(result).To(gomega.Not(gomega.BeNil()))
-	g.Expect(result.Name).To(gomega.Equal(expectedValue.Name))
-	g.Expect(result.ID).To(gomega.Equal(expectedValue.ID))
-}
-
 type Person struct {
 	ID          int      `json:"id"`
 	Name        string   `json:"name"`
@@ -567,45 +496,6 @@ type Address struct {
 	PostCode int    `json:"postCode"`
 }
 
-// RunKeyValueTest runs a basic Put/Get test against various key/ values
-func RunKeyValueTest[K comparable, V any](g *gomega.WithT, cache coherence.NamedMap[K, V], key K, value V) {
-	var (
-		result   *V
-		err      = cache.Clear(localCtx)
-		oldValue *V
-	)
-	g.Expect(err).NotTo(gomega.HaveOccurred())
-
-	_, err = cache.Put(localCtx, key, value)
-	g.Expect(err).NotTo(gomega.HaveOccurred())
-
-	result, err = cache.Get(localCtx, key)
-	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-
-	g.Expect(*result).To(gomega.Equal(value))
-
-	oldValue, err = cache.Remove(localCtx, key)
-	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-	g.Expect(oldValue).To(gomega.Equal(result))
-}
-
-// RunKeyValueTestNamedCache runs a basic Put/Get test against various key/ values
-func RunKeyValueTestNamedCache[K comparable, V any](g *gomega.WithT, cache coherence.NamedCache[K, V], key K, value V) {
-	var (
-		result interface{}
-		err    = cache.Clear(localCtx)
-	)
-	g.Expect(err).NotTo(gomega.HaveOccurred())
-
-	_, err = cache.Put(localCtx, key, value)
-	g.Expect(err).NotTo(gomega.HaveOccurred())
-
-	result, err = cache.Get(localCtx, key)
-	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-
-	g.Expect(result).To(gomega.Equal(value))
-}
-
 // getDockerComposeCommand returns true if we should use "docker-compose" (v1).
 func useDockerComposeV1() bool {
 	return os.Getenv("DOCKER_COMPOSE_V1") != ""
@@ -622,19 +512,4 @@ func getDockerComposeCommand(arguments ...string) (string, []string) {
 	}
 
 	return command, args
-}
-
-func RunNSTestWithNamedMap(ctx context.Context, g *gomega.WithT, session *coherence.Session, cache string) {
-	namedMap, err := coherence.GetNamedMap[string, string](session, cache)
-	g.Expect(err).To(gomega.Not(gomega.HaveOccurred()))
-	defer func() {
-		_ = namedMap.Destroy(ctx)
-	}()
-
-	_, err = namedMap.Put(ctx, "one", "ONE")
-	g.Expect(err).To(gomega.Not(gomega.HaveOccurred()))
-
-	size, err := namedMap.Size(ctx)
-	g.Expect(err).To(gomega.Not(gomega.HaveOccurred()))
-	g.Expect(size).To(gomega.Equal(1))
 }

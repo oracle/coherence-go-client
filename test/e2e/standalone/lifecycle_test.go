@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024 Oracle and/or its affiliates.
+ * Copyright (c) 2023, 2025 Oracle and/or its affiliates.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * https://oss.oracle.com/licenses/upl.
  */
@@ -26,10 +26,10 @@ func TestCacheLifecycle(t *testing.T) {
 		nameMap  coherence.NamedMap[int, utils.Person]
 		test     func(t *testing.T, namedCache coherence.NamedMap[int, utils.Person])
 	}{
-		{"NamedMapRunTestDestroy", utils.GetNamedMap[int, utils.Person](g, session, "destroy-map"), RunTestDestroy},
-		{"NamedCacheRunTestDestroy", utils.GetNamedCache[int, utils.Person](g, session, "destroy-cache"), RunTestDestroy},
-		{"NamedMapRunTestRelease", utils.GetNamedMap[int, utils.Person](g, session, "release-map"), RunTestRelease},
-		{"NamedCacheRunTestRelease", utils.GetNamedCache[int, utils.Person](g, session, "release-cache"), RunTestRelease},
+		{"NamedMapRunTestDestroy", GetNamedMap[int, utils.Person](g, session, "destroy-map"), RunTestDestroy},
+		{"NamedCacheRunTestDestroy", GetNamedCache[int, utils.Person](g, session, "destroy-cache"), RunTestDestroy},
+		{"NamedMapRunTestRelease", GetNamedMap[int, utils.Person](g, session, "release-map"), RunTestRelease},
+		{"NamedCacheRunTestRelease", GetNamedCache[int, utils.Person](g, session, "release-cache"), RunTestRelease},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.testName, func(t *testing.T) {

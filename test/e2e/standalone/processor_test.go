@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024 Oracle and/or its affiliates.
+ * Copyright (c) 2023, 2025 Oracle and/or its affiliates.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * https://oss.oracle.com/licenses/upl.
  */
@@ -29,26 +29,26 @@ func TestProcessorAgainstMapAndCache(t *testing.T) {
 		nameMap  coherence.NamedMap[int, utils.Person]
 		test     func(t *testing.T, namedCache coherence.NamedMap[int, utils.Person])
 	}{
-		{"NamedMapRunTestInvokeIncrement", utils.GetNamedMap[int, utils.Person](g, session, "increment-map"), RunTestInvokeIncrement},
-		{"NamedCacheRunTestInvokeIncrement", utils.GetNamedCache[int, utils.Person](g, session, "increment-cache"), RunTestInvokeIncrement},
-		{"NamedMapRunTestInvokeMultiply", utils.GetNamedMap[int, utils.Person](g, session, "multiply-map"), RunTestInvokeMultiply},
-		{"NamedCacheRunTestInvokeMultiply", utils.GetNamedCache[int, utils.Person](g, session, "multiply-cache"), RunTestInvokeMultiply},
-		{"NamedMapRunTestInvokeConditionalRemove", utils.GetNamedMap[int, utils.Person](g, session, "cond-remove-map"), RunTestInvokeConditionalRemove},
-		{"NamedCacheRunTestInvokeConditionalRemove", utils.GetNamedCache[int, utils.Person](g, session, "cond-remove-cache"), RunTestInvokeConditionalRemove},
-		{"NamedMapRunTestInvokeConditionalPut", utils.GetNamedMap[int, utils.Person](g, session, "cond-put-map"), RunTestInvokeConditionalPut},
-		{"NamedCacheRunTestInvokeConditionalPut", utils.GetNamedCache[int, utils.Person](g, session, "cond-put-cache"), RunTestInvokeConditionalPut},
-		{"NamedMapRunTestExtractProcessor", utils.GetNamedMap[int, utils.Person](g, session, "extractor-map"), RunTestExtractProcessor},
-		{"NamedCacheRunTestExtractProcessor", utils.GetNamedCache[int, utils.Person](g, session, "extractor-cache"), RunTestExtractProcessor},
-		{"NamedMapRunTestInvokeUpdater", utils.GetNamedMap[int, utils.Person](g, session, "updater-map"), RunTestInvokeUpdater},
-		{"NamedCacheRunTestInvokeUpdater", utils.GetNamedCache[int, utils.Person](g, session, "updater-cache"), RunTestInvokeUpdater},
-		{"NamedMapRunTestMethodInvocationProcessor", utils.GetNamedMap[int, utils.Person](g, session, "mip-map"), RunTestMethodInvocationProcessor},
-		{"NamedCacheRunTestMethodInvocationProcessor", utils.GetNamedCache[int, utils.Person](g, session, "mip-cache"), RunTestMethodInvocationProcessor},
-		{"NamedMapRunTestMethodInvocationProcessorMutator", utils.GetNamedMap[int, utils.Person](g, session, "mip-mutate-map"), RunTestMethodInvocationProcessorMutator},
-		{"NamedCacheRunTestMethodInvocationProcessorMutator", utils.GetNamedCache[int, utils.Person](g, session, "mip-mutate-cache"), RunTestMethodInvocationProcessorMutator},
-		{"NamedMapRunTestInvokeConditionalPutAll", utils.GetNamedMap[int, utils.Person](g, session, "map-conditional-put-all"), RunTestInvokeConditionalPutAll},
-		{"NamedCacheRunTestInvokeConditionalPutAll", utils.GetNamedCache[int, utils.Person](g, session, "cache-conditional-put-all"), RunTestInvokeConditionalPutAll},
-		{"NamedMapRunTestInvokeAll", utils.GetNamedMap[int, utils.Person](g, session, "map-invoke-all"), RunTestInvokeAll},
-		{"NamedCacheRunTestInvokeAll", utils.GetNamedCache[int, utils.Person](g, session, "cache-invoke-all"), RunTestInvokeAll},
+		{"NamedMapRunTestInvokeIncrement", GetNamedMap[int, utils.Person](g, session, "increment-map"), RunTestInvokeIncrement},
+		{"NamedCacheRunTestInvokeIncrement", GetNamedCache[int, utils.Person](g, session, "increment-cache"), RunTestInvokeIncrement},
+		{"NamedMapRunTestInvokeMultiply", GetNamedMap[int, utils.Person](g, session, "multiply-map"), RunTestInvokeMultiply},
+		{"NamedCacheRunTestInvokeMultiply", GetNamedCache[int, utils.Person](g, session, "multiply-cache"), RunTestInvokeMultiply},
+		{"NamedMapRunTestInvokeConditionalRemove", GetNamedMap[int, utils.Person](g, session, "cond-remove-map"), RunTestInvokeConditionalRemove},
+		{"NamedCacheRunTestInvokeConditionalRemove", GetNamedCache[int, utils.Person](g, session, "cond-remove-cache"), RunTestInvokeConditionalRemove},
+		{"NamedMapRunTestInvokeConditionalPut", GetNamedMap[int, utils.Person](g, session, "cond-put-map"), RunTestInvokeConditionalPut},
+		{"NamedCacheRunTestInvokeConditionalPut", GetNamedCache[int, utils.Person](g, session, "cond-put-cache"), RunTestInvokeConditionalPut},
+		{"NamedMapRunTestExtractProcessor", GetNamedMap[int, utils.Person](g, session, "extractor-map"), RunTestExtractProcessor},
+		{"NamedCacheRunTestExtractProcessor", GetNamedCache[int, utils.Person](g, session, "extractor-cache"), RunTestExtractProcessor},
+		{"NamedMapRunTestInvokeUpdater", GetNamedMap[int, utils.Person](g, session, "updater-map"), RunTestInvokeUpdater},
+		{"NamedCacheRunTestInvokeUpdater", GetNamedCache[int, utils.Person](g, session, "updater-cache"), RunTestInvokeUpdater},
+		{"NamedMapRunTestMethodInvocationProcessor", GetNamedMap[int, utils.Person](g, session, "mip-map"), RunTestMethodInvocationProcessor},
+		{"NamedCacheRunTestMethodInvocationProcessor", GetNamedCache[int, utils.Person](g, session, "mip-cache"), RunTestMethodInvocationProcessor},
+		{"NamedMapRunTestMethodInvocationProcessorMutator", GetNamedMap[int, utils.Person](g, session, "mip-mutate-map"), RunTestMethodInvocationProcessorMutator},
+		{"NamedCacheRunTestMethodInvocationProcessorMutator", GetNamedCache[int, utils.Person](g, session, "mip-mutate-cache"), RunTestMethodInvocationProcessorMutator},
+		{"NamedMapRunTestInvokeConditionalPutAll", GetNamedMap[int, utils.Person](g, session, "map-conditional-put-all"), RunTestInvokeConditionalPutAll},
+		{"NamedCacheRunTestInvokeConditionalPutAll", GetNamedCache[int, utils.Person](g, session, "cache-conditional-put-all"), RunTestInvokeConditionalPutAll},
+		{"NamedMapRunTestInvokeAll", GetNamedMap[int, utils.Person](g, session, "map-invoke-all"), RunTestInvokeAll},
+		{"NamedCacheRunTestInvokeAll", GetNamedCache[int, utils.Person](g, session, "cache-invoke-all"), RunTestInvokeAll},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.testName, func(t *testing.T) {
@@ -70,10 +70,10 @@ func TestWithVersionedAgainstMapAndCache(t *testing.T) {
 		nameMap  coherence.NamedMap[int, utils.VersionedPerson]
 		test     func(t *testing.T, namedCache coherence.NamedMap[int, utils.VersionedPerson])
 	}{
-		{"NamedMapRunTestVersionedPut", utils.GetNamedMap[int, utils.VersionedPerson](g, session, "versioned-put-map"), RunTestVersionedPut},
-		{"NamedCacheRunTestVersionedPut", utils.GetNamedCache[int, utils.VersionedPerson](g, session, "versioned-put-cache"), RunTestVersionedPut},
-		{"NamedMapRunTestVersionedPutAll", utils.GetNamedMap[int, utils.VersionedPerson](g, session, "versioned-putall-map"), RunTestVersionedPutAll},
-		{"NamedCacheRunTestVersionedPutAll", utils.GetNamedCache[int, utils.VersionedPerson](g, session, "versioned-putall-cache"), RunTestVersionedPutAll},
+		{"NamedMapRunTestVersionedPut", GetNamedMap[int, utils.VersionedPerson](g, session, "versioned-put-map"), RunTestVersionedPut},
+		{"NamedCacheRunTestVersionedPut", GetNamedCache[int, utils.VersionedPerson](g, session, "versioned-put-cache"), RunTestVersionedPut},
+		{"NamedMapRunTestVersionedPutAll", GetNamedMap[int, utils.VersionedPerson](g, session, "versioned-putall-map"), RunTestVersionedPutAll},
+		{"NamedCacheRunTestVersionedPutAll", GetNamedCache[int, utils.VersionedPerson](g, session, "versioned-putall-cache"), RunTestVersionedPutAll},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.testName, func(t *testing.T) {
@@ -95,8 +95,8 @@ func TestAgainstIntAndString(t *testing.T) {
 		nameMap  coherence.NamedMap[int, string]
 		test     func(t *testing.T, namedCache coherence.NamedMap[int, string])
 	}{
-		{"NamedMapRunTestPreloadProcessor", utils.GetNamedMap[int, string](g, session, "preload"), RunTestPreloadProcessor},
-		{"NamedCacheRunTestPreloadProcessor", utils.GetNamedCache[int, string](g, session, "preload"), RunTestPreloadProcessor},
+		{"NamedMapRunTestPreloadProcessor", GetNamedMap[int, string](g, session, "preload"), RunTestPreloadProcessor},
+		{"NamedCacheRunTestPreloadProcessor", GetNamedCache[int, string](g, session, "preload"), RunTestPreloadProcessor},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.testName, func(t *testing.T) {
@@ -115,14 +115,14 @@ func RunTestPreloadProcessor(t *testing.T, namedMap coherence.NamedMap[int, stri
 	err = namedMap.Clear(ctx)
 	g.Expect(err).To(gomega.Not(gomega.HaveOccurred()))
 
-	utils.AssertSize(g, namedMap, 0)
+	AssertSize(g, namedMap, 0)
 
 	// Preload will cause the cache store to load the value of "Number 1"
 	_, err = coherence.Invoke[int, string, string](ctx, namedMap, 1, processors.Preload())
 	g.Expect(err).NotTo(gomega.HaveOccurred())
 
 	// value should be in cache
-	utils.AssertSize(g, namedMap, 1)
+	AssertSize(g, namedMap, 1)
 
 	value, err = namedMap.Get(ctx, 1)
 	g.Expect(err).To(gomega.Not(gomega.HaveOccurred()))
@@ -223,7 +223,7 @@ func RunTestVersionedPutAll(t *testing.T, namedMap coherence.NamedMap[int, utils
 		processors.VersionedPutAll(values, true, false))
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
-	utils.AssertSize(g, namedMap, 1)
+	AssertSize(g, namedMap, 1)
 }
 
 func RunTestExtractProcessor(t *testing.T, namedMap coherence.NamedMap[int, utils.Person]) {
@@ -354,7 +354,7 @@ func RunTestInvokeConditionalRemove(t *testing.T, namedMap coherence.NamedMap[in
 	g.Expect(oldValue).To(gomega.BeNil())
 
 	// should have been removed
-	utils.AssertSize(g, namedMap, 0)
+	AssertSize(g, namedMap, 0)
 
 	oldValue, err = namedMap.Put(ctx, 1, person)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
@@ -366,7 +366,7 @@ func RunTestInvokeConditionalRemove(t *testing.T, namedMap coherence.NamedMap[in
 	g.Expect(oldValue).To(gomega.BeNil())
 
 	// should have been removed as age is greater than 5
-	utils.AssertSize(g, namedMap, 0)
+	AssertSize(g, namedMap, 0)
 
 	oldValue, err = namedMap.Put(ctx, 1, person)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
@@ -378,7 +378,7 @@ func RunTestInvokeConditionalRemove(t *testing.T, namedMap coherence.NamedMap[in
 	g.Expect(oldValue).To(gomega.BeNil())
 
 	// should not been removed as age is NOT greater than 10
-	utils.AssertSize(g, namedMap, 1)
+	AssertSize(g, namedMap, 1)
 }
 
 func RunTestInvokeConditionalPut(t *testing.T, namedMap coherence.NamedMap[int, utils.Person]) {
@@ -393,15 +393,15 @@ func RunTestInvokeConditionalPut(t *testing.T, namedMap coherence.NamedMap[int, 
 	oldValue, err = coherence.Invoke[int, utils.Person, utils.Person](ctx, namedMap, 1, processors.ConditionalPut[utils.Person](filters.Always(), person))
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	g.Expect(oldValue).To(gomega.BeNil())
-	utils.AssertSize(g, namedMap, 1)
+	AssertSize(g, namedMap, 1)
 
-	utils.ClearNamedMap[int, utils.Person](g, namedMap)
+	ClearNamedMap[int, utils.Person](g, namedMap)
 
 	// should put as filter is false
 	oldValue, err = coherence.Invoke[int, utils.Person, utils.Person](ctx, namedMap, 1, processors.ConditionalPut[utils.Person](filters.Never(), person))
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	g.Expect(oldValue).To(gomega.BeNil())
-	utils.AssertSize(g, namedMap, 0)
+	AssertSize(g, namedMap, 0)
 }
 
 func RunTestInvokeUpdater(t *testing.T, namedMap coherence.NamedMap[int, utils.Person]) {
@@ -455,14 +455,14 @@ func RunTestInvokeConditionalPutAll(t *testing.T, namedMap coherence.NamedMap[in
 	// should put as filter is true
 	_, err = coherence.Invoke[int, utils.Person, int](ctx, namedMap, 1, processors.ConditionalPutAll[int, utils.Person](filters.Always(), values))
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-	utils.AssertSize(g, namedMap, 1)
+	AssertSize(g, namedMap, 1)
 
-	utils.ClearNamedMap[int, utils.Person](g, namedMap)
+	ClearNamedMap[int, utils.Person](g, namedMap)
 
 	// should put as filter is false
 	_, err = coherence.Invoke[int, utils.Person, int](ctx, namedMap, 1, processors.ConditionalPutAll[int, utils.Person](filters.Never(), values))
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-	utils.AssertSize(g, namedMap, 0)
+	AssertSize(g, namedMap, 0)
 }
 
 func RunTestInvokeAll(t *testing.T, namedMap coherence.NamedMap[int, utils.Person]) {
@@ -522,5 +522,5 @@ func addPerson(g *gomega.WithT, namedMap coherence.NamedMap[int, utils.Person]) 
 	_, err := namedMap.Put(ctx, 1, utils.Person{ID: 1, Name: "Tim", Age: 10, Salary: 1000,
 		HomeAddress: utils.Address{Address1: "address1", Address2: "address1", City: "Perth", State: "WA", PostCode: 6000}})
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-	utils.AssertSize(g, namedMap, 1)
+	AssertSize(g, namedMap, 1)
 }

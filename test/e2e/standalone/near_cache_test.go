@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Oracle and/or its affiliates.
+ * Copyright (c) 2024, 2025 Oracle and/or its affiliates.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * https://oss.oracle.com/licenses/upl.
  */
@@ -85,7 +85,7 @@ func RunTestNearCacheBasic(t *testing.T, namedMap coherence.NamedMap[int, utils.
 	oldValue, err = namedMap.Put(ctx, person1.ID, person1)
 	g.Expect(err).NotTo(gomega.HaveOccurred())
 	g.Expect(oldValue).To(gomega.BeNil())
-	utils.AssertSize[int, utils.Person](g, namedMap, 1)
+	AssertSize[int, utils.Person](g, namedMap, 1)
 
 	// this should add to the near cache
 	_, err = namedMap.Get(ctx, person1.ID)
@@ -110,7 +110,7 @@ func RunTestNearCacheBasic(t *testing.T, namedMap coherence.NamedMap[int, utils.
 	// sleep for 15 seconds, this should expiry the entry and cause re-read
 	utils.Sleep(15)
 
-	utils.AssertSize[int, utils.Person](g, namedMap, 1)
+	AssertSize[int, utils.Person](g, namedMap, 1)
 
 	_, err = namedMap.Get(ctx, person1.ID)
 	g.Expect(err).NotTo(gomega.HaveOccurred())
@@ -120,13 +120,13 @@ func RunTestNearCacheBasic(t *testing.T, namedMap coherence.NamedMap[int, utils.
 	g.Expect(err).NotTo(gomega.HaveOccurred())
 
 	g.Expect(namedMap.GetNearCacheStats().Size()).To(gomega.Equal(0))
-	utils.AssertSize[int, utils.Person](g, namedMap, 0)
+	AssertSize[int, utils.Person](g, namedMap, 0)
 
 	// add new entry and do a get to populate near cache
 	oldValue, err = namedMap.Put(ctx, person1.ID, person1)
 	g.Expect(err).NotTo(gomega.HaveOccurred())
 	g.Expect(oldValue).To(gomega.BeNil())
-	utils.AssertSize[int, utils.Person](g, namedMap, 1)
+	AssertSize[int, utils.Person](g, namedMap, 1)
 
 	_, err = namedMap.Get(ctx, person1.ID)
 	g.Expect(err).NotTo(gomega.HaveOccurred())
@@ -161,7 +161,7 @@ func RunTestNearCacheGetAll(t *testing.T, namedMap coherence.NamedMap[int, utils
 	// populate
 	err = namedMap.PutAll(ctx, people)
 	g.Expect(err).NotTo(gomega.HaveOccurred())
-	utils.AssertSize[int, utils.Person](g, namedMap, 3)
+	AssertSize[int, utils.Person](g, namedMap, 3)
 
 	count := 0
 	// issue a GetAll for all keys, should be no hits
@@ -187,7 +187,7 @@ func RunTestNearCacheGetAll(t *testing.T, namedMap coherence.NamedMap[int, utils
 	// add the entries back
 	err = namedMap.PutAll(ctx, people)
 	g.Expect(err).NotTo(gomega.HaveOccurred())
-	utils.AssertSize[int, utils.Person](g, namedMap, 3)
+	AssertSize[int, utils.Person](g, namedMap, 3)
 
 	// issue a Get for key 1 and 2 only
 	_, err = namedMap.Get(ctx, 1)
@@ -229,7 +229,7 @@ func RunTestNearCacheGetAll2(t *testing.T, namedMap coherence.NamedMap[int, util
 
 	err = namedMap.PutAll(ctx, people)
 	g.Expect(err).NotTo(gomega.HaveOccurred())
-	utils.AssertSize[int, utils.Person](g, namedMap, 3)
+	AssertSize[int, utils.Person](g, namedMap, 3)
 
 	count := 0
 	// issue a GetAll for all keys, should be no hits
@@ -338,7 +338,7 @@ func RunTestNearCacheWithHighUnits(t *testing.T, namedMap coherence.NamedMap[int
 		g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	}
 
-	utils.AssertSize[int, utils.Person](g, namedMap, 200)
+	AssertSize[int, utils.Person](g, namedMap, 200)
 
 	// issue 100 gets to fill the near cache
 	for i := 1; i <= 100; i++ {
@@ -383,7 +383,7 @@ func RunTestNearWithClear(t *testing.T, namedMap coherence.NamedMap[int, utils.P
 		_, err = namedMap.Put(ctx, p2.ID, p2)
 		g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
-		utils.AssertSize[int, utils.Person](g, namedMap, 2)
+		AssertSize[int, utils.Person](g, namedMap, 2)
 
 		p1Get, err = namedMap.Get(ctx, p1.ID)
 		g.Expect(err).ShouldNot(gomega.HaveOccurred())
@@ -422,7 +422,7 @@ func RunTestNearCacheWithHighUnitsAccess(t *testing.T, namedMap coherence.NamedM
 		g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	}
 
-	utils.AssertSize[int, utils.Person](g, namedMap, 200)
+	AssertSize[int, utils.Person](g, namedMap, 200)
 
 	// issue 50 gets, should add entries to the near cache
 	for i := 1; i <= 50; i++ {
@@ -481,7 +481,7 @@ func RunTestNearCacheWithHighUnitsMemory(t *testing.T, namedMap coherence.NamedM
 	}
 	err = namedMap.PutAll(ctx, buffer)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-	utils.AssertSize[int, utils.Person](g, namedMap, 5_000)
+	AssertSize[int, utils.Person](g, namedMap, 5_000)
 
 	// issue 10_000 gets to fill the near cache
 	for i := 1; i <= 5_000; i++ {
@@ -827,7 +827,7 @@ func RunTestNearCacheReplaces(t *testing.T, namedMap coherence.NamedMap[int, uti
 	// clear the cache
 	err = namedMap.Clear(ctx)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-	utils.AssertSize[int, utils.Person](g, namedMap, 0)
+	AssertSize[int, utils.Person](g, namedMap, 0)
 
 	utils.Sleep(5)
 	g.Expect(namedMap.GetNearCacheStats().Size()).To(gomega.Equal(0))

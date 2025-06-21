@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024 Oracle and/or its affiliates.
+ * Copyright (c) 2023, 2025 Oracle and/or its affiliates.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * https://oss.oracle.com/licenses/upl.
  */
@@ -45,8 +45,8 @@ func TestJavaSerializationAgainstMapAndCache(t *testing.T) {
 		nameMap  coherence.NamedMap[int, Customer]
 		test     func(t *testing.T, namedCache coherence.NamedMap[int, Customer])
 	}{
-		{"NamedMapSerializationTest", utils.GetNamedMap[int, Customer](g, session, "customer-map"), RunSerializationTest},
-		{"NamedCacheSerializationTest", utils.GetNamedCache[int, Customer](g, session, "customer-cache"), RunSerializationTest},
+		{"NamedMapSerializationTest", GetNamedMap[int, Customer](g, session, "customer-map"), RunSerializationTest},
+		{"NamedCacheSerializationTest", GetNamedCache[int, Customer](g, session, "customer-cache"), RunSerializationTest},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.testName, func(t *testing.T) {
