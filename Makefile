@@ -13,8 +13,9 @@ CURRDIR := $(shell pwd)
 USER_ID := $(shell echo "`id -u`:`id -g`")
 
 override BUILD_BIN       := $(CURRDIR)/bin
-override PROTO_DIR	 := $(CURRDIR)/etc/proto
+override PROTO_DIR	     := $(CURRDIR)/etc/proto
 override PROTOV1_DIR	 := $(CURRDIR)/etc/proto-v1
+override PROTOTOPICS_DIR := $(CURRDIR)/etc/topics
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Set the location of various build tools
@@ -240,23 +241,30 @@ ifeq ($(SKIP_PROTO_GENERATION),true)
 	@echo "Skipping proto generation..."
 else
 	mkdir -p $(PROTOV1_DIR) || true
-	curl $(CURL_AUTH) -o $(PROTOV1_DIR)/proxy_service_messages_v1.proto https://raw.githubusercontent.com/oracle/coherence/25.03.1/prj/coherence-grpc/src/main/proto/proxy_service_messages_v1.proto
-	curl $(CURL_AUTH) -o $(PROTOV1_DIR)/proxy_service_v1.proto https://raw.githubusercontent.com/oracle/coherence/25.03.1/prj/coherence-grpc/src/main/proto/proxy_service_v1.proto
-	curl $(CURL_AUTH) -o $(PROTOV1_DIR)/common_messages_v1.proto https://raw.githubusercontent.com/oracle/coherence/25.03.1/prj/coherence-grpc/src/main/proto/common_messages_v1.proto
-	curl $(CURL_AUTH) -o $(PROTOV1_DIR)/cache_service_messages_v1.proto https://raw.githubusercontent.com/oracle/coherence/25.03.1/prj/coherence-grpc/src/main/proto/cache_service_messages_v1.proto
-	curl $(CURL_AUTH) -o $(PROTOV1_DIR)/queue_service_messages_v1.proto https://raw.githubusercontent.com/oracle/coherence/25.03.1/prj/coherence-grpc/src/main/proto/queue_service_messages_v1.proto
+	mkdir -p $(PROTOTOPICS_DIR) || true
+	curl $(CURL_AUTH) -o $(PROTOV1_DIR)/proxy_service_messages_v1.proto https://raw.githubusercontent.com/oracle/coherence/refs/heads/main/prj/coherence-grpc/src/main/proto/proxy_service_messages_v1.proto
+	curl $(CURL_AUTH) -o $(PROTOV1_DIR)/proxy_service_v1.proto https://raw.githubusercontent.com/oracle/coherence/refs/heads/main/prj/coherence-grpc/src/main/proto/proxy_service_v1.proto
+	curl $(CURL_AUTH) -o $(PROTOV1_DIR)/common_messages_v1.proto https://raw.githubusercontent.com/oracle/coherence/refs/heads/main/prj/coherence-grpc/src/main/proto/common_messages_v1.proto
+	curl $(CURL_AUTH) -o $(PROTOV1_DIR)/cache_service_messages_v1.proto https://raw.githubusercontent.com/oracle/coherence/refs/heads/main/prj/coherence-grpc/src/main/proto/cache_service_messages_v1.proto
+	curl $(CURL_AUTH) -o $(PROTOV1_DIR)/queue_service_messages_v1.proto https://raw.githubusercontent.com/oracle/coherence/refs/heads/main/prj/coherence-grpc/src/main/proto/queue_service_messages_v1.proto
+	curl $(CURL_AUTH) -o $(PROTOTOPICS_DIR)/topic_service_messages_v1.proto https://raw.githubusercontent.com/oracle/coherence/refs/heads/main/prj/coherence-grpc/src/main/proto/topic_service_messages_v1.proto
 	echo "" >> $(PROTOV1_DIR)/proxy_service_messages_v1.proto
 	echo "" >> $(PROTOV1_DIR)/proxy_service_v1.proto
 	echo "" >> $(PROTOV1_DIR)/common_messages_v1.proto
 	echo "" >> $(PROTOV1_DIR)/cache_service_messages_v1.proto
 	echo "" >> $(PROTOV1_DIR)/queue_service_messages_v1.proto
+	echo "" >> $(PROTOTOPICS_DIR)/topic_service_messages_v1.proto
 	echo 'option go_package = "github.com/oracle/coherence-go-client/proto/v1";' >> $(PROTOV1_DIR)/proxy_service_messages_v1.proto
 	echo 'option go_package = "github.com/oracle/coherence-go-client/proto/v1";' >> $(PROTOV1_DIR)/proxy_service_v1.proto
 	echo 'option go_package = "github.com/oracle/coherence-go-client/proto/v1";' >> $(PROTOV1_DIR)/common_messages_v1.proto
 	echo 'option go_package = "github.com/oracle/coherence-go-client/proto/v1";' >> $(PROTOV1_DIR)/cache_service_messages_v1.proto
 	echo 'option go_package = "github.com/oracle/coherence-go-client/proto/v1";' >> $(PROTOV1_DIR)/queue_service_messages_v1.proto
-	mkdir ./proto/v1 || true
-	$(TOOLS_BIN)/protoc --proto_path=./etc/proto-v1 --go_out=./proto/v1 --go_opt=paths=source_relative --go-grpc_out=./proto/v1 --go-grpc_opt=paths=source_relative etc/proto-v1/proxy_service_messages_v1.proto etc/proto-v1/proxy_service_v1.proto etc/proto-v1/common_messages_v1.proto etc/proto-v1/cache_service_messages_v1.proto etc/proto-v1/queue_service_messages_v1.proto
+	echo 'option go_package = "github.com/oracle/coherence-go-client/proto/v1/topics";' >> $(PROTOTOPICS_DIR)/topic_service_messages_v1.proto
+	mkdir ./proto/v1  ./proto/topics || true
+	$(TOOLS_BIN)/protoc --proto_path=./etc/proto-v1 --go_out=./proto/v1  --go_opt=paths=source_relative --go-grpc_out=./proto/v1     --go-grpc_opt=paths=source_relative etc/proto-v1/proxy_service_messages_v1.proto etc/proto-v1/proxy_service_v1.proto etc/proto-v1/common_messages_v1.proto etc/proto-v1/cache_service_messages_v1.proto etc/proto-v1/queue_service_messages_v1.proto
+	$(TOOLS_BIN)/protoc --proto_path=./etc/topics --proto_path=./etc/proto-v1  --go_out=./proto/topics --go_opt=paths=source_relative --go-grpc_out=./proto/topics --go-grpc_opt=paths=source_relative etc/topics/topic_service_messages_v1.proto
+	cat proto/topics/topic_service_messages_v1.pb.go | sed 's,^\tv1 "github.com/oracle/coherence-go-client/proto/v1",\tv1 "github.com/oracle/coherence-go-client/v2/proto/v1",' > /tmp/proto-queues
+	mv /tmp/proto-queues proto/topics/topic_service_messages_v1.pb.go
 endif
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -433,6 +441,15 @@ test-e2e-standalone-queues: test-clean test gotestsum $(BUILD_PROPS) ## Run e2e 
 	cd test && CGO_ENABLED=0 $(GOTESTSUM) --format testname --junitfile $(TEST_LOGS_DIR)/go-client-test-queues.xml \
 	  -- $(GO_TEST_FLAGS) -v -coverprofile=$(COVERAGE_DIR)/cover-functional-queues.out -v ./e2e/queues/... -coverpkg=github.com/oracle/coherence-go-client/v2/coherence/...
 	go tool cover -func=$(COVERAGE_DIR)/cover-functional-queues.out | grep -v '0.0%'
+
+# ----------------------------------------------------------------------------------------------------------------------
+# Executes the Go end to end tests for standalone Coherence with Topics
+# ----------------------------------------------------------------------------------------------------------------------
+.PHONY: test-e2e-standalone-topics
+test-e2e-standalone-topics: test-clean test gotestsum $(BUILD_PROPS) ## Run e2e tests with Coherence queues
+	cd test && CGO_ENABLED=0 $(GOTESTSUM) --format testname --junitfile $(TEST_LOGS_DIR)/go-client-test-queues.xml \
+	  -- $(GO_TEST_FLAGS) -v -coverprofile=$(COVERAGE_DIR)/cover-functional-topics.out -v ./e2e/topics/... -coverpkg=github.com/oracle/coherence-go-client/v2/coherence/...
+	go tool cover -func=$(COVERAGE_DIR)/cover-functional-topics.out | grep -v '0.0%'
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Executes the Go end to end tests for gRPC v1 tests

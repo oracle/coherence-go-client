@@ -327,7 +327,9 @@ type InitRequest struct {
 	// The requested frequency that heartbeat messages should be sent by the server (in millis)
 	Heartbeat *int64 `protobuf:"varint,7,opt,name=heartbeat,proto3,oneof" json:"heartbeat,omitempty"`
 	// The optional client UUID (usually from Coherence clients that have a local Member UUID).
-	ClientUuid    []byte `protobuf:"bytes,8,opt,name=clientUuid,proto3,oneof" json:"clientUuid,omitempty"`
+	ClientUuid []byte `protobuf:"bytes,8,opt,name=clientUuid,proto3,oneof" json:"clientUuid,omitempty"`
+	// The client's member identity
+	Identity      *ClientMemberIdentity `protobuf:"bytes,9,opt,name=identity,proto3,oneof" json:"identity,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -407,6 +409,13 @@ func (x *InitRequest) GetHeartbeat() int64 {
 func (x *InitRequest) GetClientUuid() []byte {
 	if x != nil {
 		return x.ClientUuid
+	}
+	return nil
+}
+
+func (x *InitRequest) GetIdentity() *ClientMemberIdentity {
+	if x != nil {
+		return x.Identity
 	}
 	return nil
 }
@@ -502,6 +511,133 @@ func (x *InitResponse) GetProxyMemberUuid() []byte {
 	return nil
 }
 
+type ClientMemberIdentity struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The name of the cluster with which this member is associated.
+	ClusterName *string `protobuf:"bytes,1,opt,name=clusterName,proto3,oneof" json:"clusterName,omitempty"`
+	// The Member's machine Id. This identifier should be the same for Members that are on
+	// the same physical machine, and ideally different for Members that are on different
+	// physical machines.
+	MachineId int32 `protobuf:"varint,2,opt,name=machineId,proto3" json:"machineId,omitempty"`
+	// The configured name for the Machine (such as a host name) in which this Member resides.
+	// This name is used for logging purposes and to differentiate among multiple servers,
+	// and may be used as the basis for determining the MachineId property.
+	MachineName *string `protobuf:"bytes,3,opt,name=machineName,proto3,oneof" json:"machineName,omitempty"`
+	// The configured name for the Member. This name is used for logging purposes and
+	// to differentiate among Members running within a particular process.
+	MemberName *string `protobuf:"bytes,4,opt,name=memberName,proto3,oneof" json:"memberName,omitempty"`
+	// The member priority
+	Priority int32 `protobuf:"varint,5,opt,name=priority,proto3" json:"priority,omitempty"`
+	// The configured name for the Process (such as a JVM) in which this Member resides.
+	// This name is used for logging purposes and to differentiate among multiple processes on a a single machine.
+	ProcessName *string `protobuf:"bytes,6,opt,name=processName,proto3,oneof" json:"processName,omitempty"`
+	// The configured name for the Rack (such as a physical rack, cage or blade frame) in which
+	// this Member resides. This name is used for logging purposes and to differentiate among multiple
+	// racks within a particular data center, for example.
+	RackName *string `protobuf:"bytes,7,opt,name=rackName,proto3,oneof" json:"rackName,omitempty"`
+	// The configured name for the Site (such as a data center) in which this Member resides.
+	// This name is used for logging purposes and to differentiate among multiple geographic sites.
+	SiteName *string `protobuf:"bytes,8,opt,name=siteName,proto3,oneof" json:"siteName,omitempty"`
+	// The configured role name for the Member. This role is completely definable by the application,
+	// and can be used to determine what Members to use for specific purposes.
+	RoleName      *string `protobuf:"bytes,9,opt,name=roleName,proto3,oneof" json:"roleName,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ClientMemberIdentity) Reset() {
+	*x = ClientMemberIdentity{}
+	mi := &file_proxy_service_messages_v1_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ClientMemberIdentity) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ClientMemberIdentity) ProtoMessage() {}
+
+func (x *ClientMemberIdentity) ProtoReflect() protoreflect.Message {
+	mi := &file_proxy_service_messages_v1_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ClientMemberIdentity.ProtoReflect.Descriptor instead.
+func (*ClientMemberIdentity) Descriptor() ([]byte, []int) {
+	return file_proxy_service_messages_v1_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *ClientMemberIdentity) GetClusterName() string {
+	if x != nil && x.ClusterName != nil {
+		return *x.ClusterName
+	}
+	return ""
+}
+
+func (x *ClientMemberIdentity) GetMachineId() int32 {
+	if x != nil {
+		return x.MachineId
+	}
+	return 0
+}
+
+func (x *ClientMemberIdentity) GetMachineName() string {
+	if x != nil && x.MachineName != nil {
+		return *x.MachineName
+	}
+	return ""
+}
+
+func (x *ClientMemberIdentity) GetMemberName() string {
+	if x != nil && x.MemberName != nil {
+		return *x.MemberName
+	}
+	return ""
+}
+
+func (x *ClientMemberIdentity) GetPriority() int32 {
+	if x != nil {
+		return x.Priority
+	}
+	return 0
+}
+
+func (x *ClientMemberIdentity) GetProcessName() string {
+	if x != nil && x.ProcessName != nil {
+		return *x.ProcessName
+	}
+	return ""
+}
+
+func (x *ClientMemberIdentity) GetRackName() string {
+	if x != nil && x.RackName != nil {
+		return *x.RackName
+	}
+	return ""
+}
+
+func (x *ClientMemberIdentity) GetSiteName() string {
+	if x != nil && x.SiteName != nil {
+		return *x.SiteName
+	}
+	return ""
+}
+
+func (x *ClientMemberIdentity) GetRoleName() string {
+	if x != nil && x.RoleName != nil {
+		return *x.RoleName
+	}
+	return ""
+}
+
 var File_proxy_service_messages_v1_proto protoreflect.FileDescriptor
 
 const file_proxy_service_messages_v1_proto_rawDesc = "" +
@@ -529,7 +665,7 @@ const file_proxy_service_messages_v1_proto_rawDesc = "" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12*\n" +
 	"\x05value\x18\x02 \x01(\v2\x14.google.protobuf.AnyR\x05value:\x028\x01B\n" +
 	"\n" +
-	"\bresponse\"\xa2\x02\n" +
+	"\bresponse\"\xfa\x02\n" +
 	"\vInitRequest\x12\x14\n" +
 	"\x05scope\x18\x02 \x01(\tR\x05scope\x12\x16\n" +
 	"\x06format\x18\x03 \x01(\tR\x06format\x12\x1a\n" +
@@ -539,17 +675,38 @@ const file_proxy_service_messages_v1_proto_rawDesc = "" +
 	"\theartbeat\x18\a \x01(\x03H\x00R\theartbeat\x88\x01\x01\x12#\n" +
 	"\n" +
 	"clientUuid\x18\b \x01(\fH\x01R\n" +
-	"clientUuid\x88\x01\x01B\f\n" +
+	"clientUuid\x88\x01\x01\x12I\n" +
+	"\bidentity\x18\t \x01(\v2(.coherence.proxy.v1.ClientMemberIdentityH\x02R\bidentity\x88\x01\x01B\f\n" +
 	"\n" +
 	"_heartbeatB\r\n" +
-	"\v_clientUuid\"\xde\x01\n" +
+	"\v_clientUuidB\v\n" +
+	"\t_identity\"\xde\x01\n" +
 	"\fInitResponse\x12\x12\n" +
 	"\x04uuid\x18\x01 \x01(\fR\x04uuid\x12\x18\n" +
 	"\aversion\x18\x02 \x01(\tR\aversion\x12&\n" +
 	"\x0eencodedVersion\x18\x03 \x01(\x05R\x0eencodedVersion\x12(\n" +
 	"\x0fprotocolVersion\x18\x04 \x01(\x05R\x0fprotocolVersion\x12$\n" +
 	"\rproxyMemberId\x18\x05 \x01(\x05R\rproxyMemberId\x12(\n" +
-	"\x0fproxyMemberUuid\x18\x06 \x01(\fR\x0fproxyMemberUuidB_\n" +
+	"\x0fproxyMemberUuid\x18\x06 \x01(\fR\x0fproxyMemberUuid\"\xb3\x03\n" +
+	"\x14ClientMemberIdentity\x12%\n" +
+	"\vclusterName\x18\x01 \x01(\tH\x00R\vclusterName\x88\x01\x01\x12\x1c\n" +
+	"\tmachineId\x18\x02 \x01(\x05R\tmachineId\x12%\n" +
+	"\vmachineName\x18\x03 \x01(\tH\x01R\vmachineName\x88\x01\x01\x12#\n" +
+	"\n" +
+	"memberName\x18\x04 \x01(\tH\x02R\n" +
+	"memberName\x88\x01\x01\x12\x1a\n" +
+	"\bpriority\x18\x05 \x01(\x05R\bpriority\x12%\n" +
+	"\vprocessName\x18\x06 \x01(\tH\x03R\vprocessName\x88\x01\x01\x12\x1f\n" +
+	"\brackName\x18\a \x01(\tH\x04R\brackName\x88\x01\x01\x12\x1f\n" +
+	"\bsiteName\x18\b \x01(\tH\x05R\bsiteName\x88\x01\x01\x12\x1f\n" +
+	"\broleName\x18\t \x01(\tH\x06R\broleName\x88\x01\x01B\x0e\n" +
+	"\f_clusterNameB\x0e\n" +
+	"\f_machineNameB\r\n" +
+	"\v_memberNameB\x0e\n" +
+	"\f_processNameB\v\n" +
+	"\t_rackNameB\v\n" +
+	"\t_siteNameB\v\n" +
+	"\t_roleNameB_\n" +
 	"+com.oracle.coherence.grpc.messages.proxy.v1P\x01Z.github.com/oracle/coherence-go-client/proto/v1b\x06proto3"
 
 var (
@@ -564,37 +721,39 @@ func file_proxy_service_messages_v1_proto_rawDescGZIP() []byte {
 	return file_proxy_service_messages_v1_proto_rawDescData
 }
 
-var file_proxy_service_messages_v1_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_proxy_service_messages_v1_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_proxy_service_messages_v1_proto_goTypes = []any{
-	(*ProxyRequest)(nil),     // 0: coherence.proxy.v1.ProxyRequest
-	(*ProxyResponse)(nil),    // 1: coherence.proxy.v1.ProxyResponse
-	(*InitRequest)(nil),      // 2: coherence.proxy.v1.InitRequest
-	(*InitResponse)(nil),     // 3: coherence.proxy.v1.InitResponse
-	nil,                      // 4: coherence.proxy.v1.ProxyRequest.ContextEntry
-	nil,                      // 5: coherence.proxy.v1.ProxyResponse.ContextEntry
-	(*anypb.Any)(nil),        // 6: google.protobuf.Any
-	(*HeartbeatMessage)(nil), // 7: coherence.common.v1.HeartbeatMessage
-	(*ErrorMessage)(nil),     // 8: coherence.common.v1.ErrorMessage
-	(*Complete)(nil),         // 9: coherence.common.v1.Complete
+	(*ProxyRequest)(nil),         // 0: coherence.proxy.v1.ProxyRequest
+	(*ProxyResponse)(nil),        // 1: coherence.proxy.v1.ProxyResponse
+	(*InitRequest)(nil),          // 2: coherence.proxy.v1.InitRequest
+	(*InitResponse)(nil),         // 3: coherence.proxy.v1.InitResponse
+	(*ClientMemberIdentity)(nil), // 4: coherence.proxy.v1.ClientMemberIdentity
+	nil,                          // 5: coherence.proxy.v1.ProxyRequest.ContextEntry
+	nil,                          // 6: coherence.proxy.v1.ProxyResponse.ContextEntry
+	(*anypb.Any)(nil),            // 7: google.protobuf.Any
+	(*HeartbeatMessage)(nil),     // 8: coherence.common.v1.HeartbeatMessage
+	(*ErrorMessage)(nil),         // 9: coherence.common.v1.ErrorMessage
+	(*Complete)(nil),             // 10: coherence.common.v1.Complete
 }
 var file_proxy_service_messages_v1_proto_depIdxs = []int32{
 	2,  // 0: coherence.proxy.v1.ProxyRequest.init:type_name -> coherence.proxy.v1.InitRequest
-	6,  // 1: coherence.proxy.v1.ProxyRequest.message:type_name -> google.protobuf.Any
-	7,  // 2: coherence.proxy.v1.ProxyRequest.heartbeat:type_name -> coherence.common.v1.HeartbeatMessage
-	4,  // 3: coherence.proxy.v1.ProxyRequest.context:type_name -> coherence.proxy.v1.ProxyRequest.ContextEntry
+	7,  // 1: coherence.proxy.v1.ProxyRequest.message:type_name -> google.protobuf.Any
+	8,  // 2: coherence.proxy.v1.ProxyRequest.heartbeat:type_name -> coherence.common.v1.HeartbeatMessage
+	5,  // 3: coherence.proxy.v1.ProxyRequest.context:type_name -> coherence.proxy.v1.ProxyRequest.ContextEntry
 	3,  // 4: coherence.proxy.v1.ProxyResponse.init:type_name -> coherence.proxy.v1.InitResponse
-	6,  // 5: coherence.proxy.v1.ProxyResponse.message:type_name -> google.protobuf.Any
-	8,  // 6: coherence.proxy.v1.ProxyResponse.error:type_name -> coherence.common.v1.ErrorMessage
-	9,  // 7: coherence.proxy.v1.ProxyResponse.complete:type_name -> coherence.common.v1.Complete
-	7,  // 8: coherence.proxy.v1.ProxyResponse.heartbeat:type_name -> coherence.common.v1.HeartbeatMessage
-	5,  // 9: coherence.proxy.v1.ProxyResponse.context:type_name -> coherence.proxy.v1.ProxyResponse.ContextEntry
-	6,  // 10: coherence.proxy.v1.ProxyRequest.ContextEntry.value:type_name -> google.protobuf.Any
-	6,  // 11: coherence.proxy.v1.ProxyResponse.ContextEntry.value:type_name -> google.protobuf.Any
-	12, // [12:12] is the sub-list for method output_type
-	12, // [12:12] is the sub-list for method input_type
-	12, // [12:12] is the sub-list for extension type_name
-	12, // [12:12] is the sub-list for extension extendee
-	0,  // [0:12] is the sub-list for field type_name
+	7,  // 5: coherence.proxy.v1.ProxyResponse.message:type_name -> google.protobuf.Any
+	9,  // 6: coherence.proxy.v1.ProxyResponse.error:type_name -> coherence.common.v1.ErrorMessage
+	10, // 7: coherence.proxy.v1.ProxyResponse.complete:type_name -> coherence.common.v1.Complete
+	8,  // 8: coherence.proxy.v1.ProxyResponse.heartbeat:type_name -> coherence.common.v1.HeartbeatMessage
+	6,  // 9: coherence.proxy.v1.ProxyResponse.context:type_name -> coherence.proxy.v1.ProxyResponse.ContextEntry
+	4,  // 10: coherence.proxy.v1.InitRequest.identity:type_name -> coherence.proxy.v1.ClientMemberIdentity
+	7,  // 11: coherence.proxy.v1.ProxyRequest.ContextEntry.value:type_name -> google.protobuf.Any
+	7,  // 12: coherence.proxy.v1.ProxyResponse.ContextEntry.value:type_name -> google.protobuf.Any
+	13, // [13:13] is the sub-list for method output_type
+	13, // [13:13] is the sub-list for method input_type
+	13, // [13:13] is the sub-list for extension type_name
+	13, // [13:13] is the sub-list for extension extendee
+	0,  // [0:13] is the sub-list for field type_name
 }
 
 func init() { file_proxy_service_messages_v1_proto_init() }
@@ -616,13 +775,14 @@ func file_proxy_service_messages_v1_proto_init() {
 		(*ProxyResponse_Heartbeat)(nil),
 	}
 	file_proxy_service_messages_v1_proto_msgTypes[2].OneofWrappers = []any{}
+	file_proxy_service_messages_v1_proto_msgTypes[4].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proxy_service_messages_v1_proto_rawDesc), len(file_proxy_service_messages_v1_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   6,
+			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

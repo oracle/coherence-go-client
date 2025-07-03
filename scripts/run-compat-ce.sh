@@ -61,3 +61,6 @@ COHERENCE_BASE_IMAGE=gcr.io/distroless/java17-debian12 PROFILES=,jakarta,-javax 
 
 echo "Coherence CE 25.03.1 All Tests gRPC v1"
 COHERENCE_BASE_IMAGE=gcr.io/distroless/java17-debian12 PROFILES=,jakarta,-javax COHERENCE_VERSION=25.03.1 make clean generate-proto generate-proto-v1 build-test-images test-e2e-standalone
+
+echo "Coherence CE 25.09-SNAPSHOT with topics"
+COHERENCE_BASE_IMAGE=gcr.io/distroless/java17-debian12 PROFILES=,jakarta,-javax,queues COHERENCE_VERSION=25.09-SNAPSHOT make clean generate-proto generate-proto-v1 build-test-images test-e2e-standalone-topics

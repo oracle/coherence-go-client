@@ -8,6 +8,7 @@ package coherence
 
 import (
 	"context"
+	pb1topics "github.com/oracle/coherence-go-client/v2/proto/topics"
 	pb1 "github.com/oracle/coherence-go-client/v2/proto/v1"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
@@ -20,7 +21,7 @@ func (m *streamManagerV1) ensureQueue(ctx context.Context, queue string, queueTy
 	return m.ensure(ctx, queue, m.session.queueIDMap, queueType)
 }
 
-// submitRequest submits a request to the stream manager and returns named queue request.
+// submitQueueRequest submits a request to the stream manager and returns named queue request.
 func (m *streamManagerV1) submitQueueRequest(req *pb1.ProxyRequest, requestType pb1.NamedQueueRequestType) (proxyRequestChannel, error) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
@@ -37,7 +38,24 @@ func (m *streamManagerV1) submitQueueRequest(req *pb1.ProxyRequest, requestType 
 	return r, m.eventStream.grpcStream.Send(req)
 }
 
-// genericCacheRequest issues a generic request that is further defined by the reqType.
+// submitTopicRequest submits a request to the stream manager and returns named topic request.
+func (m *streamManagerV1) submitTopicRequest(req *pb1.ProxyRequest, requestType pb1topics.TopicServiceRequestType) (proxyRequestChannel, error) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	// create a channel for the response
+	ch := make(chan responseMessage)
+
+	r := proxyRequestChannel{ch: ch}
+
+	// save the request in the map keyed by request id
+	m.requests[req.Id] = r
+	m.session.debugConnection("id: %v submit queue request: %v %v", req.Id, requestType, req)
+
+	return r, m.eventStream.grpcStream.Send(req)
+}
+
+// genericQueueRequest issues a generic request that is further defined by the reqType.
 func (m *streamManagerV1) genericQueueRequest(ctx context.Context, reqType pb1.NamedQueueRequestType, queue string) error {
 	req, err := m.newGenericNamedQueueRequest(queue, reqType)
 	if err != nil {

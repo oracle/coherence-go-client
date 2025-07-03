@@ -59,12 +59,15 @@ type Session struct {
 	conn                  *grpc.ClientConn
 	dialOptions           []grpc.DialOption
 	closed                bool
+	genericSerializer     Serializer[any]
 	mapMutex              sync.RWMutex
 	caches                map[string]interface{}
 	maps                  map[string]interface{}
 	queues                map[string]interface{}
+	topics                map[string]interface{}
 	cacheIDMap            safeMap[string, int32]
 	queueIDMap            safeMap[string, int32]
+	topicIDMap            safeMap[string, int32]
 	lifecycleMutex        sync.RWMutex
 	lifecycleListeners    []*SessionLifecycleListener
 	sessionConnectCtx     context.Context
@@ -77,6 +80,7 @@ type Session struct {
 	filterID              int64                // filter id for gRPC v1
 	v1StreamManagerCache  *streamManagerV1
 	v1StreamManagerQueue  *streamManagerV1
+	v1StreamManagerTopics *streamManagerV1
 }
 
 // SessionOptions holds the session attributes like host, port, tls attributes etc.
@@ -171,8 +175,10 @@ func NewSession(ctx context.Context, options ...func(session *SessionOptions)) (
 		maps:               make(map[string]interface{}, 0),
 		caches:             make(map[string]interface{}, 0),
 		queues:             make(map[string]interface{}, 0),
+		topics:             make(map[string]interface{}, 0),
 		cacheIDMap:         newSafeIDMap(),
 		queueIDMap:         newSafeIDMap(),
+		topicIDMap:         newSafeIDMap(),
 		lifecycleListeners: []*SessionLifecycleListener{},
 		sessOpts: &SessionOptions{
 			PlainText:          false,
@@ -220,6 +226,8 @@ func NewSession(ctx context.Context, options ...func(session *SessionOptions)) (
 	if session.sessOpts.Format != defaultFormat {
 		return nil, ErrInvalidFormat
 	}
+
+	session.genericSerializer = NewSerializer[any](session.sessOpts.Format)
 
 	// if no address option sent in then use the env or defaults
 	if session.sessOpts.Address == "" {
@@ -400,6 +408,9 @@ func (s *Session) getCacheID(cache string) *int32 {
 
 func (s *Session) getQueueID(queue string) *int32 {
 	return s.queueIDMap.Get(queue)
+}
+func (s *Session) getTopicID(topic string) *int32 {
+	return s.topicIDMap.Get(topic)
 }
 
 func (s *Session) getCacheNameFromCacheID(cacheID int32) *string {

@@ -27,6 +27,13 @@
     </cache-mapping>
   </caching-scheme-mapping>
 
+  <topic-scheme-mapping>
+    <topic-mapping>
+      <topic-name>*</topic-name>
+      <scheme-name>topic-scheme</scheme-name>
+    </topic-mapping>
+  </topic-scheme-mapping>
+
   <caching-schemes>
     <distributed-scheme>
       <scheme-name>distributed-scheme</scheme-name>
@@ -90,5 +97,18 @@
         </read-write-backing-map-scheme>
       </backing-map-scheme>
     </distributed-scheme>
+
+    <paged-topic-scheme>
+      <scheme-name>topic-scheme</scheme-name>
+      <service-name>${coherence.service.name Partitioned}Topic</service-name>
+      <local-storage system-property="coherence.distributed.localstorage">true</local-storage>
+      <partition-count system-property="coherence.distributed.partitions">${coherence.distributed.partitioncount 257}</partition-count>
+      <autostart system-property="coherence.topic.enabled">true</autostart>
+      <channel-count system-property="coherence.topic.channel.count"/>
+      <high-units>{topic-high-units-bytes 0B}</high-units>
+      <reconnect-wait system-property="coherence.topic.reconnect.wait"/>
+      <reconnect-timeout system-property="coherence.topic.reconnect.timeout"/>
+      <reconnect-retry system-property="coherence.topic.reconnect.retry"/>
+    </paged-topic-scheme>
   </caching-schemes>
 </cache-config>
