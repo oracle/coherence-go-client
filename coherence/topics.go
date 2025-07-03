@@ -892,3 +892,20 @@ func newNamedTopicRequest(topicID *int32, reqType pb1topics.TopicServiceRequestT
 	}
 	return anyReq, nil
 }
+
+// submitTopicRequest submits a request to the stream manager and returns named topic request.
+func (m *streamManagerV1) submitTopicRequest(req *pb1.ProxyRequest, requestType pb1topics.TopicServiceRequestType) (proxyRequestChannel, error) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	// create a channel for the response
+	ch := make(chan responseMessage)
+
+	r := proxyRequestChannel{ch: ch}
+
+	// save the request in the map keyed by request id
+	m.requests[req.Id] = r
+	m.session.debugConnection("id: %v submit topic request: %v %v", req.Id, requestType, req)
+
+	return r, m.eventStream.grpcStream.Send(req)
+}

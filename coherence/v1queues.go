@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Oracle and/or its affiliates.
+ * Copyright (c) 2024, 2025 Oracle and/or its affiliates.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * https://oss.oracle.com/licenses/upl.
  */
@@ -8,7 +8,6 @@ package coherence
 
 import (
 	"context"
-	pb1topics "github.com/oracle/coherence-go-client/v2/proto/topics"
 	pb1 "github.com/oracle/coherence-go-client/v2/proto/v1"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
@@ -23,23 +22,6 @@ func (m *streamManagerV1) ensureQueue(ctx context.Context, queue string, queueTy
 
 // submitQueueRequest submits a request to the stream manager and returns named queue request.
 func (m *streamManagerV1) submitQueueRequest(req *pb1.ProxyRequest, requestType pb1.NamedQueueRequestType) (proxyRequestChannel, error) {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-
-	// create a channel for the response
-	ch := make(chan responseMessage)
-
-	r := proxyRequestChannel{ch: ch}
-
-	// save the request in the map keyed by request id
-	m.requests[req.Id] = r
-	m.session.debugConnection("id: %v submit queue request: %v %v", req.Id, requestType, req)
-
-	return r, m.eventStream.grpcStream.Send(req)
-}
-
-// submitTopicRequest submits a request to the stream manager and returns named topic request.
-func (m *streamManagerV1) submitTopicRequest(req *pb1.ProxyRequest, requestType pb1topics.TopicServiceRequestType) (proxyRequestChannel, error) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
