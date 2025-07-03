@@ -120,11 +120,6 @@ func GetNamedTopic[V any](ctx context.Context, session *Session, topicName strin
 
 	session.topics[topicName] = newTopic
 
-	_, err = session.v1StreamManagerTopics.ensureChannelCount(ctx, topicName, topicOptions)
-	if err != nil {
-		return nil, err
-	}
-
 	return newTopic, nil
 }
 
@@ -397,41 +392,6 @@ func CreateSubscriber[V any](ctx context.Context, session *Session, topicName st
 	}
 
 	return newSubscriber[V](session, nil, result, topicName, subscriberOptions)
-}
-
-// ensureChannelCount issues the ensure topic channels
-func (m *streamManagerV1) ensureChannelCount(ctx context.Context, topicName string, opts *topic.Options) (*int32, error) {
-	req, err := m.newEnsureChannelRequest(topicName, opts.ChannelCount, opts.ChannelCount)
-	if err != nil {
-		return nil, err
-	}
-
-	requestType, err := m.submitTopicRequest(req, pb1topics.TopicServiceRequestType_EnsureChannelCount)
-	if err != nil {
-		return nil, err
-	}
-
-	newCtx, cancel := m.session.ensureContext(ctx)
-	if cancel != nil {
-		defer cancel()
-	}
-
-	defer m.cleanupRequest(req.Id)
-
-	result, err1 := waitForResponse(newCtx, requestType.ch, true)
-	if err1 != nil {
-		return nil, err1
-	}
-
-	var message = &wrapperspb.Int32Value{}
-	if err = result.UnmarshalTo(message); err != nil {
-		err = getUnmarshallError("ensure response", err)
-		return nil, err
-	}
-
-	actualChannelCount := &message.Value
-
-	return actualChannelCount, nil
 }
 
 // ensurePublisher ensures a publisher.
@@ -710,20 +670,6 @@ func releaseTopicInternal[V any](ctx context.Context, bt *baseTopicsClient[V], d
 	bt.session.topicIDMap.Remove(bt.name)
 
 	return nil
-}
-
-func (m *streamManagerV1) newEnsureChannelRequest(topicName string, requiredCount, channelCount int32) (*pb1.ProxyRequest, error) {
-	req := &pb1topics.EnsureChannelCountRequest{
-		Topic:         &topicName,
-		RequiredCount: requiredCount,
-		ChannelCount:  &channelCount,
-	}
-
-	anyReq, err := anypb.New(req)
-	if err != nil {
-		return nil, err
-	}
-	return m.newWrapperProxyTopicsRequest("", pb1topics.TopicServiceRequestType_EnsureChannelCount, anyReq)
 }
 
 func (m *streamManagerV1) newEnsurePublisherRequest(topicName string, channelCount int32) (*pb1.ProxyRequest, error) {
