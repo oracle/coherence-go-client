@@ -24,6 +24,10 @@ OS=`uname`
 
 if [ "$OS" == "Linux" ]; then
    wget -q https://raw.githubusercontent.com/dapr/cli/master/install/install.sh -O - | /bin/bash
+   curl -sL https://raw.githubusercontent.com/oracle/coherence-cli/main/scripts/install.sh | bash
+   cohctl version
+   cohctl add cluster default -u http://localhost:30000/management/coherence/cluster
+   cohctl version
 else
    echo "Assuming installed"
    type dapr
@@ -93,6 +97,9 @@ cd my-dapr-app
 go mod tidy
 
 dapr run --app-id myapp --resources-path ./components/ --log-level debug  -- go run main.go
+
+# Verify the caches
+cohctl get cache -o wide
 
 
 
