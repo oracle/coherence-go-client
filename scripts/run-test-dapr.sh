@@ -29,6 +29,9 @@ else
    type dapr
 fi
 
+dapr version
+ls -l ~/.dapr
+
 echo
 echo "Cloning repositories..."
 cd $DAPR_TEST_HOME

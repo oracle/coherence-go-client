@@ -67,7 +67,7 @@ jobs:
       with:
         go-version: '${{ matrix.go-version }}'
 
-    - name: E2E Topics Tests
+    - name: Test DAPR
       env:
         COH_VERSION: ${{ matrix.coherenceVersion }}
       shell: bash
