@@ -10,6 +10,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/oracle/coherence-go-client/v2/coherence/extractors"
 	"github.com/oracle/coherence-go-client/v2/coherence/publisher"
 	"github.com/oracle/coherence-go-client/v2/coherence/subscriber"
 	"github.com/oracle/coherence-go-client/v2/coherence/topic"
@@ -37,6 +38,7 @@ const (
 var (
 	_ Publisher[string]  = &topicPublisher[string]{}
 	_ NamedTopic[string] = &baseTopicsClient[string]{}
+	_ Subscriber[string] = &topicSubscriber[string]{}
 
 	ErrTopicDestroyedOrReleased = errors.New("this topic has been destroyed or released")
 	ErrTopicsNoSupported        = errors.New("the coherence server version must support protocol version 1 or above to use topic")
@@ -55,23 +57,37 @@ type NamedTopic[V any] interface {
 	// Destroy destroys this topic on the server and releases all resources. After this operation it is no longer usable on the client or server..
 	Destroy(ctx context.Context) error
 
+	// CreatePublisher creates a Publisher with the specified options.
 	CreatePublisher(ctx context.Context, options ...func(o *publisher.Options)) (Publisher[V], error)
+
+	// CreateSubscriber creates a Subscriber with the specified options.
+	// Note: If you wish to create a Subscriber with a transformer, you should use the helper
+	// function CreatSubscriberWithTransformer.
 	CreateSubscriber(ctx context.Context, options ...func(o *subscriber.Options)) (Subscriber[V], error)
 }
 
+// Publisher provides the means to publish messages to a [NamedTopic].
 type Publisher[V any] interface {
 	GetProxyID() int32
 	GetPublisherID() int64
 	GetChannelCount() int32
+
+	// Publish publishes a message and returns a status.
 	Publish(ctx context.Context, value V) (*publisher.PublishStatus, error)
+
+	// Close closes a publisher and releases all resources associated with it in the client
+	// and on the server.
 	Close(ctx context.Context) error
 }
 
+// Subscriber subscribes directly to a [NamedTopic], or to a subscriber group of a [NamedTopic].
 type Subscriber[V any] interface {
+	// Close closes a subscriber and releases all resources associated with it in the client
+	// and on the server.
 	Close(ctx context.Context) error
 }
 
-// GetNamedTopic gets a [NamedTopic] of the generic type specified or if a cache already exists with the
+// GetNamedTopic gets a [NamedTopic] of the generic type specified or if a topic already exists with the
 // same type parameters, it will return it otherwise it will create a new one.
 func GetNamedTopic[V any](ctx context.Context, session *Session, topicName string, options ...func(cache *topic.Options)) (NamedTopic[V], error) {
 	var (
@@ -342,7 +358,8 @@ func ensurePublisherOptions(options ...func(cache *publisher.Options)) *publishe
 	return publisherOptions
 }
 
-// CreatePublisher creates a topic publisher.
+// CreatePublisher creates a topic publisher when provided a topicName. You do not have to had created
+// a topic, but it is equivalent to called CreatePublisher on a [NamedTopic].
 func CreatePublisher[V any](ctx context.Context, session *Session, topicName string, options ...func(cache *publisher.Options)) (Publisher[V], error) {
 	publisherOptions := ensurePublisherOptions(options...)
 
@@ -358,6 +375,21 @@ func CreatePublisher[V any](ctx context.Context, session *Session, topicName str
 	}
 
 	return newPublisher[V](session, nil, result, topicName, publisherOptions)
+}
+
+// CreatSubscriberWithTransformer creates a subscriber which will transform the value from the topic using
+// the supplied extractor.
+func CreatSubscriberWithTransformer[E any](ctx context.Context, session *Session, topicName string,
+	extractor extractors.ValueExtractor[any, E], options ...func(cache *subscriber.Options)) (Subscriber[E], error) {
+
+	binExtractor, err := session.genericSerializer.Serialize(extractor)
+	if err != nil {
+		return nil, err
+	}
+
+	options = append(options, subscriber.WithTransformer(binExtractor))
+
+	return CreateSubscriber[E](ctx, session, topicName, options...)
 }
 
 // CreateSubscriber creates a topic subscriber.

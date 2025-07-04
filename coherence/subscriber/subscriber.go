@@ -37,13 +37,12 @@ type ReceiveResult[V any] struct {
 type Options struct {
 	SubscriberGroup *string
 	Filter          filters.Filter
+	Extractor       []byte
 }
 
 // TODO: Additional options
 //// the optional name of the subscriber group
 //SubscriberGroup *string `protobuf:"bytes,2,opt,name=subscriberGroup,proto3,oneof" json:"subscriberGroup,omitempty"`
-//// an optional Filter to filter received messages
-//Filter []byte `protobuf:"bytes,3,opt,name=filter,proto3,oneof" json:"filter,omitempty"`
 //// an optional ValueExtractor to convert received messages
 //Extractor []byte `protobuf:"bytes,4,opt,name=extractor,proto3,oneof" json:"extractor,omitempty"`
 //// True to return an empty value if the topic is empty
@@ -59,6 +58,13 @@ func InSubscriberGroup(group string) func(options *Options) {
 func WithFilter(fltr filters.Filter) func(options *Options) {
 	return func(s *Options) {
 		s.Filter = fltr
+	}
+}
+
+// WithTransformer returns a function to set the extractor [Subscriber].
+func WithTransformer(extractor []byte) func(options *Options) {
+	return func(s *Options) {
+		s.Extractor = extractor
 	}
 }
 
