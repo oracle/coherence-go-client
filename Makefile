@@ -26,6 +26,8 @@ override PROTO_OUT           := $(CURRDIR)/proto
 override BUILD_TARGETS       := $(BUILD_OUTPUT)/targets
 override TEST_LOGS_DIR       := $(BUILD_OUTPUT)/test-logs
 override COVERAGE_DIR        := $(BUILD_OUTPUT)/coverage
+override DAPR_DIR            := $(BUILD_OUTPUT)/dapr-test
+override DAPR_TEST_DIR       := $(CURRDIR)/test/dapr
 override COPYRIGHT_JAR       := glassfish-copyright-maven-plugin-2.4.jar
 override BUILD_CERTS         := $(CURRDIR)/test/utils/certs
 override ENV_FILE            := test/utils/.env
@@ -466,6 +468,13 @@ test-v1-base: test-clean test gotestsum $(BUILD_PROPS) ## Run e2e tests with Coh
 .PHONY: test-examples
 test-examples: test-clean gotestsum $(BUILD_PROPS) ## Run examples tests with Coherence
 	./scripts/run-test-examples.sh
+
+# ----------------------------------------------------------------------------------------------------------------------
+# Executes the tests for DAPR
+# ----------------------------------------------------------------------------------------------------------------------
+.PHONY: test-dapr
+test-dapr: test-clean gotestsum $(BUILD_PROPS) ## Run dapr tests with Coherence
+	./scripts/run-test-dapr.sh $(DAPR_TEST_DIR) $(DAPR_DIR)
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Startup cluster members via docker compose
