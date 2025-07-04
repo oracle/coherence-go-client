@@ -26,7 +26,7 @@ if [ "$OS" == "Linux" ]; then
    wget -q https://raw.githubusercontent.com/dapr/cli/master/install/install.sh -O - | /bin/bash
    curl -sL https://raw.githubusercontent.com/oracle/coherence-cli/main/scripts/install.sh | bash
    cohctl version
-   cohctl add cluster default -u http://localhost:30000/management/coherence/cluster
+   cohctl add cluster default -u http://127.0.0.1:30000/management/coherence/cluster
    cohctl version
 else
    echo "Assuming installed"
