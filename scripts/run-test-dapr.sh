@@ -29,6 +29,7 @@ else
    type dapr
 fi
 
+dapr init
 dapr version
 ls -l ~/.dapr
 
