@@ -6,6 +6,8 @@
 # https://oss.oracle.com/licenses/upl.
 #
 
+set -e
+
 if [ $# -ne 2 ]; then
    echo "You must specify the dapr test directory and dapr dir to install to"
    exit 1
