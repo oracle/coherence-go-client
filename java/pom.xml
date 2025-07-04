@@ -222,6 +222,7 @@
                   <jvmFlag>-Dcoherence.management=all</jvmFlag>
                   <jvmFlag>-Dcoherence.management.http=all</jvmFlag>
                   <jvmFlag>-Dcoherence.management.http.port=30000</jvmFlag>
+                  <jvmFlag>-Dcoherence.health.http.port=6676</jvmFlag>
                   <jvmFlag>-Dcoherence.metrics.http.enabled=true</jvmFlag>
                   <jvmFlag>-Dcoherence.metrics.http.port=9612</jvmFlag>
                   <jvmFlag>-Dcoherence.grpc.server.port=1408</jvmFlag>
@@ -270,6 +271,7 @@
                   <jvmFlag>-Dcoherence.log.level=9</jvmFlag>
                   <jvmFlag>-Dcoherence.management.http=all</jvmFlag>
                   <jvmFlag>-Dcoherence.management.http.port=30000</jvmFlag>
+                  <jvmFlag>-Dcoherence.health.http.port=6677</jvmFlag>
                   <jvmFlag>-Dcoherence.management.refresh.expiry=1s</jvmFlag>
                   <jvmFlag>-Dcoherence.distributed.localstorage=true</jvmFlag>
                   <jvmFlag>-Dcoherence.metrics.http.enabled=true</jvmFlag>

@@ -24,10 +24,15 @@ echo "DAPR Test Home: $DAPR_TEST_HOME"
 echo "Install DAPR"
 OS=`uname`
 
+echo "Listing docker images"
+docker ps
+
 if [ "$OS" == "Linux" ]; then
    wget -q https://raw.githubusercontent.com/dapr/cli/master/install/install.sh -O - | /bin/bash
    curl -sL https://raw.githubusercontent.com/oracle/coherence-cli/main/scripts/install.sh | bash
    cohctl version
+   # Wait for coherence
+   cohctl monitor health -e http://127.0.0.1:6676/,http://127.0.0.1:6677 -T 120 -w
    cohctl add cluster default -u http://127.0.0.1:30000/management/coherence/cluster
    cohctl version
 else
