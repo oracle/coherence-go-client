@@ -85,7 +85,7 @@ func init() {
 EOF
 
 # Test with the current go client
-go mod edit -replace github.com/oracle/coherence-go-client/v2=../../../../coherence
+go mod edit -replace github.com/oracle/coherence-go-client/v2=../../../..
 
 
 echo "Building dapr core..."
