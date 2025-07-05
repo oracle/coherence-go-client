@@ -32,7 +32,7 @@ if [ "$OS" == "Linux" ]; then
    curl -sL https://raw.githubusercontent.com/oracle/coherence-cli/main/scripts/install.sh | bash
    cohctl version
    # Wait for coherence
-   cohctl monitor health -e http://127.0.0.1:6676/,http://127.0.0.1:6677 -T 120 -w
+   cohctl monitor health -e http://127.0.0.1:6676/,http://127.0.0.1:6677/ -T 120 -w
    cohctl add cluster default -u http://127.0.0.1:30000/management/coherence/cluster
    cohctl version
 else
@@ -85,7 +85,7 @@ func init() {
 EOF
 
 # Test with the current go client
-go mod edit -replace github.com/oracle/coherence-go-client/v2=../../../coherence
+go mod edit -replace github.com/oracle/coherence-go-client/v2=../../../../coherence
 
 
 echo "Building dapr core..."
