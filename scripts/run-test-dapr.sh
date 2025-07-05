@@ -46,14 +46,16 @@ ls -l ~/.dapr
 
 echo
 echo "Cloning repositories..."
+DIR=`pwd`
 cd $DAPR_TEST_HOME
 rm -rf components-contrib dapr || true
 git clone https://github.com/dapr/components-contrib.git
 git clone https://github.com/dapr/dapr.git
 cd dapr
-go mod edit -replace github.com/dapr/components-contrib=../components-contrib
 
 # Temporary workaround until coherence in DAPR core
+
+go mod edit -replace github.com/dapr/components-contrib=../components-contrib
 
 cat > cmd/daprd/components/state_coherence.go <<EOF
 //go:build allcomponents
@@ -82,6 +84,10 @@ func init() {
 	stateLoader.DefaultRegistry.RegisterComponent(coherence.NewCoherenceStateStore, "coherence")
 }
 EOF
+
+# Test with the current go client
+go mod edit -replace github.com/oracle/coherence-go-client/v2=../components-contrib/${DIR}/coherence
+
 
 echo "Building dapr core..."
 make modtidy-all
