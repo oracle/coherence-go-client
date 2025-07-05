@@ -198,10 +198,9 @@ func unregisterLifecycleListener[K comparable, V any](baseClient *baseClient[K, 
 // executeAddIndex executes the add index operation against a baseClient.
 func executeAddIndex[K comparable, V, T, E any](ctx context.Context, bc *baseClient[K, V], extractor extractors.ValueExtractor[T, E], sorted bool, comparator extractors.Comparator[E]) error {
 	var (
-		extractorSerializer = NewSerializer[any](bc.format)
-		binExtractor        []byte
-		binComparator       []byte
-		err                 = bc.ensureClientConnection()
+		binExtractor  []byte
+		binComparator []byte
+		err           = bc.ensureClientConnection()
 	)
 
 	if err != nil {
@@ -213,12 +212,12 @@ func executeAddIndex[K comparable, V, T, E any](ctx context.Context, bc *baseCli
 		defer cancel()
 	}
 
-	binExtractor, err = extractorSerializer.Serialize(extractor)
+	binExtractor, err = bc.session.genericSerializer.Serialize(extractor)
 	if err != nil {
 		return err
 	}
 
-	binComparator, err = extractorSerializer.Serialize(comparator)
+	binComparator, err = bc.session.genericSerializer.Serialize(comparator)
 	if err != nil {
 		return err
 	}
@@ -236,9 +235,8 @@ func executeAddIndex[K comparable, V, T, E any](ctx context.Context, bc *baseCli
 // executeRemoveIndex executes the remove index operation against a baseClient.
 func executeRemoveIndex[K comparable, V, T, E any](ctx context.Context, bc *baseClient[K, V], extractor extractors.ValueExtractor[T, E]) error {
 	var (
-		extractorSerializer = NewSerializer[any](bc.format)
-		binExtractor        []byte
-		err                 = bc.ensureClientConnection()
+		binExtractor []byte
+		err          = bc.ensureClientConnection()
 	)
 
 	if err != nil {
@@ -250,7 +248,7 @@ func executeRemoveIndex[K comparable, V, T, E any](ctx context.Context, bc *base
 		defer cancel()
 	}
 
-	binExtractor, err = extractorSerializer.Serialize(extractor)
+	binExtractor, err = bc.session.genericSerializer.Serialize(extractor)
 	if err != nil {
 		return err
 	}
@@ -1016,8 +1014,7 @@ func executeAggregate[K comparable, V, R any](ctx context.Context, bc *baseClien
 		defer cancel()
 	}
 
-	aggregatorSerializer := NewSerializer[any](bc.format)
-	binAggregator, err = aggregatorSerializer.Serialize(aggr)
+	binAggregator, err = bc.session.genericSerializer.Serialize(aggr)
 	if err != nil {
 		return zeroValue, err
 	}
@@ -1034,7 +1031,7 @@ func executeAggregate[K comparable, V, R any](ctx context.Context, bc *baseClien
 		}
 	} else if filter != nil {
 		// filter was specified
-		binFilter, err = NewSerializer[any](bc.format).Serialize(filter)
+		binFilter, err = bc.session.genericSerializer.Serialize(filter)
 		if err != nil {
 			return zeroValue, err
 		}
@@ -1112,8 +1109,7 @@ func executeInvoke[K comparable, V any, R any](ctx context.Context, bc *baseClie
 		return zeroValue, err
 	}
 
-	procSerializer := NewSerializer[any](bc.format)
-	binProcessor, err = procSerializer.Serialize(proc)
+	binProcessor, err = bc.session.genericSerializer.Serialize(proc)
 	if err != nil {
 		return zeroValue, err
 	}
@@ -1174,14 +1170,13 @@ func executeInvokeAllFilterOrKeys[K comparable, V any, R any](ctx context.Contex
 
 	newCtx, cancel := bc.session.ensureContext(ctx)
 
-	procSerializer := NewSerializer[any](bc.format)
-	if binProcessor, err = procSerializer.Serialize(proc); err != nil {
+	if binProcessor, err = bc.session.genericSerializer.Serialize(proc); err != nil {
 		ch <- &StreamedEntry[K, R]{Err: err}
 		return ch
 	}
 
 	if fltr != nil {
-		if binFilter, err = NewSerializer[any](bc.format).Serialize(fltr); err != nil {
+		if binFilter, err = bc.session.genericSerializer.Serialize(fltr); err != nil {
 			ch <- &StreamedEntry[K, R]{Err: err}
 			return ch
 		}
@@ -1326,7 +1321,7 @@ func executeKeySetFilter[K comparable, V any](ctx context.Context, bc *baseClien
 	if fltr == nil {
 		fltr = filters.Always()
 	}
-	binFilter, err = NewSerializer[any](bc.format).Serialize(fltr)
+	binFilter, err = bc.session.genericSerializer.Serialize(fltr)
 	if err != nil {
 		ch <- &StreamedKey[K]{Err: err}
 		return ch
@@ -1906,7 +1901,6 @@ func executeEntrySetFilter[K comparable, V any, E any](ctx context.Context, bc *
 		binFilter     = make([]byte, 0)
 		binComparator = make([]byte, 0)
 		ch            = make(chan *StreamedEntry[K, V])
-		serializer    = NewSerializer[any](bc.format)
 	)
 
 	if err != nil {
@@ -1919,14 +1913,14 @@ func executeEntrySetFilter[K comparable, V any, E any](ctx context.Context, bc *
 	if fltr == nil {
 		fltr = filters.Always()
 	}
-	binFilter, err = serializer.Serialize(fltr)
+	binFilter, err = bc.session.genericSerializer.Serialize(fltr)
 	if err != nil {
 		ch <- &StreamedEntry[K, V]{Err: err}
 		return ch
 	}
 
 	if comparator != nil {
-		binComparator, err = serializer.Serialize(comparator)
+		binComparator, err = bc.session.genericSerializer.Serialize(comparator)
 		if err != nil {
 			ch <- &StreamedEntry[K, V]{Err: err}
 			return ch
@@ -2008,7 +2002,6 @@ func executeValues[K comparable, V any, E any](ctx context.Context, bc *baseClie
 		binFilter     = make([]byte, 0)
 		binComparator = make([]byte, 0)
 		ch            = make(chan *StreamedValue[V])
-		serializer    = NewSerializer[any](bc.format)
 	)
 
 	if err != nil {
@@ -2021,14 +2014,14 @@ func executeValues[K comparable, V any, E any](ctx context.Context, bc *baseClie
 	if fltr == nil {
 		fltr = filters.Always()
 	}
-	binFilter, err = serializer.Serialize(fltr)
+	binFilter, err = bc.session.genericSerializer.Serialize(fltr)
 	if err != nil {
 		ch <- &StreamedValue[V]{Err: err}
 		return ch
 	}
 
 	if comparator != nil {
-		binComparator, err = serializer.Serialize(comparator)
+		binComparator, err = bc.session.genericSerializer.Serialize(comparator)
 		if err != nil {
 			ch <- &StreamedValue[V]{Err: err}
 			return ch

@@ -10,6 +10,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	pb1topics "github.com/oracle/coherence-go-client/v2/proto/topics"
 	"github.com/oracle/coherence-go-client/v2/proto/v1"
 	pb1 "github.com/oracle/coherence-go-client/v2/proto/v1"
 	"google.golang.org/grpc/codes"
@@ -43,10 +44,12 @@ const (
 	protocolVersion                           = 1
 	cacheServiceProtocol      V1ProxyProtocol = "CacheService"
 	queueServiceProtocol      V1ProxyProtocol = "QueueService"
+	topicServiceProtocol      V1ProxyProtocol = "TopicService"
 	errorFormat                               = "error: %v"
 	responseDebug                             = "received response: %v"
 	namedCacheResponseTypeURL                 = "type.googleapis.com/coherence.cache.v1.NamedCacheResponse"
 	namedQueueResponseTypeURL                 = "type.googleapis.com/coherence.concurrent.queue.v1.NamedQueueResponse"
+	namedTopicResponseTypeURL                 = "type.googleapis.com/coherence.topic.v1.TopicServiceResponse"
 )
 
 // responseMessages is a response received by a waiting client.
@@ -54,6 +57,7 @@ type responseMessage struct {
 	message            *anypb.Any
 	namedCacheResponse *pb1.NamedCacheResponse
 	namedQueueResponse *pb1.NamedQueueResponse
+	namedTopicResponse *pb1topics.TopicServiceResponse
 	complete           bool
 	err                *string
 }
@@ -64,6 +68,10 @@ func (rm responseMessage) String() string {
 
 	if rm.namedCacheResponse != nil {
 		sb.WriteString(fmt.Sprintf(", cacheId=%v", rm.namedCacheResponse.CacheId))
+	} else if rm.namedTopicResponse != nil {
+		sb.WriteString(fmt.Sprintf(", topicId=%v", rm.namedTopicResponse.ProxyId))
+	} else if rm.namedQueueResponse != nil {
+		sb.WriteString(fmt.Sprintf(", queueId=%v", rm.namedQueueResponse.QueueId))
 	}
 
 	sb.WriteString("}")
@@ -152,10 +160,8 @@ func (m *streamManagerV1) ensureStream() (*eventStreamV1, error) {
 		// check that we received an InitResponse
 		response := proxyResponse.GetInit()
 		if response == nil {
-			if err != nil {
-				cancel()
-				return nil, errors.New("did not receive an InitResponse")
-			}
+			cancel()
+			return nil, errors.New("did not receive an InitResponse")
 		}
 
 		// save the server information received
@@ -226,6 +232,13 @@ func (m *streamManagerV1) processResponseMessage(id int64, resp *responseMessage
 				return
 			}
 			resp.namedQueueResponse = &namedQueueResponse
+		case namedTopicResponseTypeURL:
+			var namedTopicResponse pb1topics.TopicServiceResponse
+			if err := resp.message.UnmarshalTo(&namedTopicResponse); err != nil {
+				logMessage(WARNING, "%v", getUnmarshallError("namedTopicResponse", err))
+				return
+			}
+			resp.namedTopicResponse = &namedTopicResponse
 
 		default:
 			logMessage(WARNING, "Unknown message type: %v", resp.message.TypeUrl)
@@ -325,7 +338,6 @@ func (m *streamManagerV1) processResponse(reqID int64, resp *responseMessage) {
 
 	// process queue event
 	if reqID == 0 && resp.namedQueueResponse != nil {
-
 		// find the queueName from the queueID
 		queueName := m.session.queueIDMap.KeyFromValue(resp.namedQueueResponse.QueueId)
 		if queueName == nil {
@@ -344,6 +356,8 @@ func (m *streamManagerV1) processResponse(reqID int64, resp *responseMessage) {
 		}
 		return
 	}
+
+	// process topic events here- TODO
 
 	m.session.debugConnection("id: %v Response: %v", reqID, resp)
 
@@ -383,17 +397,24 @@ func (m *streamManagerV1) ensureCache(ctx context.Context, cache string) (*int32
 }
 
 // ensure ensures a queue or cache.
-func (m *streamManagerV1) ensure(ctx context.Context, name string, IDMap safeMap[string, int32], queueType NamedQueueType) (*int32, error) {
+func (m *streamManagerV1) ensure(ctx context.Context, name string, IDMap safeMap[string, int32], queueType NamedQueueType, isTopicFlag ...bool) (*int32, error) {
 	var (
 		ID          *int32
 		err         error
 		req         *v1.ProxyRequest
 		isQueue     = queueType >= 0
+		isTopic     bool
 		requestType proxyRequestChannel
 	)
 
+	if len(isTopicFlag) > 0 && isTopicFlag[0] {
+		isTopic = true
+	}
+
 	if isQueue {
 		req, err = m.newEnsureQueueRequest(name, queueType)
+	} else if isTopic {
+		req, err = m.newEnsureTopicRequest(name)
 	} else {
 		// cache
 		req, err = m.newEnsureCacheRequest(name)
@@ -405,6 +426,8 @@ func (m *streamManagerV1) ensure(ctx context.Context, name string, IDMap safeMap
 
 	if isQueue {
 		requestType, err = m.submitQueueRequest(req, pb1.NamedQueueRequestType_EnsureQueue)
+	} else if isTopic {
+		requestType, err = m.submitTopicRequest(req, pb1topics.TopicServiceRequestType_EnsureTopic)
 	} else {
 		requestType, err = m.submitRequest(req, pb1.NamedCacheRequestType_EnsureCache)
 	}
@@ -1216,13 +1239,16 @@ func (m *streamManagerV1) cleanupRequest(reqID int64) {
 	close(requestType.ch)
 }
 
-// defaultFunction returns the default named cache message
+// defaultFunction returns the default named cache, queue or topic message.
 var defaultFunction = func(resp responseMessage) *anypb.Any {
 	if resp.namedCacheResponse != nil && resp.namedCacheResponse.Message != nil {
 		return resp.namedCacheResponse.Message
 	}
 	if resp.namedQueueResponse != nil && resp.namedQueueResponse.Message != nil {
 		return resp.namedQueueResponse.Message
+	}
+	if resp.namedTopicResponse != nil && resp.namedTopicResponse.Message != nil {
+		return resp.namedTopicResponse.Message
 	}
 	return nil
 }
@@ -1232,7 +1258,7 @@ func waitForResponse(newCtx context.Context, ch chan responseMessage, ensure ...
 	var (
 		err      error
 		result   *anypb.Any
-		isEnsure = len(ensure) != 0
+		isEnsure = len(ensure) != 0 && ensure[0]
 	)
 
 	// wait until we get a complete request, or we time out
@@ -1247,7 +1273,7 @@ func waitForResponse(newCtx context.Context, ch chan responseMessage, ensure ...
 				resp.complete = true
 			}
 
-			if resp.namedCacheResponse != nil || resp.namedQueueResponse != nil {
+			if resp.namedCacheResponse != nil || resp.namedQueueResponse != nil || resp.namedTopicResponse != nil {
 				// unpack the result message if we have valid named cache response
 				if !isEnsure {
 					// standard case where we want to return the named cache/queue result message
@@ -1256,6 +1282,8 @@ func waitForResponse(newCtx context.Context, ch chan responseMessage, ensure ...
 					// special case for ensure, return the cache id or queue id, and it will be handled by ensure
 					if resp.namedCacheResponse != nil {
 						result, err = anypb.New(wrapperspb.Int32(resp.namedCacheResponse.CacheId))
+					} else if resp.namedTopicResponse != nil {
+						result, err = anypb.New(wrapperspb.Int32(resp.namedTopicResponse.ProxyId))
 					} else {
 						result, err = anypb.New(wrapperspb.Int32(resp.namedQueueResponse.QueueId))
 					}
@@ -1403,6 +1431,10 @@ func getCacheIDMessage(cache string) error {
 
 func getQueueIDMessage(cache string) error {
 	return fmt.Errorf("unable to find queue id for queue named [%s]", cache)
+}
+
+func getTopicIDMessage(topic string) error {
+	return fmt.Errorf("unable to find topic id for topic named [%s]", topic)
 }
 
 func getUnmarshallError(message string, err error) error {

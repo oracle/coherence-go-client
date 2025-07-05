@@ -35,7 +35,7 @@ func (nm *NamedMapClient[K, V]) getBaseClient() *baseClient[K, V] { //nolint
 // Invoke the specified processor against the entry mapped to the specified key.
 // Processors are invoked atomically against a specific entry as the process may mutate the entry.
 // The type parameter is R = type of the result of the invocation.
-//
+// NamedMapClient
 // The example below shows how to run an entry processor to increment the age of person identified by the key 1.
 //
 //	namedMap, err := coherence.GetNamedMap[int, Person](session, "people")

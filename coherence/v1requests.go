@@ -7,9 +7,13 @@
 package coherence
 
 import (
+	"fmt"
+	pb1topics "github.com/oracle/coherence-go-client/v2/proto/topics"
 	pb1 "github.com/oracle/coherence-go-client/v2/proto/v1"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
+	"os"
+	"runtime"
 	"time"
 )
 
@@ -25,6 +29,7 @@ func (m *streamManagerV1) newInitRequest() *pb1.ProxyRequest {
 		ProtocolVersion:          protocolVersion,
 		SupportedProtocolVersion: protocolVersion,
 		Protocol:                 string(m.proxyProtocol),
+		Identity:                 generateClientMemberIdentity(),
 	}
 
 	pr := pb1.ProxyRequest{
@@ -35,6 +40,30 @@ func (m *streamManagerV1) newInitRequest() *pb1.ProxyRequest {
 	}
 
 	return &pr
+}
+
+func generateClientMemberIdentity() *pb1.ClientMemberIdentity {
+	processID := fmt.Sprintf("PID=%d, OS=%v, Arch=%v", os.Getpid(), runtime.GOOS, runtime.GOARCH)
+	hostname, _ := os.Hostname()
+	clusterName := getEnvOrNil("COHERENCE_CLUSTER")
+	rackName := getEnvOrNil("COHERENCE_RACK")
+	siteName := getEnvOrNil("COHERENCE_SITE")
+
+	return &pb1.ClientMemberIdentity{
+		ProcessName: &processID,
+		MachineName: &hostname,
+		ClusterName: clusterName,
+		RackName:    rackName,
+		SiteName:    siteName,
+	}
+}
+
+func getEnvOrNil(key string) *string {
+	value := getStringValueFromEnvVarOrDefault(key, "")
+	if value == "" {
+		return nil
+	}
+	return &value
 }
 
 func (m *streamManagerV1) newEnsureCacheRequest(cache string) (*pb1.ProxyRequest, error) {
@@ -64,6 +93,48 @@ func (m *streamManagerV1) newEnsureQueueRequest(queue string, queueType NamedQue
 	return m.newWrapperProxyQueueRequest("", pb1.NamedQueueRequestType_EnsureQueue, anyReq)
 }
 
+func (m *streamManagerV1) newEnsureTopicRequest(topicName string) (*pb1.ProxyRequest, error) {
+	req := &pb1topics.EnsureTopicRequest{
+		Topic: topicName,
+	}
+
+	anyReq, err := anypb.New(req)
+	if err != nil {
+		return nil, err
+	}
+
+	return m.newWrapperProxyTopicsRequest("", pb1topics.TopicServiceRequestType_EnsureTopic, anyReq)
+}
+
+func (m *streamManagerV1) newEnsureTopicChannelRequest(topicName string, channelCount int32) (*pb1.ProxyRequest, error) {
+	req := &pb1topics.EnsureChannelCountRequest{
+		Topic:         &topicName,
+		ChannelCount:  &channelCount,
+		RequiredCount: channelCount,
+	}
+
+	anyReq, err := anypb.New(req)
+	if err != nil {
+		return nil, err
+	}
+
+	return m.newWrapperProxyTopicsRequest("", pb1topics.TopicServiceRequestType_EnsureChannelCount, anyReq)
+}
+
+func (m *streamManagerV1) newPublishRequest(proxyID int32, publishChannel int32, value []byte) (*pb1.ProxyRequest, error) {
+	req := &pb1topics.PublishRequest{
+		Channel: publishChannel,
+		Values:  [][]byte{value},
+	}
+
+	anyReq, err := anypb.New(req)
+	if err != nil {
+		return nil, err
+	}
+
+	return m.newWrapperProxyPublisherRequest(proxyID, pb1topics.TopicServiceRequestType_Publish, anyReq)
+}
+
 func getQueueType(queueType NamedQueueType) pb1.NamedQueueType {
 	if queueType == Queue {
 		return pb1.NamedQueueType_Queue
@@ -80,6 +151,10 @@ func (m *streamManagerV1) newGenericNamedCacheRequest(cache string, requestType 
 
 func (m *streamManagerV1) newGenericNamedQueueRequest(cache string, requestType pb1.NamedQueueRequestType) (*pb1.ProxyRequest, error) {
 	return m.newWrapperProxyQueueRequest(cache, requestType, nil)
+}
+
+func (m *streamManagerV1) newGenericNamedTopicRequest(topicName string, requestType pb1topics.TopicServiceRequestType) (*pb1.ProxyRequest, error) {
+	return m.newWrapperProxyTopicsRequest(topicName, requestType, nil)
 }
 
 func (m *streamManagerV1) newGetRequest(cache string, key []byte) (*pb1.ProxyRequest, error) {

@@ -1,4 +1,4 @@
-# Copyright 2023, 2024 Oracle Corporation and/or its affiliates.
+# Copyright 2023, 2025 Oracle Corporation and/or its affiliates.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # https://oss.oracle.com/licenses/upl.
 
@@ -17,6 +17,7 @@ services:
       - 1408:1408
       - 9612:9612
       - 8080:8080
+      - 6676:6676
     volumes:
       - ./certs:/certs
 
@@ -31,6 +32,7 @@ services:
       - COHERENCE_WKA=server1
     ports:
       - 9613:9613
+      - 6677:6677
 
 networks:
   coherence:
