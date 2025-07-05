@@ -46,7 +46,6 @@ ls -l ~/.dapr
 
 echo
 echo "Cloning repositories..."
-DIR=`pwd`
 cd $DAPR_TEST_HOME
 rm -rf components-contrib dapr || true
 git clone https://github.com/dapr/components-contrib.git
@@ -86,7 +85,7 @@ func init() {
 EOF
 
 # Test with the current go client
-go mod edit -replace github.com/oracle/coherence-go-client/v2=../components-contrib/${DIR}/coherence
+go mod edit -replace github.com/oracle/coherence-go-client/v2=../../../coherence
 
 
 echo "Building dapr core..."
