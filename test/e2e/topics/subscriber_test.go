@@ -127,14 +127,14 @@ func TestSubscriberGroupWithinTopic(t *testing.T) {
 }
 
 func TestSubscriberGroupWithinSubscriber(t *testing.T) {
-	runTestSubscriberGroup(gomega.NewWithT(t))
+	runTestSubscriberGroup(gomega.NewWithT(t), "sub-group-1")
 }
 
 func TestSubscriberGroupWithinSubscriberAndFilter(t *testing.T) {
-	runTestSubscriberGroup(gomega.NewWithT(t), subscribergroup.WithFilter(filters.GreaterEqual(extractors.Extract[int]("age"), 10)))
+	runTestSubscriberGroup(gomega.NewWithT(t), "sub-group-2", subscribergroup.WithFilter(filters.GreaterEqual(extractors.Extract[int]("age"), 10)))
 }
 
-func runTestSubscriberGroup(g *gomega.WithT, options ...func(o *subscribergroup.Options)) {
+func runTestSubscriberGroup(g *gomega.WithT, subscriberGroup string, options ...func(o *subscribergroup.Options)) {
 	var (
 		err error
 		ctx = context.Background()
@@ -142,20 +142,19 @@ func runTestSubscriberGroup(g *gomega.WithT, options ...func(o *subscribergroup.
 
 	const (
 		topicName = "my-topic-with-sg"
-		subGroup  = "sub-group-1"
 	)
 
 	session1, topic1 := getSessionAndTopic[utils.Person](g, topicName)
 	defer session1.Close()
 
-	err = topic1.CreateSubscriberGroup(ctx, subGroup, options...)
+	err = topic1.CreateSubscriberGroup(ctx, subscriberGroup, options...)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
-	sub1, err := topic1.CreateSubscriber(ctx, subscriber.InSubscriberGroup(subGroup))
+	sub1, err := topic1.CreateSubscriber(ctx, subscriber.InSubscriberGroup(subscriberGroup))
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 	// destroy the subscriber group from the subscriber only
-	g.Expect(sub1.DestroySubscriberGroup(ctx, subGroup)).ShouldNot(gomega.HaveOccurred())
+	g.Expect(sub1.DestroySubscriberGroup(ctx, subscriberGroup)).ShouldNot(gomega.HaveOccurred())
 
 	g.Expect(sub1.Close(ctx)).ShouldNot(gomega.HaveOccurred())
 
