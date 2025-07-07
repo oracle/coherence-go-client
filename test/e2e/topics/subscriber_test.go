@@ -14,11 +14,9 @@ import (
 	"github.com/oracle/coherence-go-client/v2/coherence/filters"
 	"github.com/oracle/coherence-go-client/v2/coherence/subscriber"
 	"github.com/oracle/coherence-go-client/v2/coherence/subscribergroup"
-	"github.com/oracle/coherence-go-client/v2/coherence/topic"
 	"github.com/oracle/coherence-go-client/v2/test/utils"
 	"log"
 	"testing"
-	"time"
 )
 
 func TestSubscriberWithFilter(t *testing.T) {
@@ -30,7 +28,7 @@ func TestSubscriberWithFilter(t *testing.T) {
 
 	const topicName = "my-topic-anon-filter"
 
-	session1, topic1 := getSessionAndTopic(g, topicName)
+	session1, topic1 := getSessionAndTopic[utils.Person](g, topicName)
 	defer session1.Close()
 
 	// create a subscriber with a filter
@@ -50,7 +48,7 @@ func TestSubscriberWithTransformer(t *testing.T) {
 
 	const topicName = "my-topic-anon-transformer"
 
-	session1, topic1 := getSessionAndTopic(g, topicName)
+	session1, topic1 := getSessionAndTopic[utils.Person](g, topicName)
 	defer session1.Close()
 
 	extractor := extractors.Extract[string]("name")
@@ -72,7 +70,7 @@ func TestSubscriberWithTransformerAndFilter(t *testing.T) {
 
 	const topicName = "my-topic-anon-transformer"
 
-	session1, topic1 := getSessionAndTopic(g, topicName)
+	session1, topic1 := getSessionAndTopic[utils.Person](g, topicName)
 	defer session1.Close()
 
 	extractor := extractors.Extract[string]("name")
@@ -111,7 +109,7 @@ func TestSubscriberGroupWithinTopic(t *testing.T) {
 		subGroup  = "sub-group-1"
 	)
 
-	session1, topic1 := getSessionAndTopic(g, topicName)
+	session1, topic1 := getSessionAndTopic[utils.Person](g, topicName)
 	defer session1.Close()
 
 	err = topic1.CreateSubscriberGroup(ctx, subGroup)
@@ -147,7 +145,7 @@ func runTestSubscriberGroup(g *gomega.WithT, options ...func(o *subscribergroup.
 		subGroup  = "sub-group-1"
 	)
 
-	session1, topic1 := getSessionAndTopic(g, topicName)
+	session1, topic1 := getSessionAndTopic[utils.Person](g, topicName)
 	defer session1.Close()
 
 	err = topic1.CreateSubscriberGroup(ctx, subGroup, options...)
@@ -162,15 +160,4 @@ func runTestSubscriberGroup(g *gomega.WithT, options ...func(o *subscribergroup.
 	g.Expect(sub1.Close(ctx)).ShouldNot(gomega.HaveOccurred())
 
 	g.Expect(topic1.Destroy(ctx)).ShouldNot(gomega.HaveOccurred())
-}
-
-func getSessionAndTopic(g *gomega.WithT, topicName string) (*coherence.Session, coherence.NamedTopic[utils.Person]) {
-	session1, err := utils.GetSession(coherence.WithRequestTimeout(300 * time.Second))
-	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-
-	topic1, err := coherence.GetNamedTopic[utils.Person](context.Background(), session1, topicName, topic.WithChannelCount(17))
-	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-	log.Println(topic1)
-
-	return session1, topic1
 }

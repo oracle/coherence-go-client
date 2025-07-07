@@ -16,6 +16,7 @@ import (
 var (
 	_ OrderingOption = &OrderByDefault{}
 	_ OrderingOption = &OrderByRoundRobin{}
+	//_ OrderingOption = &OrderByValue{}
 )
 
 // PublishStatus provides the result of a publish operation.
@@ -108,12 +109,3 @@ func (o *OrderByRoundRobin) GetPublishHash() int32 {
 	// #nosec G115 -- val is guaranteed to be in int32 range
 	return int32(newVal)
 }
-
-//// OrderByValue defines default ordering.
-//type OrderByValue[V any] struct {
-//	value V
-//}
-//
-//func (r *OrderByValue[V]) GetPublishHash() int32 {
-//
-//}

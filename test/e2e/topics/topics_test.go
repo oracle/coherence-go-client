@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"github.com/onsi/gomega"
 	"github.com/oracle/coherence-go-client/v2/coherence"
+	"github.com/oracle/coherence-go-client/v2/coherence/publisher"
 	"github.com/oracle/coherence-go-client/v2/coherence/topic"
 	"github.com/oracle/coherence-go-client/v2/test/utils"
 	"log"
@@ -20,25 +21,17 @@ import (
 
 func TestBasicTopicCreatedAndDestroy(t *testing.T) {
 	var (
-		g        = gomega.NewWithT(t)
-		err      error
-		session1 *coherence.Session
-		topic1   coherence.NamedTopic[string]
-		ctx      = context.Background()
+		g   = gomega.NewWithT(t)
+		err error
+		ctx = context.Background()
 	)
 
 	const topicName = "my-topic"
 
 	t.Setenv("COHERENCE_LOG_LEVEL", "ALL")
 
-	session1, err = utils.GetSession(coherence.WithRequestTimeout(300 * time.Second))
-	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	session1, topic1 := getSessionAndTopic[string](g, topicName)
 	defer session1.Close()
-
-	// get a NamedQueue with name "my-queue"
-	topic1, err = coherence.GetNamedTopic[string](ctx, session1, topicName, topic.WithChannelCount(17))
-	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-	log.Println(topic1)
 
 	utils.Sleep(5)
 
@@ -50,25 +43,25 @@ func TestBasicTopicCreatedAndDestroy(t *testing.T) {
 	g.Expect(err).Should(gomega.HaveOccurred())
 }
 
-func TestBasicTopicAnonPubSub(t *testing.T) {
+func TestTopicPublish(t *testing.T) {
+	g := gomega.NewWithT(t)
+
+	RunTestBasicTopicAnonPubSub(g)
+	RunTestBasicTopicAnonPubSub(g, publisher.WithDefaultOrdering())
+	RunTestBasicTopicAnonPubSub(g, publisher.WithRoundRobinOrdering())
+	RunTestBasicTopicAnonPubSub(g, publisher.WithChannelCount(21))
+}
+
+func RunTestBasicTopicAnonPubSub(g *gomega.WithT, options ...func(cache *publisher.Options)) {
 	var (
-		g        = gomega.NewWithT(t)
-		err      error
-		session1 *coherence.Session
-		topic1   coherence.NamedTopic[string]
-		ctx      = context.Background()
+		err error
+		ctx = context.Background()
 	)
 
 	const topicName = "my-topic-anon"
 
-	session1, err = utils.GetSession(coherence.WithRequestTimeout(300 * time.Second))
-	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	session1, topic1 := getSessionAndTopic[string](g, topicName)
 	defer session1.Close()
-
-	// get a NamedQueue with name "my-queue"
-	topic1, err = coherence.GetNamedTopic[string](ctx, session1, topicName, topic.WithChannelCount(17))
-	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-	log.Println(topic1)
 
 	// create a subscriber first
 	sub1, err := topic1.CreateSubscriber(ctx)
@@ -182,4 +175,15 @@ func publishEntriesString(g *gomega.WithT, pub coherence.Publisher[string], coun
 		g.Expect(err2).ShouldNot(gomega.HaveOccurred())
 		g.Expect(status).ShouldNot(gomega.BeNil())
 	}
+}
+
+func getSessionAndTopic[V any](g *gomega.WithT, topicName string) (*coherence.Session, coherence.NamedTopic[V]) {
+	session1, err := utils.GetSession(coherence.WithRequestTimeout(300 * time.Second))
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+
+	topic1, err := coherence.GetNamedTopic[V](context.Background(), session1, topicName, topic.WithChannelCount(17))
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	log.Println(topic1)
+
+	return session1, topic1
 }

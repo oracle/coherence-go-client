@@ -70,6 +70,7 @@ type NamedTopic[V any] interface {
 	CreateSubscriberGroup(ctx context.Context, subscriberGroup string, options ...func(o *subscribergroup.Options)) error
 
 	// DestroySubscriberGroup destroys a subscriber group.
+	// TODO: Not viable to implement?
 	DestroySubscriberGroup(ctx context.Context, subscriberGroup string) error
 }
 
