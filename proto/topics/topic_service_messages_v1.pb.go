@@ -90,7 +90,7 @@ const (
 	// The message field should be an EnsureSubscriberGroupRequest message
 	// The response will just be a Complete message corresponding to the request id.
 	TopicServiceRequestType_EnsureSubscriberGroup TopicServiceRequestType = 6
-	// Ensure a subscriber group exists for a topic.
+	// Destroy a subscriber group.
 	// The message field should be an StringValue containing the name of the
 	// subscriber group to be destroyed
 	// The response will just be a Complete message corresponding to the request id.

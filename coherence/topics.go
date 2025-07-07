@@ -13,6 +13,7 @@ import (
 	"github.com/oracle/coherence-go-client/v2/coherence/extractors"
 	"github.com/oracle/coherence-go-client/v2/coherence/publisher"
 	"github.com/oracle/coherence-go-client/v2/coherence/subscriber"
+	"github.com/oracle/coherence-go-client/v2/coherence/subscribergroup"
 	"github.com/oracle/coherence-go-client/v2/coherence/topic"
 	pb1topics "github.com/oracle/coherence-go-client/v2/proto/topics"
 	pb1 "github.com/oracle/coherence-go-client/v2/proto/v1"
@@ -64,6 +65,12 @@ type NamedTopic[V any] interface {
 	// Note: If you wish to create a Subscriber with a transformer, you should use the helper
 	// function CreatSubscriberWithTransformer.
 	CreateSubscriber(ctx context.Context, options ...func(o *subscriber.Options)) (Subscriber[V], error)
+
+	// CreateSubscriberGroup creates a subscriber group with the given options.
+	CreateSubscriberGroup(ctx context.Context, subscriberGroup string, options ...func(o *subscribergroup.Options)) error
+
+	// DestroySubscriberGroup destroys a subscriber group.
+	DestroySubscriberGroup(ctx context.Context, subscriberGroup string) error
 }
 
 // Publisher provides the means to publish messages to a [NamedTopic].
@@ -85,6 +92,9 @@ type Subscriber[V any] interface {
 	// Close closes a subscriber and releases all resources associated with it in the client
 	// and on the server.
 	Close(ctx context.Context) error
+
+	// DestroySubscriberGroup destroys a subscriber group created by this subscriber.
+	DestroySubscriberGroup(ctx context.Context, subscriberGroup string) error
 }
 
 // GetNamedTopic gets a [NamedTopic] of the generic type specified or if a topic already exists with the
@@ -228,6 +238,14 @@ func (bt *baseTopicsClient[V]) CreateSubscriber(ctx context.Context, options ...
 	return CreateSubscriber[V](ctx, bt.session, bt.name, options...)
 }
 
+func (bt *baseTopicsClient[V]) CreateSubscriberGroup(ctx context.Context, subscriberGroup string, options ...func(o *subscribergroup.Options)) error {
+	return CreateSubscriberGroup(ctx, bt.session, bt.name, subscriberGroup, options...)
+}
+
+func (bt *baseTopicsClient[V]) DestroySubscriberGroup(ctx context.Context, subscriberGroup string) error {
+	return DestroySubscriberGroup(ctx, bt.session, subscriberGroup)
+}
+
 func newPublisher[V any](session *Session, bt *baseTopicsClient[V], result *publisher.EnsurePublisherResult, topicName string, options *publisher.Options) (Publisher[V], error) {
 	tp := &topicPublisher[V]{
 		namedTopic:      bt,
@@ -309,6 +327,10 @@ func (ts *topicSubscriber[V]) Close(ctx context.Context) error {
 
 	ts.isClosed = true
 	return ts.session.v1StreamManagerTopics.destroyPublisherOrSubscriber(ctx, ts.proxyID, pb1topics.TopicServiceRequestType_DestroySubscriber)
+}
+
+func (ts *topicSubscriber[V]) DestroySubscriberGroup(ctx context.Context, subscriberGroup string) error {
+	return ts.session.v1StreamManagerTopics.destroySubscriberGroup(ctx, ts.proxyID, subscriberGroup)
 }
 
 func (ts *topicSubscriber[V]) isDisconnected() bool {
@@ -418,12 +440,53 @@ func CreateSubscriber[V any](ctx context.Context, session *Session, topicName st
 		}
 	}
 
-	result, err := session.v1StreamManagerTopics.ensureSubscriber(ctx, topicName, binFilter)
+	result, err := session.v1StreamManagerTopics.ensureSubscriber(ctx, topicName, subscriberOptions.SubscriberGroup, binFilter)
 	if err != nil {
 		return nil, err
 	}
 
 	return newSubscriber[V](session, nil, result, topicName, subscriberOptions)
+}
+
+// CreateSubscriberGroup creates a topic subscriber group.
+func CreateSubscriberGroup(ctx context.Context, session *Session, topicName string, subscriberGroup string, options ...func(cache *subscribergroup.Options)) error {
+	var (
+		subscriberGroupOptions = &subscribergroup.Options{}
+		binFilter              []byte
+		err                    error
+	)
+
+	// apply any subscriber options
+	for _, f := range options {
+		f(subscriberGroupOptions)
+	}
+
+	if session.v1StreamManagerTopics == nil {
+		if err = ensureV1StreamManagerTopics(session); err != nil {
+			return err
+		}
+	}
+
+	if subscriberGroupOptions.Filter != nil {
+		binFilter, err = session.genericSerializer.Serialize(subscriberGroupOptions.Filter)
+		if err != nil {
+			return err
+		}
+	}
+
+	return session.v1StreamManagerTopics.ensureSubscriberGroup(ctx, topicName, subscriberGroup, binFilter)
+}
+
+// DestroySubscriberGroup destroys a subscriber group.
+func DestroySubscriberGroup(ctx context.Context, session *Session, subscriberGroup string) error {
+	if session.v1StreamManagerTopics == nil {
+		if err := ensureV1StreamManagerTopics(session); err != nil {
+			return err
+		}
+	}
+
+	// TODO: Is this valid???, how can we determine the proxyID if we don't have a subscriber
+	return session.v1StreamManagerTopics.destroySubscriberGroup(ctx, 0, subscriberGroup)
 }
 
 // ensurePublisher ensures a publisher.
@@ -461,8 +524,8 @@ func (m *streamManagerV1) ensurePublisher(ctx context.Context, topicName string,
 }
 
 // ensureSubscriber ensures a subscriber.
-func (m *streamManagerV1) ensureSubscriber(ctx context.Context, topicName string, binFilter []byte) (*subscriber.EnsureSubscriberResult, error) {
-	req, err := m.newEnsureSubscriberRequest(topicName, binFilter)
+func (m *streamManagerV1) ensureSubscriber(ctx context.Context, topicName string, subscriberGroup *string, binFilter []byte) (*subscriber.EnsureSubscriberResult, error) {
+	req, err := m.newEnsureSubscriberRequest(topicName, subscriberGroup, binFilter)
 	if err != nil {
 		return nil, err
 	}
@@ -495,6 +558,56 @@ func (m *streamManagerV1) ensureSubscriber(ctx context.Context, topicName string
 	}
 
 	return &s, nil
+}
+
+// ensureSubscriber ensures a subscriber.
+func (m *streamManagerV1) ensureSubscriberGroup(ctx context.Context, topicName string, subscriberGroup string, binFilter []byte) error {
+	req, err := m.newEnsureSubscriberGroupRequest(topicName, subscriberGroup, binFilter)
+	if err != nil {
+		return err
+	}
+
+	requestType, err := m.submitTopicRequest(req, pb1topics.TopicServiceRequestType_EnsureSubscriberGroup)
+	if err != nil {
+		return err
+	}
+
+	newCtx, cancel := m.session.ensureContext(ctx)
+	if cancel != nil {
+		defer cancel()
+	}
+
+	defer m.cleanupRequest(req.Id)
+
+	// only a complete for create subscriber group
+	_, err = waitForResponse(newCtx, requestType.ch, false)
+
+	return err
+}
+
+// destroySubscriberGroup destroys a subscriber.
+func (m *streamManagerV1) destroySubscriberGroup(ctx context.Context, proxyID int32, subscriberGroup string) error {
+	req, err := m.newDestroySubscriberGroupRequest(proxyID, subscriberGroup)
+	if err != nil {
+		return err
+	}
+
+	requestType, err := m.submitTopicRequest(req, pb1topics.TopicServiceRequestType_DestroySubscriberGroup)
+	if err != nil {
+		return err
+	}
+
+	newCtx, cancel := m.session.ensureContext(ctx)
+	if cancel != nil {
+		defer cancel()
+	}
+
+	defer m.cleanupRequest(req.Id)
+
+	// only a complete for destroy subscriber group
+	_, err = waitForResponse(newCtx, requestType.ch, false)
+
+	return err
 }
 
 // destroyPublisher destroyed a publisher.
@@ -620,7 +733,7 @@ func (m *streamManagerV1) ensureTopicChannels(ctx context.Context, topicName str
 	return ID, nil
 }
 
-// ensure ensures a queue or cache.
+// newPublishRequest publishes a message to a topic.
 func (m *streamManagerV1) publishToTopic(ctx context.Context, proxyID int32, publishChannel int32, value []byte) (*publisher.PublishStatus, error) {
 	req, err := m.newPublishRequest(proxyID, publishChannel, value)
 
@@ -729,11 +842,11 @@ func (m *streamManagerV1) newDestroyPublisherOrSubscriberRequest(proxyID int32, 
 	return m.newWrapperProxyTopicsRequest("", requestType, anyReq)
 }
 
-// TODO: Add more options
-func (m *streamManagerV1) newEnsureSubscriberRequest(topicName string, binFilter []byte) (*pb1.ProxyRequest, error) {
+func (m *streamManagerV1) newEnsureSubscriberRequest(topicName string, subscriberGroup *string, binFilter []byte) (*pb1.ProxyRequest, error) {
 	req := &pb1topics.EnsureSubscriberRequest{
-		Topic:  topicName,
-		Filter: binFilter,
+		Topic:           topicName,
+		Filter:          binFilter,
+		SubscriberGroup: subscriberGroup,
 	}
 
 	anyReq, err := anypb.New(req)
@@ -741,6 +854,33 @@ func (m *streamManagerV1) newEnsureSubscriberRequest(topicName string, binFilter
 		return nil, err
 	}
 	return m.newWrapperProxyTopicsRequest(topicName, pb1topics.TopicServiceRequestType_EnsureSubscriber, anyReq)
+}
+
+func (m *streamManagerV1) newEnsureSubscriberGroupRequest(topicName string, subscriberGroup string, binFilter []byte) (*pb1.ProxyRequest, error) {
+	req := &pb1topics.EnsureSubscriberGroupRequest{
+		SubscriberGroup: subscriberGroup,
+		Filter:          binFilter,
+	}
+
+	anyReq, err := anypb.New(req)
+	if err != nil {
+		return nil, err
+	}
+	return m.newWrapperProxyTopicsRequest(topicName, pb1topics.TopicServiceRequestType_EnsureSubscriberGroup, anyReq)
+}
+
+func (m *streamManagerV1) newDestroySubscriberGroupRequest(proxyID int32, subscriberGroup string) (*pb1.ProxyRequest, error) {
+	req := &wrapperspb.StringValue{
+		Value: subscriberGroup,
+	}
+
+	anyReq, err := anypb.New(req)
+	if err != nil {
+		return nil, err
+	}
+	return m.newWrapperProxyPublisherRequest(proxyID, pb1topics.TopicServiceRequestType_DestroySubscriberGroup, anyReq)
+
+	//return m.newWrapperProxyTopicsRequest("", pb1topics.TopicServiceRequestType_DestroySubscriberGroup, anyReq)
 }
 
 //func (m *streamManagerV1) newInitializeSubscriptionRequest(subscriptionID int64, force bool) (*pb1.ProxyRequest, error) {
@@ -817,7 +957,8 @@ func (m *streamManagerV1) newWrapperProxyTopicsRequest(topicName string, request
 		noTopicRequired = requestType == pb1topics.TopicServiceRequestType_DestroyTopic ||
 			requestType == pb1topics.TopicServiceRequestType_EnsurePublisher ||
 			requestType == pb1topics.TopicServiceRequestType_EnsureSubscription ||
-			requestType == pb1topics.TopicServiceRequestType_EnsureSubscriber
+			requestType == pb1topics.TopicServiceRequestType_EnsureSubscriber ||
+			requestType == pb1topics.TopicServiceRequestType_DestroySubscriberGroup
 	)
 
 	// validate the topic ID if it is not an ensure queue request
