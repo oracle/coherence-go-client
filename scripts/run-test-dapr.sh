@@ -21,6 +21,7 @@ if [ $# -eq 3 -a "$3" == "true" ]; then
   TLS=true
 fi
 
+DIR=`pwd`
 DAPR_TEST_DIR=$1
 DAPR_TEST_HOME=$2
 
@@ -41,7 +42,7 @@ if [ "$OS" == "Linux" ]; then
    curl -sL https://raw.githubusercontent.com/oracle/coherence-cli/main/scripts/install.sh | bash
    cohctl version
    # Wait for coherence
-   cohctl monitor health -e http://127.0.0.1:6676/,http://127.0.0.1:6677/ -T 120 -w
+   cohctl monitor health -e http://127.0.0.1:6676/,http://127.0.0.1:6677/ -T 120 -w -I
    cohctl add cluster default -u http://127.0.0.1:30000/management/coherence/cluster
    cohctl version
 else
@@ -119,6 +120,9 @@ go mod tidy
 COMPONENTS=./components/
 if [ "$TLS" == "true" ]; then
   COMPONENTS=./components-tls/
+  echo "DIR = $DIR"
+  pwd
+  ls -l ../../utils/certs/guardians-ca.crt
 fi
 
 echo "Running DAPR with component $COMPONENTS"
