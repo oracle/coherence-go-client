@@ -473,14 +473,14 @@ test-examples: test-clean gotestsum $(BUILD_PROPS) ## Run examples tests with Co
 # Executes the tests for DAPR
 # ----------------------------------------------------------------------------------------------------------------------
 .PHONY: test-dapr
-test-dapr: test-clean gotestsum $(BUILD_PROPS) ## Run dapr tests with Coherence
+test-dapr: gotestsum $(BUILD_PROPS) ## Run dapr tests with Coherence
 	./scripts/run-test-dapr.sh $(DAPR_TEST_DIR) $(DAPR_DIR)
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Executes the tests for DAPR TLS
 # ----------------------------------------------------------------------------------------------------------------------
 .PHONY: test-dapr-tls
-test-dapr-tls: test-clean gotestsum $(BUILD_PROPS) ## Run dapr tests with Coherence with TLS
+test-dapr-tls: gotestsum $(BUILD_PROPS) ## Run dapr tests with Coherence with TLS
 	./scripts/run-test-dapr.sh $(DAPR_TEST_DIR) $(DAPR_DIR) true
 
 # ----------------------------------------------------------------------------------------------------------------------

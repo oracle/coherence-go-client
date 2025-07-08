@@ -6,7 +6,7 @@
 # https://oss.oracle.com/licenses/upl.
 #
 
-# TLS=true exported to enable TLS tests
+# $3 = true to enable TLS test
 
 set -e
 
@@ -16,7 +16,6 @@ if [ $# -lt 2 ]; then
 fi
 
 TLS=false
-echo "TLS: $3"
 
 if [ $# -eq 3 -a "$3" == "true" ]; then
   TLS=true
@@ -113,11 +112,9 @@ cp $DAPR_BIN ~/.dapr/bin
 
 echo "Running Test"
 
-cd $DAPR_TEST_DIR
+cd $DAPR_TEST_DIR/my-dapr-app
 
-cd my-dapr-app
 go mod tidy
-
 
 COMPONENTS=./components/
 if [ "$TLS" == "true" ]; then
