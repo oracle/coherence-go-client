@@ -94,7 +94,7 @@ func TestCreatePubSubWithoutCreatingTopic(t *testing.T) {
 		ctx      = context.Background()
 	)
 
-	const topicName = "my-topic-anon"
+	const topicName = "my-topic-anon-2"
 
 	session1, err = utils.GetSession(coherence.WithRequestTimeout(300 * time.Second))
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
