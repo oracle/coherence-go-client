@@ -15,7 +15,7 @@ fi
 
 TLS=false
 
-if [ $# -eq 3 && "$3" == "tls" ]; then
+if [ $# -eq 3 && "$3" == "true" ]; then
   TLS=true
 fi
 
@@ -115,15 +115,18 @@ cd $DAPR_TEST_DIR
 cd my-dapr-app
 go mod tidy
 
+
 COMPONENTS=./components/
 if [ "$TLS" == "true" ]; then
   COMPONENTS=./components-tls/
 fi
 
+echo "Running DAPR with component $COMPONENTS"
+
 dapr run --app-id myapp --resources-path $COMPONENTS --log-level debug  -- go run main.go
 
 # Verify the caches
-cohctl get cache -o wide
+cohctl get caches -o wide
 
 
 
