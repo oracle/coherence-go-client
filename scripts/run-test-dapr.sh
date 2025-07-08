@@ -6,6 +6,8 @@
 # https://oss.oracle.com/licenses/upl.
 #
 
+# TLS=true exported to enable TLS tests
+
 set -e
 
 if [ $# -lt 2 ]; then
@@ -13,14 +15,12 @@ if [ $# -lt 2 ]; then
    exit 1
 fi
 
-set -x
 TLS=false
 echo "TLS: $3"
 
 if [ $# -eq 3 -a "$3" == "true" ]; then
   TLS=true
 fi
-set +x
 
 DAPR_TEST_DIR=$1
 DAPR_TEST_HOME=$2
