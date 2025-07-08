@@ -477,6 +477,13 @@ test-dapr: test-clean gotestsum $(BUILD_PROPS) ## Run dapr tests with Coherence
 	./scripts/run-test-dapr.sh $(DAPR_TEST_DIR) $(DAPR_DIR)
 
 # ----------------------------------------------------------------------------------------------------------------------
+# Executes the tests for DAPR TLS
+# ----------------------------------------------------------------------------------------------------------------------
+.PHONY: test-dapr-tls
+test-dapr-tls: test-clean gotestsum $(BUILD_PROPS) ## Run dapr tests with Coherence with TLS
+	./scripts/run-test-dapr.sh $(DAPR_TEST_DIR) $(DAPR_DIR) true
+
+# ----------------------------------------------------------------------------------------------------------------------
 # Startup cluster members via docker compose
 # ----------------------------------------------------------------------------------------------------------------------
 .PHONY: test-cluster-startup

@@ -8,9 +8,15 @@
 
 set -e
 
-if [ $# -ne 2 ]; then
+if [ $# -lt 2 ]; then
    echo "You must specify the dapr test directory and dapr dir to install to"
    exit 1
+fi
+
+TLS=false
+
+if [ $# -eq 3 && "$3" == "tls" ]; then
+  TLS=true
 fi
 
 DAPR_TEST_DIR=$1
@@ -20,6 +26,7 @@ mkdir -p $DAPR_TEST_HOME
 
 echo "DAPR Test Dir:  $DAPR_TEST_DIR"
 echo "DAPR Test Home: $DAPR_TEST_HOME"
+echo "TLS:            $TLS"
 
 echo "Install DAPR"
 OS=`uname`
@@ -108,7 +115,12 @@ cd $DAPR_TEST_DIR
 cd my-dapr-app
 go mod tidy
 
-dapr run --app-id myapp --resources-path ./components/ --log-level debug  -- go run main.go
+COMPONENTS=./components/
+if [ "$TLS" == "true" ]; then
+  COMPONENTS=./components-tls/
+fi
+
+dapr run --app-id myapp --resources-path $COMPONENTS --log-level debug  -- go run main.go
 
 # Verify the caches
 cohctl get cache -o wide

@@ -1,0 +1,25 @@
+#
+# Copyright (c) 2025 Oracle and/or its affiliates.
+# Licensed under the Universal Permissive License v 1.0 as shown at
+# https://oss.oracle.com/licenses/upl.
+#
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: statestore
+spec:
+  type: state.coherence
+  version: v1
+  metadata:
+    - name: serverAddress
+      value: localhost:1408
+    - name: tlsEnabled
+      value: true
+    - name: tlsClientCertPath
+      value: ../../utils/certs/star-lord.crt
+    - name: tlsClientKey
+      value: ../../utils/certs/star-lord.key
+    - name: tlsCertsPath
+      value: ../../utils/certs/guardians-ca.crt
+    - name: ignoreInvalidCerts
+      value: true
