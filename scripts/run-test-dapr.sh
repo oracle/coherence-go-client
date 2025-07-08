@@ -15,9 +15,10 @@ fi
 
 TLS=false
 
-if [ $# -eq 3 && "$3" == "true" ]; then
+if [ $# -eq 3 -a "$3" == "true" ]; then
   TLS=true
 fi
+
 
 DAPR_TEST_DIR=$1
 DAPR_TEST_HOME=$2
