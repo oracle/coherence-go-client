@@ -405,19 +405,80 @@ func processTopicEvent(m *streamManagerV1, resp *responseMessage) {
 	// search for publisher ID via ProxyID
 	publisherID := m.session.publisherIDMap.KeyFromValue(resp.namedTopicResponse.ProxyId)
 	if publisherID != nil {
-		log.Printf("Received message type %v for publisher id %v. TODO\n", resp.namedTopicResponse.Type, publisherID)
+		processPublisherEvent(m, resp, publisherID)
 		return
 	}
 
 	// search for subscriber ID for ProxyID
 	subscriberID := m.session.subscriberIDMap.KeyFromValue(resp.namedTopicResponse.ProxyId)
 	if subscriberID != nil {
-		log.Printf("Received message type %v for susbcriber id %v. TODO\n", resp.namedTopicResponse.Type, subscriberID)
+		processSubscriberEvent(m, resp, subscriberID)
 		return
 	}
 
 	m.session.debugConnection("cannot find topic, subscriber or publisher for message ID %v and type %v",
 		resp.namedTopicResponse.ProxyId, resp.namedTopicResponse.Type)
+}
+
+func processPublisherEvent(m *streamManagerV1, resp *responseMessage, publisherID *int64) {
+	m.session.debugConnection("Received message type %v for publisher id %v", resp.namedTopicResponse.Type, *publisherID)
+	if existingPublisher, ok := m.session.publishers[*publisherID]; ok {
+		if publisherEventSubmitter, ok2 := existingPublisher.(PublisherEventSubmitter); ok2 {
+			switch resp.namedTopicResponse.Type {
+			case pb1topics.ResponseType_Event:
+				var eventType = &pb1topics.PublisherEvent{}
+				if err := resp.namedTopicResponse.Message.UnmarshalTo(eventType); err != nil {
+					err = getUnmarshallError("ensure response", err)
+					m.session.debugConnection("cannot unmarshal topic response topic for publisher %v: %v", publisherID, err)
+					return
+				}
+				switch eventType.Type {
+				case pb1topics.PublisherEventType_PublisherDestroyed:
+					publisherEventSubmitter.generatePublisherLifecycleEvent(existingPublisher, PublisherDestroyed)
+				case pb1topics.PublisherEventType_PublisherConnected:
+					publisherEventSubmitter.generatePublisherLifecycleEvent(existingPublisher, PublisherConnected)
+				case pb1topics.PublisherEventType_PublisherDisconnected:
+					publisherEventSubmitter.generatePublisherLifecycleEvent(existingPublisher, PublisherDisconnected)
+				case pb1topics.PublisherEventType_PublisherChannelsFreed:
+					publisherEventSubmitter.generatePublisherLifecycleEvent(existingPublisher, PublisherChannelsFreed)
+				}
+			}
+		}
+	}
+}
+func processSubscriberEvent(m *streamManagerV1, resp *responseMessage, subscriberID *int64) {
+	m.session.debugConnection("Received message type %v for subscriber id %v", resp.namedTopicResponse.Type, *subscriberID)
+	if existingSubscriber, ok := m.session.subscribers[*subscriberID]; ok {
+		if subscriberEventSubmitter, ok2 := existingSubscriber.(SubscriberEventSubmitter); ok2 {
+			switch resp.namedTopicResponse.Type {
+			case pb1topics.ResponseType_Event:
+				var eventType = &pb1topics.SubscriberEvent{}
+				if err := resp.namedTopicResponse.Message.UnmarshalTo(eventType); err != nil {
+					err = getUnmarshallError("ensure response", err)
+					m.session.debugConnection("cannot unmarshal topic response topic for subscriber %v: %v", subscriberID, err)
+					return
+				}
+				switch eventType.Type {
+				case pb1topics.SubscriberEventType_SubscriberChannelAllocation:
+					subscriberEventSubmitter.generateSubscriberLifecycleEvent(existingSubscriber, SubscriberChannelAllocation)
+				case pb1topics.SubscriberEventType_SubscriberChannelHead:
+					subscriberEventSubmitter.generateSubscriberLifecycleEvent(existingSubscriber, SubscriberChannelHead)
+				case pb1topics.SubscriberEventType_SubscriberChannelPopulated:
+					subscriberEventSubmitter.generateSubscriberLifecycleEvent(existingSubscriber, SubscriberChannelPopulated)
+				case pb1topics.SubscriberEventType_SubscriberChannelsLost:
+					subscriberEventSubmitter.generateSubscriberLifecycleEvent(existingSubscriber, SubscriberChannelsLost)
+				case pb1topics.SubscriberEventType_SubscriberDestroyed:
+					subscriberEventSubmitter.generateSubscriberLifecycleEvent(existingSubscriber, SubscriberDestroyed)
+				case pb1topics.SubscriberEventType_SubscriberDisconnected:
+					subscriberEventSubmitter.generateSubscriberLifecycleEvent(existingSubscriber, SubscriberDisconnected)
+				case pb1topics.SubscriberEventType_SubscriberGroupDestroyed:
+					subscriberEventSubmitter.generateSubscriberLifecycleEvent(existingSubscriber, SubscriberGroupDestroyed)
+				case pb1topics.SubscriberEventType_SubscriberUnsubscribed:
+					subscriberEventSubmitter.generateSubscriberLifecycleEvent(existingSubscriber, SubscriberUnsubscribed)
+				}
+			}
+		}
+	}
 }
 
 // submitRequest submits a request to the stream manager and returns named cache request.

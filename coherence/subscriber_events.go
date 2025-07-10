@@ -48,7 +48,7 @@ func (l *subscriberLifecycleEvent[V]) Source() Subscriber[V] {
 	return l.source
 }
 
-// String returns a string representation of a MapLifecycleEvent.
+// String returns a string representation of a [SubscriberLifecycleEvent].\.
 func (l *subscriberLifecycleEvent[V]) String() string {
 	return fmt.Sprintf("subscriberLifecycleEvent{source=%v, type=%s}", l.Source(), l.Type())
 }
@@ -65,6 +65,27 @@ type SubscriberLifecycleListener[V any] interface {
 	// OnReleased registers a callback that will be notified when a [Subscriber] is released.
 	OnReleased(callback func(SubscriberLifecycleEvent[V])) SubscriberLifecycleListener[V]
 
+	// OnDisconnected registers a callback that will be notified when a [Subscriber] is disconnected.
+	OnDisconnected(callback func(SubscriberLifecycleEvent[V])) SubscriberLifecycleListener[V]
+
+	// OnUnsubscribed registers a callback that will be notified when a [Subscriber] is unsubscribed.
+	OnUnsubscribed(callback func(SubscriberLifecycleEvent[V])) SubscriberLifecycleListener[V]
+
+	// OnChannelsLost registers a callback that will be notified when a [Subscriber] loses channels.
+	OnChannelsLost(callback func(SubscriberLifecycleEvent[V])) SubscriberLifecycleListener[V]
+
+	// OnChannelHeadChanged registers a callback that will be notified when head position of a channel has changed for a [Subscriber].
+	OnChannelHeadChanged(callback func(SubscriberLifecycleEvent[V])) SubscriberLifecycleListener[V]
+
+	// OnChannelPopulated registers a callback that will be notified when a channel is populated for a [Subscriber].
+	OnChannelPopulated(callback func(SubscriberLifecycleEvent[V])) SubscriberLifecycleListener[V]
+
+	// OnChannelAllocated registers a callback that will be notified when a channel is allocated for a [Subscriber].
+	OnChannelAllocated(callback func(SubscriberLifecycleEvent[V])) SubscriberLifecycleListener[V]
+
+	// OnSubscriberGroupDestroyed registers a callback that will be notified when a subscriber group is destroyed for a [Subscriber].
+	OnSubscriberGroupDestroyed(callback func(SubscriberLifecycleEvent[V])) SubscriberLifecycleListener[V]
+
 	getEmitter() *eventEmitter[SubscriberLifecycleEventType, SubscriberLifecycleEvent[V]]
 }
 
@@ -77,19 +98,56 @@ type subscriberLifecycleListener[V any] struct { //lint:ignore U1000 - required 
 	emitter *eventEmitter[SubscriberLifecycleEventType, SubscriberLifecycleEvent[V]]
 }
 
-// OnAny registers a callback that will be notified when any [NamedTopic] event occurs.
+// OnAny registers a callback that will be notified when any [Subscriber] event occurs.
 func (t *subscriberLifecycleListener[V]) OnAny(callback func(SubscriberLifecycleEvent[V])) SubscriberLifecycleListener[V] {
-	return t.OnDestroyed(callback).OnReleased(callback)
+	return t.OnDestroyed(callback).OnReleased(callback).OnDisconnected(callback).
+		OnUnsubscribed(callback).OnChannelsLost(callback).OnChannelHeadChanged(callback).
+		OnChannelPopulated(callback).OnSubscriberGroupDestroyed(callback).OnChannelAllocated(callback)
 }
 
-// OnDestroyed registers a callback that will be notified when a[NamedTopic] is destroyed.
+// OnDestroyed registers a callback that will be notified when a [Subscriber] is destroyed.
 func (t *subscriberLifecycleListener[V]) OnDestroyed(callback func(SubscriberLifecycleEvent[V])) SubscriberLifecycleListener[V] {
 	return t.on(SubscriberDestroyed, callback)
 }
 
-// OnReleased registers a callback that will be notified when a[NamedTopic] is released.
+// OnReleased registers a callback that will be notified when a [Subscriber] is released.
 func (t *subscriberLifecycleListener[V]) OnReleased(callback func(SubscriberLifecycleEvent[V])) SubscriberLifecycleListener[V] {
 	return t.on(SubscriberReleased, callback)
+}
+
+// OnDisconnected registers a callback that will be notified when a [Subscriber] is disconnected.
+func (t *subscriberLifecycleListener[V]) OnDisconnected(callback func(SubscriberLifecycleEvent[V])) SubscriberLifecycleListener[V] {
+	return t.on(SubscriberDisconnected, callback)
+}
+
+// OnUnsubscribed registers a callback that will be notified when a [Subscriber] is unsubscribed.
+func (t *subscriberLifecycleListener[V]) OnUnsubscribed(callback func(SubscriberLifecycleEvent[V])) SubscriberLifecycleListener[V] {
+	return t.on(SubscriberUnsubscribed, callback)
+}
+
+// OnChannelsLost registers a callback that will be notified when a [Subscriber] loses channels.
+func (t *subscriberLifecycleListener[V]) OnChannelsLost(callback func(SubscriberLifecycleEvent[V])) SubscriberLifecycleListener[V] {
+	return t.on(SubscriberChannelsLost, callback)
+}
+
+// OnChannelHeadChanged registers a callback that will be notified when head position of a channel has changed for a [Subscriber].
+func (t *subscriberLifecycleListener[V]) OnChannelHeadChanged(callback func(SubscriberLifecycleEvent[V])) SubscriberLifecycleListener[V] {
+	return t.on(SubscriberChannelHead, callback)
+}
+
+// OnChannelPopulated registers a callback that will be notified when a channel is populated for a [Subscriber].
+func (t *subscriberLifecycleListener[V]) OnChannelPopulated(callback func(SubscriberLifecycleEvent[V])) SubscriberLifecycleListener[V] {
+	return t.on(SubscriberChannelPopulated, callback)
+}
+
+// OnChannelAllocated registers a callback that will be notified when a channel is allocated for a [Subscriber].
+func (t *subscriberLifecycleListener[V]) OnChannelAllocated(callback func(SubscriberLifecycleEvent[V])) SubscriberLifecycleListener[V] {
+	return t.on(SubscriberChannelAllocation, callback)
+}
+
+// OnSubscriberGroupDestroyed registers a callback that will be notified when a subscriber group is destroyed for a [Subscriber].
+func (t *subscriberLifecycleListener[V]) OnSubscriberGroupDestroyed(callback func(SubscriberLifecycleEvent[V])) SubscriberLifecycleListener[V] {
+	return t.on(SubscriberGroupDestroyed, callback)
 }
 
 func (t *subscriberLifecycleListener[V]) getEmitter() *eventEmitter[SubscriberLifecycleEventType, SubscriberLifecycleEvent[V]] {
@@ -156,17 +214,17 @@ func newSubscriberLifecycleEvent[V any](nt Subscriber[V], eventType SubscriberLi
 	return &subscriberLifecycleEvent[V]{source: nt, eventType: eventType}
 }
 
-// generateTopicLifecycleEvent emits the queue lifecycle events.
+// generateSubscriberLifecycleEvent emits the subscriber lifecycle events.
 func (ts *topicSubscriber[V]) generateSubscriberLifecycleEvent(client interface{}, eventType SubscriberLifecycleEventType) {
 	listeners := ts.lifecycleListenersV1
 
-	if sub, ok := client.(NamedTopic[V]); ok || client == nil {
+	if sub, ok := client.(Subscriber[V]); ok || client == nil {
 		event := newSubscriberLifecycleEvent[V](sub, eventType)
 		for _, l := range listeners {
 			e := *l
 			e.getEmitter().emit(eventType, event)
 		}
-		//
+		// TODO:
 		//if eventType == TopicDestroyed {
 		//	_ = releaseTopicInternal[V](context.Background(), bt, false)
 		//}

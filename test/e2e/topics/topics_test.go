@@ -127,7 +127,7 @@ func TestCreatePubSubWithoutCreatingTopic(t *testing.T) {
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 }
 
-func runTest[E any](g *gomega.WithT, topic1 coherence.NamedTopic[utils.Person], s coherence.Subscriber[E]) {
+func runTestPerson[E any](g *gomega.WithT, topic1 coherence.NamedTopic[utils.Person], s coherence.Subscriber[E]) {
 	ctx := context.Background()
 
 	pub1, err := topic1.CreatePublisher(context.Background())
@@ -141,6 +141,28 @@ func runTest[E any](g *gomega.WithT, topic1 coherence.NamedTopic[utils.Person], 
 			Age:  10 + i,
 		}
 		status, err2 := pub1.Publish(ctx, p)
+		g.Expect(err2).ShouldNot(gomega.HaveOccurred())
+		g.Expect(status).ShouldNot(gomega.BeNil())
+	}
+
+	utils.Sleep(5)
+
+	err = s.Close(ctx)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+
+	err = s.Close(ctx)
+	g.Expect(err).Should(gomega.HaveOccurred())
+}
+
+func runTestString[E any](g *gomega.WithT, topic1 coherence.NamedTopic[string], s coherence.Subscriber[E]) {
+	ctx := context.Background()
+
+	pub1, err := topic1.CreatePublisher(context.Background())
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	log.Println("Publisher created", pub1)
+
+	for i := 1; i <= 1_000; i++ {
+		status, err2 := pub1.Publish(ctx, fmt.Sprintf("my-value-%d", i))
 		g.Expect(err2).ShouldNot(gomega.HaveOccurred())
 		g.Expect(status).ShouldNot(gomega.BeNil())
 	}

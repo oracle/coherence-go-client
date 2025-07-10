@@ -152,7 +152,7 @@ func newTopicLifecycleEvent[V any](nt NamedTopic[V], eventType TopicLifecycleEve
 	return &topicLifecycleEvent[V]{source: nt, eventType: eventType}
 }
 
-// generateTopicLifecycleEvent emits the queue lifecycle events.
+// generateTopicLifecycleEvent emits the topic lifecycle events.
 func (bt *baseTopicsClient[V]) generateTopicLifecycleEvent(client interface{}, eventType TopicLifecycleEventType) {
 	listeners := bt.lifecycleListenersV1
 

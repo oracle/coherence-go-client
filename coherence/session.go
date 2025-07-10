@@ -65,6 +65,8 @@ type Session struct {
 	maps                  map[string]interface{}
 	queues                map[string]interface{}
 	topics                map[string]interface{}
+	publishers            map[int64]interface{}
+	subscribers           map[int64]interface{}
 	cacheIDMap            safeMap[string, int32]
 	queueIDMap            safeMap[string, int32]
 	topicIDMap            safeMap[string, int32]
@@ -178,6 +180,8 @@ func NewSession(ctx context.Context, options ...func(session *SessionOptions)) (
 		caches:             make(map[string]interface{}, 0),
 		queues:             make(map[string]interface{}, 0),
 		topics:             make(map[string]interface{}, 0),
+		publishers:         make(map[int64]interface{}, 0),
+		subscribers:        make(map[int64]interface{}, 0),
 		cacheIDMap:         newSafeIDMap(),
 		queueIDMap:         newSafeIDMap(),
 		topicIDMap:         newSafeIDMap(),

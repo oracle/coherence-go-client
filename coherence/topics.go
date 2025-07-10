@@ -68,7 +68,7 @@ type NamedTopic[V any] interface {
 	// AddLifecycleListener adds a [TopicLifecycleListener] to this topic.
 	AddLifecycleListener(listener TopicLifecycleListener[V]) error
 
-	// RemoveLifecycleListener removes a [TopicLifecycleListener] to this topic.
+	// RemoveLifecycleListener removes a [TopicLifecycleListener] from this topic.
 	RemoveLifecycleListener(listener TopicLifecycleListener[V]) error
 
 	// GetName returns the name of this topic.
@@ -97,6 +97,12 @@ type Subscriber[V any] interface {
 
 	// DestroySubscriberGroup destroys a subscriber group created by this subscriber.
 	DestroySubscriberGroup(ctx context.Context, subscriberGroup string) error
+
+	// AddLifecycleListener adds a [SubscriberLifecycleListener] to this subscriber.
+	AddLifecycleListener(listener SubscriberLifecycleListener[V]) error
+
+	// RemoveLifecycleListener removes a [SubscriberLifecycleListener] from this subscriber.
+	RemoveLifecycleListener(listener SubscriberLifecycleListener[V]) error
 }
 
 // GetNamedTopic gets a [NamedTopic] of the generic type specified or if a topic already exists with the
@@ -152,15 +158,17 @@ func GetNamedTopic[V any](ctx context.Context, session *Session, topicName strin
 }
 
 type topicPublisher[V any] struct {
-	session         *Session
-	isClosed        bool
-	namedTopic      *baseTopicsClient[V] // may be nil if created outside topic
-	topicName       string
-	proxyID         int32
-	publisherID     int64
-	channelCount    int32
-	options         *publisher.Options
-	valueSerializer Serializer[V]
+	session              *Session
+	isClosed             bool
+	namedTopic           *baseTopicsClient[V] // may be nil if created outside topic
+	topicName            string
+	proxyID              int32
+	publisherID          int64
+	channelCount         int32
+	options              *publisher.Options
+	valueSerializer      Serializer[V]
+	mutex                *sync.RWMutex
+	lifecycleListenersV1 []*PublisherLifecycleListener[V]
 }
 
 func (tp *topicPublisher[V]) GetProxyID() int32 {
@@ -196,6 +204,12 @@ func (tp *topicPublisher[V]) Close(ctx context.Context) error {
 	}
 	tp.isClosed = true
 	tp.session.publisherIDMap.Remove(tp.publisherID)
+
+	tp.session.mapMutex.Lock()
+	delete(tp.session.publishers, tp.publisherID)
+
+	tp.session.mapMutex.Unlock()
+	tp.generatePublisherLifecycleEvent(tp, PublisherReleased)
 
 	return tp.session.v1StreamManagerTopics.destroyPublisherOrSubscriber(ctx, tp.proxyID, pb1topics.TopicServiceRequestType_DestroyPublisher)
 }
@@ -271,6 +285,9 @@ func newPublisher[V any](session *Session, bt *baseTopicsClient[V], result *publ
 		channelCount:    result.ChannelCount,
 		isClosed:        false,
 	}
+	session.mapMutex.Lock()
+	defer session.mapMutex.Unlock()
+	session.publishers[result.PublisherID] = tp
 
 	session.publisherIDMap.Add(tp.publisherID, tp.proxyID)
 	return tp, nil
@@ -289,6 +306,11 @@ func newSubscriber[V any](session *Session, bt *baseTopicsClient[V], result *sub
 		disconnected:    true,
 		isClosed:        false,
 	}
+
+	session.mapMutex.Lock()
+	defer session.mapMutex.Unlock()
+	session.subscribers[result.SubscriberID] = ts
+
 	session.subscriberIDMap.Add(ts.SubscriberID, ts.proxyID)
 
 	return ts, nil
@@ -327,6 +349,12 @@ func (ts *topicSubscriber[V]) Close(ctx context.Context) error {
 
 	ts.isClosed = true
 	ts.session.subscriberIDMap.Remove(ts.SubscriberID)
+
+	ts.session.mapMutex.Lock()
+	delete(ts.session.publishers, ts.SubscriberID)
+	ts.session.mapMutex.Unlock()
+
+	ts.generateSubscriberLifecycleEvent(ts, SubscriberReleased)
 
 	return ts.session.v1StreamManagerTopics.destroyPublisherOrSubscriber(ctx, ts.proxyID, pb1topics.TopicServiceRequestType_DestroySubscriber)
 }

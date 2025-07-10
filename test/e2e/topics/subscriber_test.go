@@ -36,7 +36,7 @@ func TestSubscriberWithFilter(t *testing.T) {
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	log.Println("Subscriber created", sub1)
 
-	runTest[string](g, topic1, sub1)
+	runTestPerson(g, topic1, sub1)
 }
 
 func TestSubscriberWithTransformer(t *testing.T) {
@@ -58,7 +58,7 @@ func TestSubscriberWithTransformer(t *testing.T) {
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	log.Println("Subscriber created", sub1)
 
-	runTest[string](g, topic1, sub1)
+	runTestPerson(g, topic1, sub1)
 }
 
 func TestSubscriberWithTransformerAndFilter(t *testing.T) {
