@@ -87,6 +87,12 @@ type Publisher[V any] interface {
 	// Close closes a publisher and releases all resources associated with it in the client
 	// and on the server.
 	Close(ctx context.Context) error
+
+	// AddLifecycleListener adds a [PublisherLifecycleListener] to this topic.
+	AddLifecycleListener(listener PublisherLifecycleListener[V]) error
+
+	// RemoveLifecycleListener removes a [PublisherLifecycleListener] from this topic.
+	RemoveLifecycleListener(listener PublisherLifecycleListener[V]) error
 }
 
 // Subscriber subscribes directly to a [NamedTopic], or to a subscriber group of a [NamedTopic].
@@ -167,7 +173,7 @@ type topicPublisher[V any] struct {
 	channelCount         int32
 	options              *publisher.Options
 	valueSerializer      Serializer[V]
-	mutex                *sync.RWMutex
+	mutex                sync.RWMutex
 	lifecycleListenersV1 []*PublisherLifecycleListener[V]
 }
 
