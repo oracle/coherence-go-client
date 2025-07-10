@@ -69,7 +69,7 @@ func (rm responseMessage) String() string {
 	if rm.namedCacheResponse != nil {
 		sb.WriteString(fmt.Sprintf(", cacheId=%v", rm.namedCacheResponse.CacheId))
 	} else if rm.namedTopicResponse != nil {
-		sb.WriteString(fmt.Sprintf(", topicId=%v", rm.namedTopicResponse.ProxyId))
+		sb.WriteString(fmt.Sprintf(", proxyID=%v", rm.namedTopicResponse.ProxyId))
 	} else if rm.namedQueueResponse != nil {
 		sb.WriteString(fmt.Sprintf(", queueId=%v", rm.namedQueueResponse.QueueId))
 	}
@@ -357,7 +357,11 @@ func (m *streamManagerV1) processResponse(reqID int64, resp *responseMessage) {
 		return
 	}
 
-	// process topic events here- TODO
+	// process topic event
+	if reqID == 0 && resp.namedTopicResponse != nil {
+		processTopicEvent(m, resp)
+		return
+	}
 
 	m.session.debugConnection("id: %v Response: %v", reqID, resp)
 
@@ -366,11 +370,54 @@ func (m *streamManagerV1) processResponse(reqID int64, resp *responseMessage) {
 	defer m.mutex.Unlock()
 
 	if e, ok := m.requests[reqID]; ok {
-		// request exists
 		e.ch <- *resp
 	} else {
 		m.session.debugConnection("found request %v (%v) in response but no request exists", *resp, reqID)
 	}
+}
+
+// processTopicEvent processes a topic event.
+func processTopicEvent(m *streamManagerV1, resp *responseMessage) {
+	// find the topicName from the ProxyID, this could bte the topicID, publisherID or SubscriberID
+	topicName := m.session.topicIDMap.KeyFromValue(resp.namedTopicResponse.ProxyId)
+
+	if topicName != nil {
+		// must be a topic
+		if existingTopic, ok := m.session.topics[*topicName]; ok {
+			if topicEventSubmitter, ok2 := existingTopic.(TopicEventSubmitter); ok2 {
+				switch resp.namedTopicResponse.Type {
+				case pb1topics.ResponseType_Event:
+					var eventType = &pb1topics.NamedTopicEvent{}
+					if err := resp.namedTopicResponse.Message.UnmarshalTo(eventType); err != nil {
+						err = getUnmarshallError("ensure response", err)
+						m.session.debugConnection("cannot unmarshal topic response topic for topic %v: %v", topicName, err)
+					} else {
+						if eventType.Type == pb1topics.TopicEventType_TopicDestroyed {
+							topicEventSubmitter.generateTopicLifecycleEvent(existingTopic, TopicDestroyed)
+						}
+					}
+				}
+			}
+		}
+		return
+	}
+
+	// search for publisher ID via ProxyID
+	publisherID := m.session.publisherIDMap.KeyFromValue(resp.namedTopicResponse.ProxyId)
+	if publisherID != nil {
+		log.Printf("Received message type %v for publisher id %v. TODO\n", resp.namedTopicResponse.Type, publisherID)
+		return
+	}
+
+	// search for subscriber ID for ProxyID
+	subscriberID := m.session.subscriberIDMap.KeyFromValue(resp.namedTopicResponse.ProxyId)
+	if subscriberID != nil {
+		log.Printf("Received message type %v for susbcriber id %v. TODO\n", resp.namedTopicResponse.Type, subscriberID)
+		return
+	}
+
+	m.session.debugConnection("cannot find topic, subscriber or publisher for message ID %v and type %v",
+		resp.namedTopicResponse.ProxyId, resp.namedTopicResponse.Type)
 }
 
 // submitRequest submits a request to the stream manager and returns named cache request.
@@ -416,7 +463,6 @@ func (m *streamManagerV1) ensure(ctx context.Context, name string, IDMap safeMap
 	} else if isTopic {
 		req, err = m.newEnsureTopicRequest(name)
 	} else {
-		// cache
 		req, err = m.newEnsureCacheRequest(name)
 	}
 

@@ -68,6 +68,8 @@ type Session struct {
 	cacheIDMap            safeMap[string, int32]
 	queueIDMap            safeMap[string, int32]
 	topicIDMap            safeMap[string, int32]
+	subscriberIDMap       safeMap[int64, int32]
+	publisherIDMap        safeMap[int64, int32]
 	lifecycleMutex        sync.RWMutex
 	lifecycleListeners    []*SessionLifecycleListener
 	sessionConnectCtx     context.Context
@@ -179,6 +181,8 @@ func NewSession(ctx context.Context, options ...func(session *SessionOptions)) (
 		cacheIDMap:         newSafeIDMap(),
 		queueIDMap:         newSafeIDMap(),
 		topicIDMap:         newSafeIDMap(),
+		publisherIDMap:     newSafeIDMapInt64(),
+		subscriberIDMap:    newSafeIDMapInt64(),
 		lifecycleListeners: []*SessionLifecycleListener{},
 		sessOpts: &SessionOptions{
 			PlainText:          false,
@@ -409,6 +413,7 @@ func (s *Session) getCacheID(cache string) *int32 {
 func (s *Session) getQueueID(queue string) *int32 {
 	return s.queueIDMap.Get(queue)
 }
+
 func (s *Session) getTopicID(topic string) *int32 {
 	return s.topicIDMap.Get(topic)
 }
@@ -1011,4 +1016,8 @@ func (m *safeMapImpl[K, V]) Clear() {
 
 func newSafeIDMap() safeMap[string, int32] {
 	return &safeMapImpl[string, int32]{internalMap: make(map[string]int32, 0)}
+}
+
+func newSafeIDMapInt64() safeMap[int64, int32] {
+	return &safeMapImpl[int64, int32]{internalMap: make(map[int64]int32, 0)}
 }

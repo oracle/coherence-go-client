@@ -24,15 +24,6 @@ import (
 )
 
 const (
-	// TopicDestroyed raised when a queue is destroyed usually as a result of a call to NamedTopic.Destroy().
-	TopicDestroyed TopicLifecycleEventType = "topic_destroyed"
-	//
-	//// QueueTruncated raised when a queue is truncated.
-	//QueueTruncated TopicLifecycleEventType = "queue_truncated"
-
-	// TopicReleased raised when a topic is released but the session.
-	TopicReleased TopicLifecycleEventType = "topic_released"
-
 	defaultChannelCount = 17
 )
 
@@ -48,15 +39,16 @@ var (
 	ErrSubscriberClosed         = errors.New("subscriber has been closed and is no longer usable")
 )
 
-type TopicLifecycleEventType string
-
 // NamedTopic defines the APIs to interact with Coherence topic allowing to publish and
 // subscribe from Go client.
 //
 // The type parameter is V = type of the value.
 type NamedTopic[V any] interface {
-	// Destroy destroys this topic on the server and releases all resources. After this operation it is no longer usable on the client or server..
+	// Destroy destroys this topic on the server and releases all resources. After this operation it is no longer usable on the client or server.
 	Destroy(ctx context.Context) error
+
+	// Close closes a topic and releases the resources associated with it on the client only.
+	Close(ctx context.Context) error
 
 	// CreatePublisher creates a Publisher with the specified options.
 	CreatePublisher(ctx context.Context, options ...func(o *publisher.Options)) (Publisher[V], error)
@@ -72,6 +64,15 @@ type NamedTopic[V any] interface {
 	// DestroySubscriberGroup destroys a subscriber group.
 	// TODO: Not viable to implement?
 	DestroySubscriberGroup(ctx context.Context, subscriberGroup string) error
+
+	// AddLifecycleListener adds a [TopicLifecycleListener] to this topic.
+	AddLifecycleListener(listener TopicLifecycleListener[V]) error
+
+	// RemoveLifecycleListener removes a [TopicLifecycleListener] to this topic.
+	RemoveLifecycleListener(listener TopicLifecycleListener[V]) error
+
+	// GetName returns the name of this topic.
+	GetName() string
 }
 
 // Publisher provides the means to publish messages to a [NamedTopic].
@@ -194,6 +195,8 @@ func (tp *topicPublisher[V]) Close(ctx context.Context) error {
 		return ErrPublisherClosed
 	}
 	tp.isClosed = true
+	tp.session.publisherIDMap.Remove(tp.publisherID)
+
 	return tp.session.v1StreamManagerTopics.destroyPublisherOrSubscriber(ctx, tp.proxyID, pb1topics.TopicServiceRequestType_DestroyPublisher)
 }
 
@@ -208,15 +211,16 @@ func (tp *topicPublisher[V]) ensureTopicChannel() int32 {
 }
 
 type baseTopicsClient[V any] struct {
-	session         *Session
-	valueSerializer Serializer[V]
-	name            string
-	ctx             context.Context
-	topicID         int32
-	isDestroyed     bool
-	isReleased      bool
-	mutex           *sync.RWMutex
-	topicOpts       *topic.Options
+	session              *Session
+	valueSerializer      Serializer[V]
+	name                 string
+	ctx                  context.Context
+	topicID              int32
+	isDestroyed          bool
+	isReleased           bool
+	mutex                *sync.RWMutex
+	topicOpts            *topic.Options
+	lifecycleListenersV1 []*TopicLifecycleListener[V]
 }
 
 type namedTopic[V any] struct {
@@ -225,6 +229,14 @@ type namedTopic[V any] struct {
 
 func (bt *baseTopicsClient[V]) Destroy(ctx context.Context) error {
 	return releaseTopicInternal[V](ctx, bt, true)
+}
+
+func (bt *baseTopicsClient[V]) GetName() string {
+	return bt.name
+}
+
+func (bt *baseTopicsClient[V]) Close(ctx context.Context) error {
+	return releaseTopicInternal[V](ctx, bt, false)
 }
 
 func (bt *baseTopicsClient[V]) String() string {
@@ -259,6 +271,8 @@ func newPublisher[V any](session *Session, bt *baseTopicsClient[V], result *publ
 		channelCount:    result.ChannelCount,
 		isClosed:        false,
 	}
+
+	session.publisherIDMap.Add(tp.publisherID, tp.proxyID)
 	return tp, nil
 }
 
@@ -275,41 +289,26 @@ func newSubscriber[V any](session *Session, bt *baseTopicsClient[V], result *sub
 		disconnected:    true,
 		isClosed:        false,
 	}
+	session.subscriberIDMap.Add(ts.SubscriberID, ts.proxyID)
+
 	return ts, nil
 }
 
-// generateQueueLifecycleEvent emits the queue lifecycle events.
-func (bt *baseTopicsClient[V]) generateTopicLifecycleEvent(_ interface{}, _ TopicLifecycleEventType) {
-	//listeners := bq.lifecycleListenersV1
-	//
-	//if namedQ, ok := client.(NamedQueue[V]); ok || client == nil {
-	//	event := newQueueLifecycleEvent(namedQ, eventType)
-	//	for _, l := range listeners {
-	//		e := *l
-	//		e.getEmitter().emit(eventType, event)
-	//	}
-	//
-	//	if eventType == QueueDestroyed {
-	//		bq.session.debugConnection("received destroy for queue: %s", bq.name)
-	//		_ = releaseInternal[V](context.Background(), bq, true)
-	//	}
-	//}
-}
-
 type topicSubscriber[V any] struct {
-	session           *Session
-	namedTopic        *baseTopicsClient[V] // may be nil if created outside topic
-	topicName         string
-	proxyID           int32
-	SubscriberID      int64
-	SubscriberGroupID int64
-	channelCount      int32
-	options           *subscriber.Options
-	valueSerializer   Serializer[V]
-	UUID              string
-	mutex             sync.RWMutex
-	disconnected      bool
-	isClosed          bool
+	session              *Session
+	namedTopic           *baseTopicsClient[V] // may be nil if created outside topic
+	topicName            string
+	proxyID              int32
+	SubscriberID         int64
+	SubscriberGroupID    int64
+	channelCount         int32
+	options              *subscriber.Options
+	valueSerializer      Serializer[V]
+	UUID                 string
+	mutex                sync.RWMutex
+	disconnected         bool
+	isClosed             bool
+	lifecycleListenersV1 []*SubscriberLifecycleListener[V]
 }
 
 func (ts *topicSubscriber[V]) String() string {
@@ -327,6 +326,8 @@ func (ts *topicSubscriber[V]) Close(ctx context.Context) error {
 	}
 
 	ts.isClosed = true
+	ts.session.subscriberIDMap.Remove(ts.SubscriberID)
+
 	return ts.session.v1StreamManagerTopics.destroyPublisherOrSubscriber(ctx, ts.proxyID, pb1topics.TopicServiceRequestType_DestroySubscriber)
 }
 
@@ -805,9 +806,10 @@ func releaseTopicInternal[V any](ctx context.Context, bt *baseTopicsClient[V], d
 			return err
 		}
 		bt.isDestroyed = true
+		bt.generateTopicLifecycleEvent(nil, TopicDestroyed)
 	} else {
-		if existingQueue, ok := bt.session.topics[bt.name]; ok {
-			bt.generateTopicLifecycleEvent(existingQueue, TopicReleased)
+		if existingTopic, ok := bt.session.topics[bt.name]; ok {
+			bt.generateTopicLifecycleEvent(existingTopic, TopicReleased)
 			bt.isReleased = true
 		}
 	}
