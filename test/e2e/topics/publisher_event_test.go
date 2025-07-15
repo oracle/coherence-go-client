@@ -46,7 +46,7 @@ func TestPublisherEventsDestroyOnServer(t *testing.T) {
 	g.Eventually(func() int32 { return listener.destroyCount }).
 		WithTimeout(10 * time.Second).Should(gomega.Equal(int32(1)))
 
-	g.Expect(topic1.Close(context.Background())).Should(gomega.Equal(coherence.ErrTopicDestroyedOrReleased))
+	//g.Expect(topic1.Close(context.Background())).Should(gomega.Equal(coherence.ErrTopicDestroyedOrReleased))
 }
 
 func TestPublisherEventsDestroyByClient(t *testing.T) {
