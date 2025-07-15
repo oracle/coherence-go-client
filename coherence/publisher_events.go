@@ -7,6 +7,7 @@
 package coherence
 
 import (
+	"context"
 	"fmt"
 )
 
@@ -186,10 +187,9 @@ func (tp *topicPublisher[V]) generatePublisherLifecycleEvent(client interface{},
 			e := *l
 			e.getEmitter().emit(eventType, event)
 		}
-		// TODO:
-		//if eventType == TopicDestroyed {
-		//	_ = releaseTopicInternal[V](context.Background(), bt, false)
-		//}
+		if eventType == PublisherDestroyed || eventType == PublisherReleased {
+			_ = closePublisher[V](context.Background(), tp)
+		}
 	}
 }
 

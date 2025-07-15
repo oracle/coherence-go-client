@@ -13,5 +13,5 @@ import (
 
 // The entry point for the test suite
 func TestMain(m *testing.M) {
-	utils.RunTest(m, 1408, 30000, 8080, false)
+	utils.RunTest(m, 1408, 30000, 8080, true)
 }

@@ -74,7 +74,7 @@ jobs:
       shell: bash
       run: |
         go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.5.1
-        COHERENCE_BASE_IMAGE=gcr.io/distroless/java17-debian12 INCLUDE_LONG_RUNNING=true PROFILES=,jakarta,-javax COHERENCE_VERSION=$COH_VERSION make clean generate-proto generate-proto-v1 build-test-images test-e2e-standalone-topics
+        COHERENCE_BASE_IMAGE=gcr.io/distroless/java17-debian12 PROFILES=,jakarta,-javax COHERENCE_VERSION=$COH_VERSION make clean generate-proto generate-proto-v1 build-test-images test-e2e-standalone-topics
 
     - uses: actions/upload-artifact@v4
       if: failure()

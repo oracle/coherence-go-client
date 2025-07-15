@@ -205,6 +205,10 @@ func (tp *topicPublisher[V]) Publish(ctx context.Context, value V) (*publisher.P
 }
 
 func (tp *topicPublisher[V]) Close(ctx context.Context) error {
+	return closePublisher[V](ctx, tp)
+}
+
+func closePublisher[V any](ctx context.Context, tp *topicPublisher[V]) error {
 	if tp.isClosed {
 		return ErrPublisherClosed
 	}
@@ -345,6 +349,10 @@ func (ts *topicSubscriber[V]) String() string {
 }
 
 func (ts *topicSubscriber[V]) Close(ctx context.Context) error {
+	return closeSubscriber[V](ctx, ts)
+}
+
+func closeSubscriber[V any](ctx context.Context, ts *topicSubscriber[V]) error {
 	if ts.isClosed {
 		return ErrSubscriberClosed
 	}
