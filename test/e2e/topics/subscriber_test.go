@@ -141,7 +141,7 @@ func runTestSubscriberGroup(g *gomega.WithT, subscriberGroup string, options ...
 	)
 
 	const (
-		topicName = "my-topic-with-sg"
+		topicName = "my-topic-with-sg-2"
 	)
 
 	session1, topic1 := getSessionAndTopic[utils.Person](g, topicName)
