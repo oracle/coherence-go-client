@@ -10,6 +10,7 @@ import (
 	"context"
 	"github.com/onsi/gomega"
 	"github.com/oracle/coherence-go-client/v2/coherence"
+	"github.com/oracle/coherence-go-client/v2/coherence/subscriber"
 	"github.com/oracle/coherence-go-client/v2/test/utils"
 	"sync/atomic"
 	"testing"
@@ -22,14 +23,17 @@ func TestSubscriberEventsDestroyOnServer(t *testing.T) {
 		err error
 	)
 
-	const topicName = "subscriber-events"
+	const (
+		topicName           = "subscriber-events"
+		subscriberGroupName = "subscriber-events"
+	)
 
 	t.Setenv("COHERENCE_LOG_LEVEL", "ALL")
 
 	session1, topic1 := getSessionAndTopic[string](g, topicName)
 	defer session1.Close()
 
-	sub, err := topic1.CreateSubscriber(context.Background())
+	sub, err := topic1.CreateSubscriber(context.Background(), subscriber.InSubscriberGroup(subscriberGroupName))
 	g.Expect(err).Should(gomega.Not(gomega.HaveOccurred()))
 
 	utils.Sleep(5)
@@ -43,7 +47,7 @@ func TestSubscriberEventsDestroyOnServer(t *testing.T) {
 
 	utils.Sleep(5)
 
-	g.Eventually(func() int32 { return listener.destroyCount }).
+	g.Eventually(func() int32 { return listener.subscriberGrpCount }).
 		WithTimeout(10 * time.Second).Should(gomega.Equal(int32(1)))
 
 	//g.Expect(topic1.Close(context.Background())).Should(gomega.Equal(coherence.ErrTopicDestroyedOrReleased))
@@ -88,6 +92,18 @@ func NewCountingSubscriberListener[V any](name string) *CountingSubscriberListen
 		atomic.AddInt32(&countingListener.destroyCount, 1)
 	}).OnReleased(func(_ coherence.SubscriberLifecycleEvent[V]) {
 		atomic.AddInt32(&countingListener.releaseCount, 1)
+	}).OnDisconnected(func(_ coherence.SubscriberLifecycleEvent[V]) {
+		atomic.AddInt32(&countingListener.disconnectedCount, 1)
+	}).OnUnsubscribed(func(_ coherence.SubscriberLifecycleEvent[V]) {
+		atomic.AddInt32(&countingListener.unsubscribedCount, 1)
+	}).OnChannelPopulated(func(_ coherence.SubscriberLifecycleEvent[V]) {
+		atomic.AddInt32(&countingListener.populatedCount, 1)
+	}).OnChannelAllocated(func(_ coherence.SubscriberLifecycleEvent[V]) {
+		atomic.AddInt32(&countingListener.allocatedCount, 1)
+	}).OnChannelHeadChanged(func(_ coherence.SubscriberLifecycleEvent[V]) {
+		atomic.AddInt32(&countingListener.headChangedCount, 1)
+	}).OnSubscriberGroupDestroyed(func(_ coherence.SubscriberLifecycleEvent[V]) {
+		atomic.AddInt32(&countingListener.subscriberGrpCount, 1)
 	}).OnAny(func(_ coherence.SubscriberLifecycleEvent[V]) {
 		atomic.AddInt32(&countingListener.allCount, 1)
 	})
@@ -96,9 +112,15 @@ func NewCountingSubscriberListener[V any](name string) *CountingSubscriberListen
 }
 
 type CountingSubscriberListener[V any] struct {
-	listener     coherence.SubscriberLifecycleListener[V]
-	name         string
-	releaseCount int32
-	destroyCount int32
-	allCount     int32
+	listener           coherence.SubscriberLifecycleListener[V]
+	name               string
+	releaseCount       int32
+	disconnectedCount  int32
+	unsubscribedCount  int32
+	populatedCount     int32
+	allocatedCount     int32
+	headChangedCount   int32
+	subscriberGrpCount int32
+	destroyCount       int32
+	allCount           int32
 }

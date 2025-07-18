@@ -88,6 +88,12 @@ func NewCountingPublisherListener[V any](name string) *CountingPublisherListener
 		atomic.AddInt32(&countingListener.destroyCount, 1)
 	}).OnReleased(func(_ coherence.PublisherLifecycleEvent[V]) {
 		atomic.AddInt32(&countingListener.releaseCount, 1)
+	}).OnConnected(func(_ coherence.PublisherLifecycleEvent[V]) {
+		atomic.AddInt32(&countingListener.connectedCount, 1)
+	}).OnDisconnected(func(_ coherence.PublisherLifecycleEvent[V]) {
+		atomic.AddInt32(&countingListener.disconnectedCount, 1)
+	}).OnChannelsFreed(func(_ coherence.PublisherLifecycleEvent[V]) {
+		atomic.AddInt32(&countingListener.freedCount, 1)
 	}).OnAny(func(_ coherence.PublisherLifecycleEvent[V]) {
 		atomic.AddInt32(&countingListener.allCount, 1)
 	})
@@ -96,9 +102,12 @@ func NewCountingPublisherListener[V any](name string) *CountingPublisherListener
 }
 
 type CountingPublisherListener[V any] struct {
-	listener     coherence.PublisherLifecycleListener[V]
-	name         string
-	releaseCount int32
-	destroyCount int32
-	allCount     int32
+	listener          coherence.PublisherLifecycleListener[V]
+	name              string
+	releaseCount      int32
+	destroyCount      int32
+	connectedCount    int32
+	disconnectedCount int32
+	freedCount        int32
+	allCount          int32
 }
