@@ -25,7 +25,7 @@ jobs:
           - 22.06.14-SNAPSHOT
           - 22.06.13
           - 14.1.2-0-3
-          - 14.1.2-0-2-SNAPSHOT
+          - 14.1.2-0-4-SNAPSHOT
         go-version:
           - 1.23.x
           - 1.24.x
