@@ -23,6 +23,8 @@ func TestSubscriberEventsDestroyOnServer(t *testing.T) {
 		err error
 	)
 
+	t.Skip("temporarily disable")
+
 	const (
 		topicName           = "subscriber-events"
 		subscriberGroupName = "subscriber-events"

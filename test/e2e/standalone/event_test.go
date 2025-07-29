@@ -899,7 +899,6 @@ func runMultipleLifecycleTests(g *gomega.WithT, cache coherence.NamedMap[string,
 	log.Println("Truncate - 2", cache.Name())
 	err = cache.Truncate(ctx)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-	//time.Sleep(time.Duration(5) * time.Second)
 
 	// each of the listeners should receive 2 events
 	g.Eventually(func() int32 {

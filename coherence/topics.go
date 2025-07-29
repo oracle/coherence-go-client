@@ -36,7 +36,16 @@ var (
 	ErrTopicsNoSupported        = errors.New("the coherence server version must support protocol version 1 or above to use topic")
 	ErrTopicFull                = errors.New("unable to publish, this topic is full")
 	ErrPublisherClosed          = errors.New("publisher has been closed and is no longer usable")
-	ErrSubscriberClosed         = errors.New("subscriber has been closed and is no longer usable")
+
+	ErrSubscriberClosed    = errors.New("subscriber has been closed and is no longer usable")
+	ErrChannelExhausted    = errors.New("channel is exhausted")
+	ErrChannelNotAllocated = errors.New("channel is not allocated")
+	ErrUnknownSubscriber   = errors.New("unknown subscriber")
+
+	ErrAlreadyCommitted = errors.New("already committed")
+	ErrCommitRejected   = errors.New("commit rejected")
+	ErrCommitUnowned    = errors.New("commit unowned")
+	ErrNothingToCommit  = errors.New("nothing to commit")
 )
 
 // NamedTopic defines the APIs to interact with Coherence topic allowing to publish and
@@ -100,6 +109,13 @@ type Subscriber[V any] interface {
 	// Close closes a subscriber and releases all resources associated with it in the client
 	// and on the server.
 	Close(ctx context.Context) error
+
+	// Receive attempts to receive messages. Messages must be committed to be considered processed unless autoCommit is set.
+	// If the length of the [subscriber.ReceiveResponse] is zero this means no messages were available.
+	Receive(ctx context.Context) ([]*subscriber.ReceiveResponse[V], error)
+
+	// Commit commits a channel and position meaning the message will be removed from the topic.
+	Commit(ctx context.Context, channel int32, position *pb1topics.TopicPosition) (*subscriber.CommitResponse, error)
 
 	// DestroySubscriberGroup destroys a subscriber group created by this subscriber.
 	DestroySubscriberGroup(ctx context.Context, subscriberGroup string) error
@@ -356,10 +372,6 @@ func closeSubscriber[V any](ctx context.Context, ts *topicSubscriber[V]) error {
 	if ts.isClosed {
 		return ErrSubscriberClosed
 	}
-	err := ts.ensureConnected()
-	if err != nil {
-		return err
-	}
 
 	ts.isClosed = true
 	ts.session.subscriberIDMap.Remove(ts.SubscriberID)
@@ -373,23 +385,79 @@ func closeSubscriber[V any](ctx context.Context, ts *topicSubscriber[V]) error {
 	return ts.session.v1StreamManagerTopics.destroyPublisherOrSubscriber(ctx, ts.proxyID, pb1topics.TopicServiceRequestType_DestroySubscriber)
 }
 
+func receiveInternal[V any](ctx context.Context, ts *topicSubscriber[V], maxMessages *int32) ([]*pb1topics.TopicElement, error) {
+	if ts.isClosed {
+		return nil, ErrSubscriberClosed
+	}
+
+	return ts.session.v1StreamManagerTopics.receive(ctx, ts.proxyID, maxMessages)
+}
+
+func commitInternal[V any](ctx context.Context, ts *topicSubscriber[V], channel int32, position *pb1topics.TopicPosition) (*subscriber.CommitResponse, error) {
+	if ts.isClosed {
+		return nil, ErrSubscriberClosed
+	}
+
+	return ts.session.v1StreamManagerTopics.commit(ctx, ts.proxyID, channel, position)
+}
+
 func (ts *topicSubscriber[V]) DestroySubscriberGroup(ctx context.Context, subscriberGroup string) error {
 	return ts.session.v1StreamManagerTopics.destroySubscriberGroup(ctx, ts.proxyID, subscriberGroup)
 }
 
-func (ts *topicSubscriber[V]) isDisconnected() bool {
-	ts.mutex.Lock()
-	defer ts.mutex.Unlock()
-	return ts.disconnected
-}
-
-// ensureConnected ensures the topic is connected.
-func (ts *topicSubscriber[V]) ensureConnected() error {
-	if !ts.isDisconnected() {
-		return nil
+// Receive attempts to receive messages. Messages must be committed to be considered processed unless autoCommit is set.
+func (ts *topicSubscriber[V]) Receive(ctx context.Context) ([]*subscriber.ReceiveResponse[V], error) {
+	r, err := receiveInternal(ctx, ts, &ts.options.MaxMessages)
+	if err != nil {
+		return nil, err
 	}
 
-	return nil
+	values, err := ts.decodeAll(r)
+	if err != nil {
+		return nil, fmt.Errorf("unable to decode receive values: %v", err)
+	}
+
+	if ts.options.AutoCommit && len(values) > 0 {
+		// get the last channel and position as this will commit all before
+		lastChannel := values[len(values)-1].Channel
+		lastPosition := values[len(values)-1].Position
+
+		_, err = commitInternal(ctx, ts, lastChannel, lastPosition)
+		if err != nil {
+			return nil, fmt.Errorf("unable to automatically commit channel %v and position %v", lastChannel, lastPosition)
+		}
+	}
+
+	return values, nil
+}
+
+func (ts *topicSubscriber[V]) Commit(ctx context.Context, channel int32, position *pb1topics.TopicPosition) (*subscriber.CommitResponse, error) {
+	return commitInternal(ctx, ts, channel, position)
+}
+
+func (ts *topicSubscriber[V]) decodeAll(response []*pb1topics.TopicElement) ([]*subscriber.ReceiveResponse[V], error) {
+	var (
+		err             error
+		valueSerializer = ts.valueSerializer
+		values          = make([]*subscriber.ReceiveResponse[V], 0)
+		value           *V
+	)
+
+	for _, v := range response {
+		value, err = valueSerializer.Deserialize(v.Value)
+		if err != nil {
+			return nil, err
+		}
+		resp := &subscriber.ReceiveResponse[V]{
+			Channel:   v.Channel,
+			Value:     value,
+			Position:  v.Position,
+			Timestamp: v.Timestamp.AsTime(),
+		}
+		values = append(values, resp)
+	}
+
+	return values, nil
 }
 
 func newBaseTopicsClient[V any](ctx context.Context, session *Session, queueName string, topicID int32, topicOpts *topic.Options) (*baseTopicsClient[V], error) {
@@ -574,7 +642,7 @@ func (m *streamManagerV1) ensureSubscriber(ctx context.Context, topicName string
 		return nil, err
 	}
 
-	requestType, err := m.submitTopicRequest(req, pb1topics.TopicServiceRequestType_EnsureSubscriber)
+	requestType, err := m.submitTopicRequest(req, pb1topics.TopicServiceRequestType_EnsureSimpleSubscriber)
 
 	newCtx, cancel := m.session.ensureContext(ctx)
 	if cancel != nil {
@@ -602,6 +670,98 @@ func (m *streamManagerV1) ensureSubscriber(ctx context.Context, topicName string
 	}
 
 	return &s, nil
+}
+
+// receive calls receive for a subscriber.
+func (m *streamManagerV1) receive(ctx context.Context, proxyID int32, maxMessages *int32) ([]*pb1topics.TopicElement, error) {
+	req, err := m.newSubscriberReceiveRequest(proxyID, maxMessages)
+	if err != nil {
+		return nil, err
+	}
+
+	requestType, err := m.submitTopicRequest(req, pb1topics.TopicServiceRequestType_SimpleReceive)
+
+	newCtx, cancel := m.session.ensureContext(ctx)
+	if cancel != nil {
+		defer cancel()
+	}
+
+	defer m.cleanupRequest(req.Id)
+
+	result, err1 := waitForResponse(newCtx, requestType.ch, false)
+	if err1 != nil {
+		return nil, err
+	}
+
+	return decodeReceiveResponse(result)
+}
+
+func decodeReceiveResponse(response *anypb.Any) ([]*pb1topics.TopicElement, error) {
+	var message = &pb1topics.SimpleReceiveResponse{}
+	if err := response.UnmarshalTo(message); err != nil {
+		err = getUnmarshallError("receive subscriber response", err)
+		return nil, err
+	}
+
+	if message.Status == pb1topics.ReceiveStatus_ChannelExhausted {
+		return nil, ErrChannelExhausted
+	} else if message.Status == pb1topics.ReceiveStatus_ChannelNotAllocatedChannel {
+		return nil, ErrChannelNotAllocated
+	} else if message.Status == pb1topics.ReceiveStatus_UnknownSubscriber {
+		return nil, ErrUnknownSubscriber
+	}
+
+	return message.Values, nil
+}
+
+// commit calls commit for a subscriber.
+func (m *streamManagerV1) commit(ctx context.Context, proxyID int32, channel int32, position *pb1topics.TopicPosition) (*subscriber.CommitResponse, error) {
+	req, err := m.newSubscriberCommitRequest(proxyID, channel, position)
+	if err != nil {
+		return nil, err
+	}
+
+	requestType, err := m.submitTopicRequest(req, pb1topics.TopicServiceRequestType_CommitPosition)
+
+	newCtx, cancel := m.session.ensureContext(ctx)
+	if cancel != nil {
+		defer cancel()
+	}
+
+	defer m.cleanupRequest(req.Id)
+
+	result, err1 := waitForResponse(newCtx, requestType.ch, false)
+	if err1 != nil {
+		return nil, err
+	}
+
+	return decodeCommitResponse(result)
+}
+
+func decodeCommitResponse(response *anypb.Any) (*subscriber.CommitResponse, error) {
+	var message = &pb1topics.CommitResponse{}
+	if err := response.UnmarshalTo(message); err != nil {
+		err = getUnmarshallError("receive subscriber response", err)
+		return nil, err
+	}
+
+	if message.Status == pb1topics.CommitResponseStatus_AlreadyCommitted {
+		return nil, ErrAlreadyCommitted
+	} else if message.Status == pb1topics.CommitResponseStatus_Rejected {
+		return nil, ErrCommitRejected
+	} else if message.Status == pb1topics.CommitResponseStatus_Unowned {
+		return nil, ErrCommitUnowned
+	} else if message.Status == pb1topics.CommitResponseStatus_NothingToCommit {
+		return nil, ErrNothingToCommit
+	}
+
+	r := &subscriber.CommitResponse{
+		Channel:  message.Channel,
+		Head:     message.Head,
+		Position: message.Position,
+	}
+
+	return r, nil
 }
 
 // ensureSubscriber ensures a subscriber.
@@ -677,44 +837,6 @@ func (m *streamManagerV1) destroyPublisherOrSubscriber(ctx context.Context, prox
 
 	return nil
 }
-
-//
-//// ensureSubscriber ensures a subscriber.
-//func (m *streamManagerV1) ensureSubscriptionRequest(ctx context.Context, subscriptionID int64, force bool) (*subscriber.EnsureSubscriberResult, error) {
-//	req, err := m.newEnsureSubscriptionRequest(subscriptionID, force)
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	requestType, err := m.submitTopicRequest(req, pb1topics.TopicServiceRequestType_EnsureSubscription)
-//
-//	newCtx, cancel := m.session.ensureContext(ctx)
-//	if cancel != nil {
-//		defer cancel()
-//	}
-//
-//	defer m.cleanupRequest(req.Id)
-//
-//	result, err1 := waitForResponse(newCtx, requestType.ch, false)
-//	if err1 != nil {
-//		return nil, err
-//	}
-//
-//	var message = &pb1topics.EnsureSubscriptionRequest{}
-//	if err = result.UnmarshalTo(message); err != nil {
-//		err = getUnmarshallError("ensure subscriber response", err)
-//		return nil, err
-//	}
-//
-//	s := subscriber.EnsureSubscriberResult{ProxyID: message.ProxyId}
-//
-//	if message.SubscriberId != nil {
-//		s.SubscriberID = message.SubscriberId.Id
-//		s.UUID = string(message.SubscriberId.Uuid)
-//	}
-//
-//	return &s, nil
-//}
 
 // ensureTopic issues the ensure queue request. This must be done before any requests to access queues can be issued.
 func (m *streamManagerV1) ensureTopic(ctx context.Context, topicName string) (*int32, error) {
@@ -888,7 +1010,7 @@ func (m *streamManagerV1) newDestroyPublisherOrSubscriberRequest(proxyID int32, 
 }
 
 func (m *streamManagerV1) newEnsureSubscriberRequest(topicName string, subscriberGroup *string, binFilter []byte) (*pb1.ProxyRequest, error) {
-	req := &pb1topics.EnsureSubscriberRequest{
+	req := &pb1topics.EnsureSimpleSubscriberRequest{
 		Topic:           topicName,
 		Filter:          binFilter,
 		SubscriberGroup: subscriberGroup,
@@ -898,7 +1020,32 @@ func (m *streamManagerV1) newEnsureSubscriberRequest(topicName string, subscribe
 	if err != nil {
 		return nil, err
 	}
-	return m.newWrapperProxyTopicsRequest(topicName, pb1topics.TopicServiceRequestType_EnsureSubscriber, anyReq)
+	return m.newWrapperProxyTopicsRequest(topicName, pb1topics.TopicServiceRequestType_EnsureSimpleSubscriber, anyReq)
+}
+
+func (m *streamManagerV1) newSubscriberReceiveRequest(ProxyID int32, maxMessages *int32) (*pb1.ProxyRequest, error) {
+	req := &pb1topics.SimpleReceiveRequest{
+		MaxMessages: maxMessages,
+	}
+
+	anyReq, err := anypb.New(req)
+	if err != nil {
+		return nil, err
+	}
+	return m.newWrapperProxyPublisherRequest(ProxyID, pb1topics.TopicServiceRequestType_SimpleReceive, anyReq)
+}
+
+func (m *streamManagerV1) newSubscriberCommitRequest(ProxyID int32, channel int32, position *pb1topics.TopicPosition) (*pb1.ProxyRequest, error) {
+	req := &pb1topics.ChannelAndPosition{
+		Channel:  channel,
+		Position: position,
+	}
+
+	anyReq, err := anypb.New(req)
+	if err != nil {
+		return nil, err
+	}
+	return m.newWrapperProxyPublisherRequest(ProxyID, pb1topics.TopicServiceRequestType_CommitPosition, anyReq)
 }
 
 func (m *streamManagerV1) newEnsureSubscriberGroupRequest(topicName string, subscriberGroup string, binFilter []byte) (*pb1.ProxyRequest, error) {
@@ -924,22 +1071,7 @@ func (m *streamManagerV1) newDestroySubscriberGroupRequest(proxyID int32, subscr
 		return nil, err
 	}
 	return m.newWrapperProxyPublisherRequest(proxyID, pb1topics.TopicServiceRequestType_DestroySubscriberGroup, anyReq)
-
-	//return m.newWrapperProxyTopicsRequest("", pb1topics.TopicServiceRequestType_DestroySubscriberGroup, anyReq)
 }
-
-//func (m *streamManagerV1) newInitializeSubscriptionRequest(subscriptionID int64, force bool) (*pb1.ProxyRequest, error) {
-//	req := &pb1topics.InitializeSubscriptionRequest{
-//		SubscriptionId: subscriptionID,
-//		ForceReconnect: force,
-//	}
-//
-//	anyReq, err := anypb.New(req)
-//	if err != nil {
-//		return nil, err
-//	}
-//	return m.newWrapperProxyTopicsRequest("", pb1topics.TopicServiceRequestType_EnsureSubscription, anyReq)
-//}
 
 // genericTopicRequest issues a generic topic request that is further defined by the reqType.
 func (m *streamManagerV1) genericTopicRequest(ctx context.Context, reqType pb1topics.TopicServiceRequestType, topic string) error {
@@ -1003,6 +1135,7 @@ func (m *streamManagerV1) newWrapperProxyTopicsRequest(topicName string, request
 			requestType == pb1topics.TopicServiceRequestType_EnsurePublisher ||
 			requestType == pb1topics.TopicServiceRequestType_EnsureSubscription ||
 			requestType == pb1topics.TopicServiceRequestType_EnsureSubscriber ||
+			requestType == pb1topics.TopicServiceRequestType_EnsureSimpleSubscriber ||
 			requestType == pb1topics.TopicServiceRequestType_DestroySubscriberGroup
 	)
 

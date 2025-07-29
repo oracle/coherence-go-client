@@ -21,9 +21,10 @@ import (
 
 func TestSubscriberWithFilter(t *testing.T) {
 	var (
-		g   = gomega.NewWithT(t)
-		err error
-		ctx = context.Background()
+		g           = gomega.NewWithT(t)
+		err         error
+		ctx         = context.Background()
+		maxMessages = 1000
 	)
 
 	const topicName = "my-topic-anon-filter"
@@ -36,7 +37,11 @@ func TestSubscriberWithFilter(t *testing.T) {
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	log.Println("Subscriber created", sub1)
 
-	runTestPerson(g, topic1, sub1)
+	go func() {
+
+	}()
+
+	runTestPerson(g, topic1, sub1, maxMessages)
 }
 
 func TestSubscriberWithTransformer(t *testing.T) {
@@ -52,13 +57,13 @@ func TestSubscriberWithTransformer(t *testing.T) {
 	defer session1.Close()
 
 	extractor := extractors.Extract[string]("name")
-	// create a subscriber with a transformer, this
+
 	sub1, err := coherence.CreatSubscriberWithTransformer(ctx, session1, topicName, extractor,
 		subscriber.WithFilter(filters.GreaterEqual(extractors.Extract[int]("age"), 10)))
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	log.Println("Subscriber created", sub1)
 
-	runTestPerson(g, topic1, sub1)
+	runTestPerson(g, topic1, sub1, 1_000)
 }
 
 func TestSubscriberWithTransformerAndFilter(t *testing.T) {

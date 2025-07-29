@@ -37,7 +37,7 @@ MVN_VERSION ?= 1.0.0
 SHELL := /bin/bash
 
 # Coherence CE version to run base tests against
-COHERENCE_VERSION ?= 22.06.12
+COHERENCE_VERSION ?= 22.06.13
 COHERENCE_GROUP_ID ?= com.oracle.coherence.ce
 COHERENCE_WKA1 ?= server1
 COHERENCE_WKA2 ?= server1
@@ -225,8 +225,8 @@ ifeq ($(SKIP_PROTO_GENERATION),true)
 	@echo "Skipping proto generation..."
 else
 	mkdir -p $(PROTO_DIR) || true
-	curl $(CURL_AUTH) -o $(PROTO_DIR)/services.proto https://raw.githubusercontent.com/oracle/coherence/22.06.12/prj/coherence-grpc/src/main/proto/services.proto
-	curl $(CURL_AUTH) -o $(PROTO_DIR)/messages.proto https://raw.githubusercontent.com/oracle/coherence/22.06.12/prj/coherence-grpc/src/main/proto/messages.proto
+	curl $(CURL_AUTH) -o $(PROTO_DIR)/services.proto https://raw.githubusercontent.com/oracle/coherence/22.06.13/prj/coherence-grpc/src/main/proto/services.proto
+	curl $(CURL_AUTH) -o $(PROTO_DIR)/messages.proto https://raw.githubusercontent.com/oracle/coherence/22.06.13/prj/coherence-grpc/src/main/proto/messages.proto
 	echo "" >> $(PROTO_DIR)/services.proto
 	echo "" >> $(PROTO_DIR)/messages.proto
 	echo 'option go_package = "github.com/oracle/coherence-go-client/proto";' >> $(PROTO_DIR)/services.proto

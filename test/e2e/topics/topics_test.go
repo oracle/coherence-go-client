@@ -12,6 +12,7 @@ import (
 	"github.com/onsi/gomega"
 	"github.com/oracle/coherence-go-client/v2/coherence"
 	"github.com/oracle/coherence-go-client/v2/coherence/publisher"
+	"github.com/oracle/coherence-go-client/v2/coherence/subscriber"
 	"github.com/oracle/coherence-go-client/v2/coherence/topic"
 	"github.com/oracle/coherence-go-client/v2/test/utils"
 	"log"
@@ -54,8 +55,11 @@ func TestTopicPublish(t *testing.T) {
 
 func RunTestBasicTopicAnonPubSub(g *gomega.WithT, options ...func(cache *publisher.Options)) {
 	var (
-		err error
-		ctx = context.Background()
+		err        error
+		ctx        = context.Background()
+		maxEntries = 100
+
+		processedMessageCount int
 	)
 
 	const topicName = "my-topic-anon"
@@ -63,21 +67,44 @@ func RunTestBasicTopicAnonPubSub(g *gomega.WithT, options ...func(cache *publish
 	session1, topic1 := getSessionAndTopic[string](g, topicName)
 	defer session1.Close()
 
-	// create a subscriber first
-	sub1, err := topic1.CreateSubscriber(ctx)
-	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-	log.Println("Subscriber created", sub1)
+	go func() {
+		var (
+			values   []*subscriber.ReceiveResponse[string]
+			response *subscriber.CommitResponse
+		)
+		sub1, err1 := topic1.CreateSubscriber(ctx)
+		g.Expect(err1).ShouldNot(gomega.HaveOccurred())
+		log.Println("Subscriber created", sub1)
 
-	pub1, err := topic1.CreatePublisher(context.Background())
-	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-	log.Println("Publisher created", pub1)
+		for {
+			values, err = sub1.Receive(context.Background())
+			g.Expect(err).ShouldNot(gomega.HaveOccurred())
+			if len(values) == 0 {
+				// nothing on topic
+				utils.Sleep(1)
+				continue
+			}
+			response, err = sub1.Commit(ctx, values[0].Channel, values[0].Position)
 
-	publishEntriesString(g, pub1, 1_000)
+			g.Expect(err).ShouldNot(gomega.HaveOccurred())
+			g.Expect(response).ShouldNot(gomega.BeNil())
+			g.Expect(response.Channel).Should(gomega.Equal(values[0].Channel))
+			processedMessageCount++
+			log.Println("Processed message count", processedMessageCount)
+		}
+	}()
 
 	utils.Sleep(5)
 
-	err = sub1.Close(ctx)
+	pub1, err := topic1.CreatePublisher(context.Background(), options...)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	log.Println("Publisher created", pub1)
+
+	publishEntriesString(g, pub1, maxEntries)
+
+	g.Eventually(func() int { return processedMessageCount }, 20*time.Second).Should(gomega.Equal(maxEntries))
+
+	utils.Sleep(5)
 
 	err = pub1.Close(ctx)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
@@ -127,14 +154,14 @@ func TestCreatePubSubWithoutCreatingTopic(t *testing.T) {
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 }
 
-func runTestPerson[E any](g *gomega.WithT, topic1 coherence.NamedTopic[utils.Person], s coherence.Subscriber[E]) {
+func runTestPerson[E any](g *gomega.WithT, topic1 coherence.NamedTopic[utils.Person], s coherence.Subscriber[E], count int) {
 	ctx := context.Background()
 
 	pub1, err := topic1.CreatePublisher(context.Background())
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	log.Println("Publisher created", pub1)
 
-	for i := 1; i <= 1_000; i++ {
+	for i := 1; i <= count; i++ {
 		p := utils.Person{
 			ID:   i,
 			Name: fmt.Sprintf("my-value-%d", i),

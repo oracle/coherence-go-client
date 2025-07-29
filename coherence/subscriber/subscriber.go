@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"github.com/oracle/coherence-go-client/v2/coherence/filters"
 	pb1topics "github.com/oracle/coherence-go-client/v2/proto/topics"
+	"time"
 )
 
 type ReceiveStatus int32
@@ -29,15 +30,28 @@ type EnsureSubscriberResult struct {
 	UUID              string
 }
 
-type ReceiveResult[V any] struct {
-	Status ReceiveStatus
-}
-
 // Options provides options for creating a subscriber.
 type Options struct {
 	SubscriberGroup *string
 	Filter          filters.Filter
 	Extractor       []byte
+	AutoCommit      bool
+	MaxMessages     int32
+}
+
+// CommitResponse represents th response from a [Subscriber] commit.
+type CommitResponse struct {
+	Channel  int32
+	Position *pb1topics.TopicPosition
+	Head     *pb1topics.TopicPosition
+}
+
+// ReceiveResponse represents a response from a [Subscriber] receive request.
+type ReceiveResponse[V any] struct {
+	Channel   int32
+	Value     *V
+	Position  *pb1topics.TopicPosition
+	Timestamp time.Time
 }
 
 // TODO: Additional options
@@ -58,6 +72,20 @@ func InSubscriberGroup(group string) func(options *Options) {
 func WithFilter(fltr filters.Filter) func(options *Options) {
 	return func(s *Options) {
 		s.Filter = fltr
+	}
+}
+
+// WithAutoCommit returns a function to set auto commit to be true for a [Subscriber].
+func WithAutoCommit() func(options *Options) {
+	return func(s *Options) {
+		s.AutoCommit = true
+	}
+}
+
+// WithMaxMessages returns a function to set the maximum messages for a[Subscriber].
+func WithMaxMessages(maxMessages int32) func(options *Options) {
+	return func(s *Options) {
+		s.MaxMessages = maxMessages
 	}
 }
 

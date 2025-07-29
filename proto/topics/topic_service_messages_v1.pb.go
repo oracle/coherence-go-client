@@ -172,6 +172,16 @@ const (
 	// The message should be a ChannelAndPosition
 	// The response will be a CommitResponse
 	TopicServiceRequestType_CommitPosition TopicServiceRequestType = 25
+	// Called to ensure a simple subscriber.
+	// Must be the first message called prior to any other subscriber requests.
+	// The message field must be an EnsureSubscriberRequest.
+	// The response will contain the Subscriber Id and an EnsureSubscriberResponse
+	// message in the response field.
+	TopicServiceRequestType_EnsureSimpleSubscriber TopicServiceRequestType = 26
+	// Receive values from a simple subscriber.
+	// The message should be a SimpleReceiveRequest.
+	// The response will be a ReceiveResponse.
+	TopicServiceRequestType_SimpleReceive TopicServiceRequestType = 27
 )
 
 // Enum value maps for TopicServiceRequestType.
@@ -203,6 +213,8 @@ var (
 		23: "Receive",
 		24: "SeekSubscriber",
 		25: "CommitPosition",
+		26: "EnsureSimpleSubscriber",
+		27: "SimpleReceive",
 	}
 	TopicServiceRequestType_value = map[string]int32{
 		"RequestUnknown":         0,
@@ -231,6 +243,8 @@ var (
 		"Receive":                23,
 		"SeekSubscriber":         24,
 		"CommitPosition":         25,
+		"EnsureSimpleSubscriber": 26,
+		"SimpleReceive":          27,
 	}
 )
 
@@ -1789,6 +1803,97 @@ func (x *EnsureSubscriberRequest) GetChannels() []int32 {
 	return nil
 }
 
+// A request to ensure a specific simple subscriber.
+type EnsureSimpleSubscriberRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The name of the topic.
+	Topic string `protobuf:"bytes,1,opt,name=topic,proto3" json:"topic,omitempty"`
+	// the optional name of the subscriber group
+	SubscriberGroup *string `protobuf:"bytes,2,opt,name=subscriberGroup,proto3,oneof" json:"subscriberGroup,omitempty"`
+	// an optional Filter to filter received messages
+	Filter []byte `protobuf:"bytes,3,opt,name=filter,proto3,oneof" json:"filter,omitempty"`
+	// an optional ValueExtractor to convert received messages
+	Extractor []byte `protobuf:"bytes,4,opt,name=extractor,proto3,oneof" json:"extractor,omitempty"`
+	// True to return an empty value if the topic is empty
+	CompleteOnEmpty bool `protobuf:"varint,5,opt,name=completeOnEmpty,proto3" json:"completeOnEmpty,omitempty"`
+	// The channels to allocate to this subscriber (invalid channels will be ignored)
+	Channels      []int32 `protobuf:"varint,6,rep,packed,name=channels,proto3" json:"channels,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *EnsureSimpleSubscriberRequest) Reset() {
+	*x = EnsureSimpleSubscriberRequest{}
+	mi := &file_topic_service_messages_v1_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EnsureSimpleSubscriberRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EnsureSimpleSubscriberRequest) ProtoMessage() {}
+
+func (x *EnsureSimpleSubscriberRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_topic_service_messages_v1_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EnsureSimpleSubscriberRequest.ProtoReflect.Descriptor instead.
+func (*EnsureSimpleSubscriberRequest) Descriptor() ([]byte, []int) {
+	return file_topic_service_messages_v1_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *EnsureSimpleSubscriberRequest) GetTopic() string {
+	if x != nil {
+		return x.Topic
+	}
+	return ""
+}
+
+func (x *EnsureSimpleSubscriberRequest) GetSubscriberGroup() string {
+	if x != nil && x.SubscriberGroup != nil {
+		return *x.SubscriberGroup
+	}
+	return ""
+}
+
+func (x *EnsureSimpleSubscriberRequest) GetFilter() []byte {
+	if x != nil {
+		return x.Filter
+	}
+	return nil
+}
+
+func (x *EnsureSimpleSubscriberRequest) GetExtractor() []byte {
+	if x != nil {
+		return x.Extractor
+	}
+	return nil
+}
+
+func (x *EnsureSimpleSubscriberRequest) GetCompleteOnEmpty() bool {
+	if x != nil {
+		return x.CompleteOnEmpty
+	}
+	return false
+}
+
+func (x *EnsureSimpleSubscriberRequest) GetChannels() []int32 {
+	if x != nil {
+		return x.Channels
+	}
+	return nil
+}
+
 // An event to indicate the state of a NamedTopic Subscriber has changed.
 type SubscriberEvent struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -1802,7 +1907,7 @@ type SubscriberEvent struct {
 
 func (x *SubscriberEvent) Reset() {
 	*x = SubscriberEvent{}
-	mi := &file_topic_service_messages_v1_proto_msgTypes[17]
+	mi := &file_topic_service_messages_v1_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1814,7 +1919,7 @@ func (x *SubscriberEvent) String() string {
 func (*SubscriberEvent) ProtoMessage() {}
 
 func (x *SubscriberEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_topic_service_messages_v1_proto_msgTypes[17]
+	mi := &file_topic_service_messages_v1_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1827,7 +1932,7 @@ func (x *SubscriberEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SubscriberEvent.ProtoReflect.Descriptor instead.
 func (*SubscriberEvent) Descriptor() ([]byte, []int) {
-	return file_topic_service_messages_v1_proto_rawDescGZIP(), []int{17}
+	return file_topic_service_messages_v1_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *SubscriberEvent) GetType() SubscriberEventType {
@@ -1857,7 +1962,7 @@ type SubscriberId struct {
 
 func (x *SubscriberId) Reset() {
 	*x = SubscriberId{}
-	mi := &file_topic_service_messages_v1_proto_msgTypes[18]
+	mi := &file_topic_service_messages_v1_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1869,7 +1974,7 @@ func (x *SubscriberId) String() string {
 func (*SubscriberId) ProtoMessage() {}
 
 func (x *SubscriberId) ProtoReflect() protoreflect.Message {
-	mi := &file_topic_service_messages_v1_proto_msgTypes[18]
+	mi := &file_topic_service_messages_v1_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1882,7 +1987,7 @@ func (x *SubscriberId) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SubscriberId.ProtoReflect.Descriptor instead.
 func (*SubscriberId) Descriptor() ([]byte, []int) {
-	return file_topic_service_messages_v1_proto_rawDescGZIP(), []int{18}
+	return file_topic_service_messages_v1_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *SubscriberId) GetId() int64 {
@@ -1912,7 +2017,7 @@ type SubscriberGroupId struct {
 
 func (x *SubscriberGroupId) Reset() {
 	*x = SubscriberGroupId{}
-	mi := &file_topic_service_messages_v1_proto_msgTypes[19]
+	mi := &file_topic_service_messages_v1_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1924,7 +2029,7 @@ func (x *SubscriberGroupId) String() string {
 func (*SubscriberGroupId) ProtoMessage() {}
 
 func (x *SubscriberGroupId) ProtoReflect() protoreflect.Message {
-	mi := &file_topic_service_messages_v1_proto_msgTypes[19]
+	mi := &file_topic_service_messages_v1_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1937,7 +2042,7 @@ func (x *SubscriberGroupId) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SubscriberGroupId.ProtoReflect.Descriptor instead.
 func (*SubscriberGroupId) Descriptor() ([]byte, []int) {
-	return file_topic_service_messages_v1_proto_rawDescGZIP(), []int{19}
+	return file_topic_service_messages_v1_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *SubscriberGroupId) GetName() string {
@@ -1970,7 +2075,7 @@ type InitializeSubscriptionRequest struct {
 
 func (x *InitializeSubscriptionRequest) Reset() {
 	*x = InitializeSubscriptionRequest{}
-	mi := &file_topic_service_messages_v1_proto_msgTypes[20]
+	mi := &file_topic_service_messages_v1_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1982,7 +2087,7 @@ func (x *InitializeSubscriptionRequest) String() string {
 func (*InitializeSubscriptionRequest) ProtoMessage() {}
 
 func (x *InitializeSubscriptionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_topic_service_messages_v1_proto_msgTypes[20]
+	mi := &file_topic_service_messages_v1_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1995,7 +2100,7 @@ func (x *InitializeSubscriptionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InitializeSubscriptionRequest.ProtoReflect.Descriptor instead.
 func (*InitializeSubscriptionRequest) Descriptor() ([]byte, []int) {
-	return file_topic_service_messages_v1_proto_rawDescGZIP(), []int{20}
+	return file_topic_service_messages_v1_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *InitializeSubscriptionRequest) GetDisconnected() bool {
@@ -2034,7 +2139,7 @@ type InitializeSubscriptionResponse struct {
 
 func (x *InitializeSubscriptionResponse) Reset() {
 	*x = InitializeSubscriptionResponse{}
-	mi := &file_topic_service_messages_v1_proto_msgTypes[21]
+	mi := &file_topic_service_messages_v1_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2046,7 +2151,7 @@ func (x *InitializeSubscriptionResponse) String() string {
 func (*InitializeSubscriptionResponse) ProtoMessage() {}
 
 func (x *InitializeSubscriptionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_topic_service_messages_v1_proto_msgTypes[21]
+	mi := &file_topic_service_messages_v1_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2059,7 +2164,7 @@ func (x *InitializeSubscriptionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InitializeSubscriptionResponse.ProtoReflect.Descriptor instead.
 func (*InitializeSubscriptionResponse) Descriptor() ([]byte, []int) {
-	return file_topic_service_messages_v1_proto_rawDescGZIP(), []int{21}
+	return file_topic_service_messages_v1_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *InitializeSubscriptionResponse) GetSubscriptionId() int64 {
@@ -2097,7 +2202,7 @@ type EnsureSubscriptionRequest struct {
 
 func (x *EnsureSubscriptionRequest) Reset() {
 	*x = EnsureSubscriptionRequest{}
-	mi := &file_topic_service_messages_v1_proto_msgTypes[22]
+	mi := &file_topic_service_messages_v1_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2109,7 +2214,7 @@ func (x *EnsureSubscriptionRequest) String() string {
 func (*EnsureSubscriptionRequest) ProtoMessage() {}
 
 func (x *EnsureSubscriptionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_topic_service_messages_v1_proto_msgTypes[22]
+	mi := &file_topic_service_messages_v1_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2122,7 +2227,7 @@ func (x *EnsureSubscriptionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EnsureSubscriptionRequest.ProtoReflect.Descriptor instead.
 func (*EnsureSubscriptionRequest) Descriptor() ([]byte, []int) {
-	return file_topic_service_messages_v1_proto_rawDescGZIP(), []int{22}
+	return file_topic_service_messages_v1_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *EnsureSubscriptionRequest) GetSubscriptionId() int64 {
@@ -2156,7 +2261,7 @@ type TopicElement struct {
 
 func (x *TopicElement) Reset() {
 	*x = TopicElement{}
-	mi := &file_topic_service_messages_v1_proto_msgTypes[23]
+	mi := &file_topic_service_messages_v1_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2168,7 +2273,7 @@ func (x *TopicElement) String() string {
 func (*TopicElement) ProtoMessage() {}
 
 func (x *TopicElement) ProtoReflect() protoreflect.Message {
-	mi := &file_topic_service_messages_v1_proto_msgTypes[23]
+	mi := &file_topic_service_messages_v1_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2181,7 +2286,7 @@ func (x *TopicElement) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TopicElement.ProtoReflect.Descriptor instead.
 func (*TopicElement) Descriptor() ([]byte, []int) {
-	return file_topic_service_messages_v1_proto_rawDescGZIP(), []int{23}
+	return file_topic_service_messages_v1_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *TopicElement) GetChannel() int32 {
@@ -2227,7 +2332,7 @@ type ReceiveRequest struct {
 
 func (x *ReceiveRequest) Reset() {
 	*x = ReceiveRequest{}
-	mi := &file_topic_service_messages_v1_proto_msgTypes[24]
+	mi := &file_topic_service_messages_v1_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2239,7 +2344,7 @@ func (x *ReceiveRequest) String() string {
 func (*ReceiveRequest) ProtoMessage() {}
 
 func (x *ReceiveRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_topic_service_messages_v1_proto_msgTypes[24]
+	mi := &file_topic_service_messages_v1_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2252,7 +2357,7 @@ func (x *ReceiveRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReceiveRequest.ProtoReflect.Descriptor instead.
 func (*ReceiveRequest) Descriptor() ([]byte, []int) {
-	return file_topic_service_messages_v1_proto_rawDescGZIP(), []int{24}
+	return file_topic_service_messages_v1_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *ReceiveRequest) GetChannel() int32 {
@@ -2269,6 +2374,53 @@ func (x *ReceiveRequest) GetMaxMessages() int32 {
 	return 0
 }
 
+type SimpleReceiveRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The maximum number of messages to return.
+	// If not set (or <= 0) a single messages will be returned.
+	MaxMessages   *int32 `protobuf:"varint,2,opt,name=maxMessages,proto3,oneof" json:"maxMessages,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SimpleReceiveRequest) Reset() {
+	*x = SimpleReceiveRequest{}
+	mi := &file_topic_service_messages_v1_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SimpleReceiveRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SimpleReceiveRequest) ProtoMessage() {}
+
+func (x *SimpleReceiveRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_topic_service_messages_v1_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SimpleReceiveRequest.ProtoReflect.Descriptor instead.
+func (*SimpleReceiveRequest) Descriptor() ([]byte, []int) {
+	return file_topic_service_messages_v1_proto_rawDescGZIP(), []int{26}
+}
+
+func (x *SimpleReceiveRequest) GetMaxMessages() int32 {
+	if x != nil && x.MaxMessages != nil {
+		return *x.MaxMessages
+	}
+	return 0
+}
+
+// A response from a ReceiveRequest
 type ReceiveResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// The status of the receive result.
@@ -2285,7 +2437,7 @@ type ReceiveResponse struct {
 
 func (x *ReceiveResponse) Reset() {
 	*x = ReceiveResponse{}
-	mi := &file_topic_service_messages_v1_proto_msgTypes[25]
+	mi := &file_topic_service_messages_v1_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2297,7 +2449,7 @@ func (x *ReceiveResponse) String() string {
 func (*ReceiveResponse) ProtoMessage() {}
 
 func (x *ReceiveResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_topic_service_messages_v1_proto_msgTypes[25]
+	mi := &file_topic_service_messages_v1_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2310,7 +2462,7 @@ func (x *ReceiveResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReceiveResponse.ProtoReflect.Descriptor instead.
 func (*ReceiveResponse) Descriptor() ([]byte, []int) {
-	return file_topic_service_messages_v1_proto_rawDescGZIP(), []int{25}
+	return file_topic_service_messages_v1_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *ReceiveResponse) GetStatus() ReceiveStatus {
@@ -2341,6 +2493,61 @@ func (x *ReceiveResponse) GetRemainingValues() int32 {
 	return 0
 }
 
+// A response from a SimpleReceiveRequest
+type SimpleReceiveResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The status of the receive result.
+	Status ReceiveStatus `protobuf:"varint,1,opt,name=status,proto3,enum=coherence.topic.v1.ReceiveStatus" json:"status,omitempty"`
+	// The elements received from the channel.
+	Values        []*TopicElement `protobuf:"bytes,2,rep,name=values,proto3" json:"values,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SimpleReceiveResponse) Reset() {
+	*x = SimpleReceiveResponse{}
+	mi := &file_topic_service_messages_v1_proto_msgTypes[28]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SimpleReceiveResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SimpleReceiveResponse) ProtoMessage() {}
+
+func (x *SimpleReceiveResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_topic_service_messages_v1_proto_msgTypes[28]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SimpleReceiveResponse.ProtoReflect.Descriptor instead.
+func (*SimpleReceiveResponse) Descriptor() ([]byte, []int) {
+	return file_topic_service_messages_v1_proto_rawDescGZIP(), []int{28}
+}
+
+func (x *SimpleReceiveResponse) GetStatus() ReceiveStatus {
+	if x != nil {
+		return x.Status
+	}
+	return ReceiveStatus_ReceiveSuccess
+}
+
+func (x *SimpleReceiveResponse) GetValues() []*TopicElement {
+	if x != nil {
+		return x.Values
+	}
+	return nil
+}
+
 // A request to seek (reposition) one or more channels.
 type SeekRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -2357,7 +2564,7 @@ type SeekRequest struct {
 
 func (x *SeekRequest) Reset() {
 	*x = SeekRequest{}
-	mi := &file_topic_service_messages_v1_proto_msgTypes[26]
+	mi := &file_topic_service_messages_v1_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2369,7 +2576,7 @@ func (x *SeekRequest) String() string {
 func (*SeekRequest) ProtoMessage() {}
 
 func (x *SeekRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_topic_service_messages_v1_proto_msgTypes[26]
+	mi := &file_topic_service_messages_v1_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2382,7 +2589,7 @@ func (x *SeekRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SeekRequest.ProtoReflect.Descriptor instead.
 func (*SeekRequest) Descriptor() ([]byte, []int) {
-	return file_topic_service_messages_v1_proto_rawDescGZIP(), []int{26}
+	return file_topic_service_messages_v1_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *SeekRequest) GetPositions() isSeekRequest_Positions {
@@ -2441,7 +2648,7 @@ type SeekedPositions struct {
 
 func (x *SeekedPositions) Reset() {
 	*x = SeekedPositions{}
-	mi := &file_topic_service_messages_v1_proto_msgTypes[27]
+	mi := &file_topic_service_messages_v1_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2453,7 +2660,7 @@ func (x *SeekedPositions) String() string {
 func (*SeekedPositions) ProtoMessage() {}
 
 func (x *SeekedPositions) ProtoReflect() protoreflect.Message {
-	mi := &file_topic_service_messages_v1_proto_msgTypes[27]
+	mi := &file_topic_service_messages_v1_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2466,7 +2673,7 @@ func (x *SeekedPositions) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SeekedPositions.ProtoReflect.Descriptor instead.
 func (*SeekedPositions) Descriptor() ([]byte, []int) {
-	return file_topic_service_messages_v1_proto_rawDescGZIP(), []int{27}
+	return file_topic_service_messages_v1_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *SeekedPositions) GetHead() *TopicPosition {
@@ -2494,7 +2701,7 @@ type SeekResponse struct {
 
 func (x *SeekResponse) Reset() {
 	*x = SeekResponse{}
-	mi := &file_topic_service_messages_v1_proto_msgTypes[28]
+	mi := &file_topic_service_messages_v1_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2506,7 +2713,7 @@ func (x *SeekResponse) String() string {
 func (*SeekResponse) ProtoMessage() {}
 
 func (x *SeekResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_topic_service_messages_v1_proto_msgTypes[28]
+	mi := &file_topic_service_messages_v1_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2519,7 +2726,7 @@ func (x *SeekResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SeekResponse.ProtoReflect.Descriptor instead.
 func (*SeekResponse) Descriptor() ([]byte, []int) {
-	return file_topic_service_messages_v1_proto_rawDescGZIP(), []int{28}
+	return file_topic_service_messages_v1_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *SeekResponse) GetPositions() map[int32]*SeekedPositions {
@@ -2548,7 +2755,7 @@ type CommitResponse struct {
 
 func (x *CommitResponse) Reset() {
 	*x = CommitResponse{}
-	mi := &file_topic_service_messages_v1_proto_msgTypes[29]
+	mi := &file_topic_service_messages_v1_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2560,7 +2767,7 @@ func (x *CommitResponse) String() string {
 func (*CommitResponse) ProtoMessage() {}
 
 func (x *CommitResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_topic_service_messages_v1_proto_msgTypes[29]
+	mi := &file_topic_service_messages_v1_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2573,7 +2780,7 @@ func (x *CommitResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CommitResponse.ProtoReflect.Descriptor instead.
 func (*CommitResponse) Descriptor() ([]byte, []int) {
-	return file_topic_service_messages_v1_proto_rawDescGZIP(), []int{29}
+	return file_topic_service_messages_v1_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *CommitResponse) GetChannel() int32 {
@@ -2622,7 +2829,7 @@ type ChannelAndPosition struct {
 
 func (x *ChannelAndPosition) Reset() {
 	*x = ChannelAndPosition{}
-	mi := &file_topic_service_messages_v1_proto_msgTypes[30]
+	mi := &file_topic_service_messages_v1_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2634,7 +2841,7 @@ func (x *ChannelAndPosition) String() string {
 func (*ChannelAndPosition) ProtoMessage() {}
 
 func (x *ChannelAndPosition) ProtoReflect() protoreflect.Message {
-	mi := &file_topic_service_messages_v1_proto_msgTypes[30]
+	mi := &file_topic_service_messages_v1_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2647,7 +2854,7 @@ func (x *ChannelAndPosition) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ChannelAndPosition.ProtoReflect.Descriptor instead.
 func (*ChannelAndPosition) Descriptor() ([]byte, []int) {
-	return file_topic_service_messages_v1_proto_rawDescGZIP(), []int{30}
+	return file_topic_service_messages_v1_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *ChannelAndPosition) GetChannel() int32 {
@@ -2675,7 +2882,7 @@ type MapOfChannelAndPosition struct {
 
 func (x *MapOfChannelAndPosition) Reset() {
 	*x = MapOfChannelAndPosition{}
-	mi := &file_topic_service_messages_v1_proto_msgTypes[31]
+	mi := &file_topic_service_messages_v1_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2687,7 +2894,7 @@ func (x *MapOfChannelAndPosition) String() string {
 func (*MapOfChannelAndPosition) ProtoMessage() {}
 
 func (x *MapOfChannelAndPosition) ProtoReflect() protoreflect.Message {
-	mi := &file_topic_service_messages_v1_proto_msgTypes[31]
+	mi := &file_topic_service_messages_v1_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2700,7 +2907,7 @@ func (x *MapOfChannelAndPosition) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MapOfChannelAndPosition.ProtoReflect.Descriptor instead.
 func (*MapOfChannelAndPosition) Descriptor() ([]byte, []int) {
-	return file_topic_service_messages_v1_proto_rawDescGZIP(), []int{31}
+	return file_topic_service_messages_v1_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *MapOfChannelAndPosition) GetPositions() map[int32]*TopicPosition {
@@ -2721,7 +2928,7 @@ type MapOfChannelAndTimestamp struct {
 
 func (x *MapOfChannelAndTimestamp) Reset() {
 	*x = MapOfChannelAndTimestamp{}
-	mi := &file_topic_service_messages_v1_proto_msgTypes[32]
+	mi := &file_topic_service_messages_v1_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2733,7 +2940,7 @@ func (x *MapOfChannelAndTimestamp) String() string {
 func (*MapOfChannelAndTimestamp) ProtoMessage() {}
 
 func (x *MapOfChannelAndTimestamp) ProtoReflect() protoreflect.Message {
-	mi := &file_topic_service_messages_v1_proto_msgTypes[32]
+	mi := &file_topic_service_messages_v1_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2746,7 +2953,7 @@ func (x *MapOfChannelAndTimestamp) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MapOfChannelAndTimestamp.ProtoReflect.Descriptor instead.
 func (*MapOfChannelAndTimestamp) Descriptor() ([]byte, []int) {
-	return file_topic_service_messages_v1_proto_rawDescGZIP(), []int{32}
+	return file_topic_service_messages_v1_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *MapOfChannelAndTimestamp) GetTimestamps() map[int32]*timestamppb.Timestamp {
@@ -2842,6 +3049,17 @@ const file_topic_service_messages_v1_proto_rawDesc = "" +
 	"\x10_subscriberGroupB\t\n" +
 	"\a_filterB\f\n" +
 	"\n" +
+	"_extractor\"\x97\x02\n" +
+	"\x1dEnsureSimpleSubscriberRequest\x12\x14\n" +
+	"\x05topic\x18\x01 \x01(\tR\x05topic\x12-\n" +
+	"\x0fsubscriberGroup\x18\x02 \x01(\tH\x00R\x0fsubscriberGroup\x88\x01\x01\x12\x1b\n" +
+	"\x06filter\x18\x03 \x01(\fH\x01R\x06filter\x88\x01\x01\x12!\n" +
+	"\textractor\x18\x04 \x01(\fH\x02R\textractor\x88\x01\x01\x12(\n" +
+	"\x0fcompleteOnEmpty\x18\x05 \x01(\bR\x0fcompleteOnEmpty\x12\x1a\n" +
+	"\bchannels\x18\x06 \x03(\x05R\bchannelsB\x12\n" +
+	"\x10_subscriberGroupB\t\n" +
+	"\a_filterB\f\n" +
+	"\n" +
 	"_extractor\"n\n" +
 	"\x0fSubscriberEvent\x12;\n" +
 	"\x04type\x18\x01 \x01(\x0e2'.coherence.topic.v1.SubscriberEventTypeR\x04type\x12\x1e\n" +
@@ -2871,12 +3089,18 @@ const file_topic_service_messages_v1_proto_rawDesc = "" +
 	"\x0eReceiveRequest\x12\x18\n" +
 	"\achannel\x18\x01 \x01(\x05R\achannel\x12%\n" +
 	"\vmaxMessages\x18\x02 \x01(\x05H\x00R\vmaxMessages\x88\x01\x01B\x0e\n" +
+	"\f_maxMessages\"M\n" +
+	"\x14SimpleReceiveRequest\x12%\n" +
+	"\vmaxMessages\x18\x02 \x01(\x05H\x00R\vmaxMessages\x88\x01\x01B\x0e\n" +
 	"\f_maxMessages\"\xd5\x01\n" +
 	"\x0fReceiveResponse\x129\n" +
 	"\x06status\x18\x01 \x01(\x0e2!.coherence.topic.v1.ReceiveStatusR\x06status\x12\x16\n" +
 	"\x06values\x18\x02 \x03(\fR\x06values\x12E\n" +
 	"\fheadPosition\x18\x03 \x01(\v2!.coherence.topic.v1.TopicPositionR\fheadPosition\x12(\n" +
-	"\x0fremainingValues\x18\x04 \x01(\x05R\x0fremainingValues\"\xbb\x01\n" +
+	"\x0fremainingValues\x18\x04 \x01(\x05R\x0fremainingValues\"\x8c\x01\n" +
+	"\x15SimpleReceiveResponse\x129\n" +
+	"\x06status\x18\x01 \x01(\x0e2!.coherence.topic.v1.ReceiveStatusR\x06status\x128\n" +
+	"\x06values\x18\x02 \x03(\v2 .coherence.topic.v1.TopicElementR\x06values\"\xbb\x01\n" +
 	"\vSeekRequest\x12M\n" +
 	"\n" +
 	"byPosition\x18\x01 \x01(\v2+.coherence.topic.v1.MapOfChannelAndPositionH\x00R\n" +
@@ -2912,7 +3136,7 @@ const file_topic_service_messages_v1_proto_rawDesc = "" +
 	"timestamps\x1aY\n" +
 	"\x0fTimestampsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\x05R\x03key\x120\n" +
-	"\x05value\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\x05value:\x028\x01*\xcc\x04\n" +
+	"\x05value\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\x05value:\x028\x01*\xfb\x04\n" +
 	"\x17TopicServiceRequestType\x12\x12\n" +
 	"\x0eRequestUnknown\x10\x00\x12\x0f\n" +
 	"\vEnsureTopic\x10\x01\x12\x10\n" +
@@ -2940,7 +3164,9 @@ const file_topic_service_messages_v1_proto_rawDesc = "" +
 	"\x0ePeekAtPosition\x10\x16\x12\v\n" +
 	"\aReceive\x10\x17\x12\x12\n" +
 	"\x0eSeekSubscriber\x10\x18\x12\x12\n" +
-	"\x0eCommitPosition\x10\x19*&\n" +
+	"\x0eCommitPosition\x10\x19\x12\x1a\n" +
+	"\x16EnsureSimpleSubscriber\x10\x1a\x12\x11\n" +
+	"\rSimpleReceive\x10\x1b*&\n" +
 	"\fResponseType\x12\v\n" +
 	"\aMessage\x10\x00\x12\t\n" +
 	"\x05Event\x10\x01*6\n" +
@@ -2994,7 +3220,7 @@ func file_topic_service_messages_v1_proto_rawDescGZIP() []byte {
 }
 
 var file_topic_service_messages_v1_proto_enumTypes = make([]protoimpl.EnumInfo, 8)
-var file_topic_service_messages_v1_proto_msgTypes = make([]protoimpl.MessageInfo, 36)
+var file_topic_service_messages_v1_proto_msgTypes = make([]protoimpl.MessageInfo, 39)
 var file_topic_service_messages_v1_proto_goTypes = []any{
 	(TopicServiceRequestType)(0),           // 0: coherence.topic.v1.TopicServiceRequestType
 	(ResponseType)(0),                      // 1: coherence.topic.v1.ResponseType
@@ -3021,70 +3247,75 @@ var file_topic_service_messages_v1_proto_goTypes = []any{
 	(*TopicPosition)(nil),                  // 22: coherence.topic.v1.TopicPosition
 	(*EnsureSubscriberResponse)(nil),       // 23: coherence.topic.v1.EnsureSubscriberResponse
 	(*EnsureSubscriberRequest)(nil),        // 24: coherence.topic.v1.EnsureSubscriberRequest
-	(*SubscriberEvent)(nil),                // 25: coherence.topic.v1.SubscriberEvent
-	(*SubscriberId)(nil),                   // 26: coherence.topic.v1.SubscriberId
-	(*SubscriberGroupId)(nil),              // 27: coherence.topic.v1.SubscriberGroupId
-	(*InitializeSubscriptionRequest)(nil),  // 28: coherence.topic.v1.InitializeSubscriptionRequest
-	(*InitializeSubscriptionResponse)(nil), // 29: coherence.topic.v1.InitializeSubscriptionResponse
-	(*EnsureSubscriptionRequest)(nil),      // 30: coherence.topic.v1.EnsureSubscriptionRequest
-	(*TopicElement)(nil),                   // 31: coherence.topic.v1.TopicElement
-	(*ReceiveRequest)(nil),                 // 32: coherence.topic.v1.ReceiveRequest
-	(*ReceiveResponse)(nil),                // 33: coherence.topic.v1.ReceiveResponse
-	(*SeekRequest)(nil),                    // 34: coherence.topic.v1.SeekRequest
-	(*SeekedPositions)(nil),                // 35: coherence.topic.v1.SeekedPositions
-	(*SeekResponse)(nil),                   // 36: coherence.topic.v1.SeekResponse
-	(*CommitResponse)(nil),                 // 37: coherence.topic.v1.CommitResponse
-	(*ChannelAndPosition)(nil),             // 38: coherence.topic.v1.ChannelAndPosition
-	(*MapOfChannelAndPosition)(nil),        // 39: coherence.topic.v1.MapOfChannelAndPosition
-	(*MapOfChannelAndTimestamp)(nil),       // 40: coherence.topic.v1.MapOfChannelAndTimestamp
-	nil,                                    // 41: coherence.topic.v1.SeekResponse.PositionsEntry
-	nil,                                    // 42: coherence.topic.v1.MapOfChannelAndPosition.PositionsEntry
-	nil,                                    // 43: coherence.topic.v1.MapOfChannelAndTimestamp.TimestampsEntry
-	(*anypb.Any)(nil),                      // 44: google.protobuf.Any
-	(*v1.ErrorMessage)(nil),                // 45: coherence.common.v1.ErrorMessage
-	(*timestamppb.Timestamp)(nil),          // 46: google.protobuf.Timestamp
+	(*EnsureSimpleSubscriberRequest)(nil),  // 25: coherence.topic.v1.EnsureSimpleSubscriberRequest
+	(*SubscriberEvent)(nil),                // 26: coherence.topic.v1.SubscriberEvent
+	(*SubscriberId)(nil),                   // 27: coherence.topic.v1.SubscriberId
+	(*SubscriberGroupId)(nil),              // 28: coherence.topic.v1.SubscriberGroupId
+	(*InitializeSubscriptionRequest)(nil),  // 29: coherence.topic.v1.InitializeSubscriptionRequest
+	(*InitializeSubscriptionResponse)(nil), // 30: coherence.topic.v1.InitializeSubscriptionResponse
+	(*EnsureSubscriptionRequest)(nil),      // 31: coherence.topic.v1.EnsureSubscriptionRequest
+	(*TopicElement)(nil),                   // 32: coherence.topic.v1.TopicElement
+	(*ReceiveRequest)(nil),                 // 33: coherence.topic.v1.ReceiveRequest
+	(*SimpleReceiveRequest)(nil),           // 34: coherence.topic.v1.SimpleReceiveRequest
+	(*ReceiveResponse)(nil),                // 35: coherence.topic.v1.ReceiveResponse
+	(*SimpleReceiveResponse)(nil),          // 36: coherence.topic.v1.SimpleReceiveResponse
+	(*SeekRequest)(nil),                    // 37: coherence.topic.v1.SeekRequest
+	(*SeekedPositions)(nil),                // 38: coherence.topic.v1.SeekedPositions
+	(*SeekResponse)(nil),                   // 39: coherence.topic.v1.SeekResponse
+	(*CommitResponse)(nil),                 // 40: coherence.topic.v1.CommitResponse
+	(*ChannelAndPosition)(nil),             // 41: coherence.topic.v1.ChannelAndPosition
+	(*MapOfChannelAndPosition)(nil),        // 42: coherence.topic.v1.MapOfChannelAndPosition
+	(*MapOfChannelAndTimestamp)(nil),       // 43: coherence.topic.v1.MapOfChannelAndTimestamp
+	nil,                                    // 44: coherence.topic.v1.SeekResponse.PositionsEntry
+	nil,                                    // 45: coherence.topic.v1.MapOfChannelAndPosition.PositionsEntry
+	nil,                                    // 46: coherence.topic.v1.MapOfChannelAndTimestamp.TimestampsEntry
+	(*anypb.Any)(nil),                      // 47: google.protobuf.Any
+	(*v1.ErrorMessage)(nil),                // 48: coherence.common.v1.ErrorMessage
+	(*timestamppb.Timestamp)(nil),          // 49: google.protobuf.Timestamp
 }
 var file_topic_service_messages_v1_proto_depIdxs = []int32{
 	0,  // 0: coherence.topic.v1.TopicServiceRequest.type:type_name -> coherence.topic.v1.TopicServiceRequestType
-	44, // 1: coherence.topic.v1.TopicServiceRequest.message:type_name -> google.protobuf.Any
+	47, // 1: coherence.topic.v1.TopicServiceRequest.message:type_name -> google.protobuf.Any
 	1,  // 2: coherence.topic.v1.TopicServiceResponse.type:type_name -> coherence.topic.v1.ResponseType
-	44, // 3: coherence.topic.v1.TopicServiceResponse.message:type_name -> google.protobuf.Any
+	47, // 3: coherence.topic.v1.TopicServiceResponse.message:type_name -> google.protobuf.Any
 	2,  // 4: coherence.topic.v1.NamedTopicEvent.type:type_name -> coherence.topic.v1.TopicEventType
 	3,  // 5: coherence.topic.v1.PublisherEvent.type:type_name -> coherence.topic.v1.PublisherEventType
 	22, // 6: coherence.topic.v1.PublishedValueStatus.position:type_name -> coherence.topic.v1.TopicPosition
-	45, // 7: coherence.topic.v1.PublishedValueStatus.error:type_name -> coherence.common.v1.ErrorMessage
+	48, // 7: coherence.topic.v1.PublishedValueStatus.error:type_name -> coherence.common.v1.ErrorMessage
 	4,  // 8: coherence.topic.v1.PublishResult.status:type_name -> coherence.topic.v1.PublishStatus
 	19, // 9: coherence.topic.v1.PublishResult.valueStatus:type_name -> coherence.topic.v1.PublishedValueStatus
-	44, // 10: coherence.topic.v1.TopicPosition.position:type_name -> google.protobuf.Any
-	26, // 11: coherence.topic.v1.EnsureSubscriberResponse.subscriberId:type_name -> coherence.topic.v1.SubscriberId
-	27, // 12: coherence.topic.v1.EnsureSubscriberResponse.groupId:type_name -> coherence.topic.v1.SubscriberGroupId
+	47, // 10: coherence.topic.v1.TopicPosition.position:type_name -> google.protobuf.Any
+	27, // 11: coherence.topic.v1.EnsureSubscriberResponse.subscriberId:type_name -> coherence.topic.v1.SubscriberId
+	28, // 12: coherence.topic.v1.EnsureSubscriberResponse.groupId:type_name -> coherence.topic.v1.SubscriberGroupId
 	5,  // 13: coherence.topic.v1.SubscriberEvent.type:type_name -> coherence.topic.v1.SubscriberEventType
-	46, // 14: coherence.topic.v1.InitializeSubscriptionResponse.timestamp:type_name -> google.protobuf.Timestamp
+	49, // 14: coherence.topic.v1.InitializeSubscriptionResponse.timestamp:type_name -> google.protobuf.Timestamp
 	22, // 15: coherence.topic.v1.InitializeSubscriptionResponse.heads:type_name -> coherence.topic.v1.TopicPosition
 	22, // 16: coherence.topic.v1.TopicElement.position:type_name -> coherence.topic.v1.TopicPosition
-	46, // 17: coherence.topic.v1.TopicElement.timestamp:type_name -> google.protobuf.Timestamp
+	49, // 17: coherence.topic.v1.TopicElement.timestamp:type_name -> google.protobuf.Timestamp
 	6,  // 18: coherence.topic.v1.ReceiveResponse.status:type_name -> coherence.topic.v1.ReceiveStatus
 	22, // 19: coherence.topic.v1.ReceiveResponse.headPosition:type_name -> coherence.topic.v1.TopicPosition
-	39, // 20: coherence.topic.v1.SeekRequest.byPosition:type_name -> coherence.topic.v1.MapOfChannelAndPosition
-	40, // 21: coherence.topic.v1.SeekRequest.byTimestamp:type_name -> coherence.topic.v1.MapOfChannelAndTimestamp
-	22, // 22: coherence.topic.v1.SeekedPositions.head:type_name -> coherence.topic.v1.TopicPosition
-	22, // 23: coherence.topic.v1.SeekedPositions.seekedTo:type_name -> coherence.topic.v1.TopicPosition
-	41, // 24: coherence.topic.v1.SeekResponse.positions:type_name -> coherence.topic.v1.SeekResponse.PositionsEntry
-	22, // 25: coherence.topic.v1.CommitResponse.position:type_name -> coherence.topic.v1.TopicPosition
-	22, // 26: coherence.topic.v1.CommitResponse.head:type_name -> coherence.topic.v1.TopicPosition
-	7,  // 27: coherence.topic.v1.CommitResponse.status:type_name -> coherence.topic.v1.CommitResponseStatus
-	45, // 28: coherence.topic.v1.CommitResponse.error:type_name -> coherence.common.v1.ErrorMessage
-	22, // 29: coherence.topic.v1.ChannelAndPosition.position:type_name -> coherence.topic.v1.TopicPosition
-	42, // 30: coherence.topic.v1.MapOfChannelAndPosition.positions:type_name -> coherence.topic.v1.MapOfChannelAndPosition.PositionsEntry
-	43, // 31: coherence.topic.v1.MapOfChannelAndTimestamp.timestamps:type_name -> coherence.topic.v1.MapOfChannelAndTimestamp.TimestampsEntry
-	35, // 32: coherence.topic.v1.SeekResponse.PositionsEntry.value:type_name -> coherence.topic.v1.SeekedPositions
-	22, // 33: coherence.topic.v1.MapOfChannelAndPosition.PositionsEntry.value:type_name -> coherence.topic.v1.TopicPosition
-	46, // 34: coherence.topic.v1.MapOfChannelAndTimestamp.TimestampsEntry.value:type_name -> google.protobuf.Timestamp
-	35, // [35:35] is the sub-list for method output_type
-	35, // [35:35] is the sub-list for method input_type
-	35, // [35:35] is the sub-list for extension type_name
-	35, // [35:35] is the sub-list for extension extendee
-	0,  // [0:35] is the sub-list for field type_name
+	6,  // 20: coherence.topic.v1.SimpleReceiveResponse.status:type_name -> coherence.topic.v1.ReceiveStatus
+	32, // 21: coherence.topic.v1.SimpleReceiveResponse.values:type_name -> coherence.topic.v1.TopicElement
+	42, // 22: coherence.topic.v1.SeekRequest.byPosition:type_name -> coherence.topic.v1.MapOfChannelAndPosition
+	43, // 23: coherence.topic.v1.SeekRequest.byTimestamp:type_name -> coherence.topic.v1.MapOfChannelAndTimestamp
+	22, // 24: coherence.topic.v1.SeekedPositions.head:type_name -> coherence.topic.v1.TopicPosition
+	22, // 25: coherence.topic.v1.SeekedPositions.seekedTo:type_name -> coherence.topic.v1.TopicPosition
+	44, // 26: coherence.topic.v1.SeekResponse.positions:type_name -> coherence.topic.v1.SeekResponse.PositionsEntry
+	22, // 27: coherence.topic.v1.CommitResponse.position:type_name -> coherence.topic.v1.TopicPosition
+	22, // 28: coherence.topic.v1.CommitResponse.head:type_name -> coherence.topic.v1.TopicPosition
+	7,  // 29: coherence.topic.v1.CommitResponse.status:type_name -> coherence.topic.v1.CommitResponseStatus
+	48, // 30: coherence.topic.v1.CommitResponse.error:type_name -> coherence.common.v1.ErrorMessage
+	22, // 31: coherence.topic.v1.ChannelAndPosition.position:type_name -> coherence.topic.v1.TopicPosition
+	45, // 32: coherence.topic.v1.MapOfChannelAndPosition.positions:type_name -> coherence.topic.v1.MapOfChannelAndPosition.PositionsEntry
+	46, // 33: coherence.topic.v1.MapOfChannelAndTimestamp.timestamps:type_name -> coherence.topic.v1.MapOfChannelAndTimestamp.TimestampsEntry
+	38, // 34: coherence.topic.v1.SeekResponse.PositionsEntry.value:type_name -> coherence.topic.v1.SeekedPositions
+	22, // 35: coherence.topic.v1.MapOfChannelAndPosition.PositionsEntry.value:type_name -> coherence.topic.v1.TopicPosition
+	49, // 36: coherence.topic.v1.MapOfChannelAndTimestamp.TimestampsEntry.value:type_name -> google.protobuf.Timestamp
+	37, // [37:37] is the sub-list for method output_type
+	37, // [37:37] is the sub-list for method input_type
+	37, // [37:37] is the sub-list for extension type_name
+	37, // [37:37] is the sub-list for extension extendee
+	0,  // [0:37] is the sub-list for field type_name
 }
 
 func init() { file_topic_service_messages_v1_proto_init() }
@@ -3103,19 +3334,21 @@ func file_topic_service_messages_v1_proto_init() {
 		(*PublishedValueStatus_Error)(nil),
 	}
 	file_topic_service_messages_v1_proto_msgTypes[16].OneofWrappers = []any{}
-	file_topic_service_messages_v1_proto_msgTypes[24].OneofWrappers = []any{}
-	file_topic_service_messages_v1_proto_msgTypes[26].OneofWrappers = []any{
+	file_topic_service_messages_v1_proto_msgTypes[17].OneofWrappers = []any{}
+	file_topic_service_messages_v1_proto_msgTypes[25].OneofWrappers = []any{}
+	file_topic_service_messages_v1_proto_msgTypes[26].OneofWrappers = []any{}
+	file_topic_service_messages_v1_proto_msgTypes[29].OneofWrappers = []any{
 		(*SeekRequest_ByPosition)(nil),
 		(*SeekRequest_ByTimestamp)(nil),
 	}
-	file_topic_service_messages_v1_proto_msgTypes[29].OneofWrappers = []any{}
+	file_topic_service_messages_v1_proto_msgTypes[32].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_topic_service_messages_v1_proto_rawDesc), len(file_topic_service_messages_v1_proto_rawDesc)),
 			NumEnums:      8,
-			NumMessages:   36,
+			NumMessages:   39,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
