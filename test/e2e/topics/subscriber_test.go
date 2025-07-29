@@ -36,11 +36,7 @@ func TestSubscriberWithFilter(t *testing.T) {
 	sub1, err := topic1.CreateSubscriber(ctx, subscriber.WithFilter(filters.GreaterEqual(extractors.Extract[int]("age"), 10)))
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	log.Println("Subscriber created", sub1)
-
-	go func() {
-
-	}()
-
+	
 	runTestPerson(g, topic1, sub1, maxMessages)
 }
 
