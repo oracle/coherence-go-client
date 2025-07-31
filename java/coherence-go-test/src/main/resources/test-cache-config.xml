@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <!--
-  ~ Copyright (c) 2023 Oracle and/or its affiliates.
+  ~ Copyright (c) 2023, 2025 Oracle and/or its affiliates.
   ~ Licensed under the Universal Permissive License v 1.0 as shown at
   ~ https://oss.oracle.com/licenses/upl.
   -->
@@ -26,6 +26,22 @@
       <scheme-name>touch-scheme</scheme-name>
     </cache-mapping>
   </caching-scheme-mapping>
+
+  <topic-scheme-mapping>
+    <topic-mapping>
+      <topic-name>*</topic-name>
+      <scheme-name>topic-scheme</scheme-name>
+    </topic-mapping>
+    <topic-mapping>
+      <topic-name>durable-*</topic-name>
+      <scheme-name>topic-scheme</scheme-name>
+      <subscriber-groups>
+        <subscriber-group>
+          <name>subscriber-group</name>
+        </subscriber-group>
+      </subscriber-groups>
+    </topic-mapping>
+  </topic-scheme-mapping>
 
   <caching-schemes>
     <distributed-scheme>
@@ -90,5 +106,18 @@
         </read-write-backing-map-scheme>
       </backing-map-scheme>
     </distributed-scheme>
+
+    <paged-topic-scheme>
+      <scheme-name>topic-scheme</scheme-name>
+      <service-name>${coherence.service.name Partitioned}Topic</service-name>
+      <local-storage system-property="coherence.distributed.localstorage">true</local-storage>
+      <partition-count system-property="coherence.distributed.partitions">${coherence.distributed.partitioncount 257}</partition-count>
+      <autostart system-property="coherence.topic.enabled">true</autostart>
+      <channel-count system-property="coherence.topic.channel.count"/>
+      <high-units>{topic-high-units-bytes 0B}</high-units>
+      <reconnect-wait system-property="coherence.topic.reconnect.wait"/>
+      <reconnect-timeout system-property="coherence.topic.reconnect.timeout"/>
+      <reconnect-retry system-property="coherence.topic.reconnect.retry"/>
+    </paged-topic-scheme>
   </caching-schemes>
 </cache-config>

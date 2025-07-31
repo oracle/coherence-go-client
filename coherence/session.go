@@ -59,12 +59,19 @@ type Session struct {
 	conn                  *grpc.ClientConn
 	dialOptions           []grpc.DialOption
 	closed                bool
+	genericSerializer     Serializer[any]
 	mapMutex              sync.RWMutex
 	caches                map[string]interface{}
 	maps                  map[string]interface{}
 	queues                map[string]interface{}
+	topics                map[string]interface{}
+	publishers            map[int64]interface{}
+	subscribers           map[int64]interface{}
 	cacheIDMap            safeMap[string, int32]
 	queueIDMap            safeMap[string, int32]
+	topicIDMap            safeMap[string, int32]
+	subscriberIDMap       safeMap[int64, int32]
+	publisherIDMap        safeMap[int64, int32]
 	lifecycleMutex        sync.RWMutex
 	lifecycleListeners    []*SessionLifecycleListener
 	sessionConnectCtx     context.Context
@@ -77,6 +84,7 @@ type Session struct {
 	filterID              int64                // filter id for gRPC v1
 	v1StreamManagerCache  *streamManagerV1
 	v1StreamManagerQueue  *streamManagerV1
+	v1StreamManagerTopics *streamManagerV1
 }
 
 // SessionOptions holds the session attributes like host, port, tls attributes etc.
@@ -171,8 +179,14 @@ func NewSession(ctx context.Context, options ...func(session *SessionOptions)) (
 		maps:               make(map[string]interface{}, 0),
 		caches:             make(map[string]interface{}, 0),
 		queues:             make(map[string]interface{}, 0),
+		topics:             make(map[string]interface{}, 0),
+		publishers:         make(map[int64]interface{}, 0),
+		subscribers:        make(map[int64]interface{}, 0),
 		cacheIDMap:         newSafeIDMap(),
 		queueIDMap:         newSafeIDMap(),
+		topicIDMap:         newSafeIDMap(),
+		publisherIDMap:     newSafeIDMapInt64(),
+		subscriberIDMap:    newSafeIDMapInt64(),
 		lifecycleListeners: []*SessionLifecycleListener{},
 		sessOpts: &SessionOptions{
 			PlainText:          false,
@@ -221,6 +235,8 @@ func NewSession(ctx context.Context, options ...func(session *SessionOptions)) (
 		return nil, ErrInvalidFormat
 	}
 
+	session.genericSerializer = NewSerializer[any](session.sessOpts.Format)
+
 	// if no address option sent in then use the env or defaults
 	if session.sessOpts.Address == "" {
 		session.sessOpts.Address = getStringValueFromEnvVarOrDefault(envHostName, "localhost:1408")
@@ -260,6 +276,8 @@ func NewSession(ctx context.Context, options ...func(session *SessionOptions)) (
 // setLogLevel sets the log level from the COHERENCE_LOG_LEVEL environment variable.
 func setLogLevel(envLevel string) {
 	var level int
+	logLevelMutex.Lock()
+	defer logLevelMutex.Unlock()
 
 	// try to convert from integer first
 	if lvl, err := strconv.Atoi(envLevel); err == nil {
@@ -400,6 +418,10 @@ func (s *Session) getCacheID(cache string) *int32 {
 
 func (s *Session) getQueueID(queue string) *int32 {
 	return s.queueIDMap.Get(queue)
+}
+
+func (s *Session) getTopicID(topic string) *int32 {
+	return s.topicIDMap.Get(topic)
 }
 
 func (s *Session) getCacheNameFromCacheID(cacheID int32) *string {
@@ -1000,4 +1022,8 @@ func (m *safeMapImpl[K, V]) Clear() {
 
 func newSafeIDMap() safeMap[string, int32] {
 	return &safeMapImpl[string, int32]{internalMap: make(map[string]int32, 0)}
+}
+
+func newSafeIDMapInt64() safeMap[int64, int32] {
+	return &safeMapImpl[int64, int32]{internalMap: make(map[int64]int32, 0)}
 }

@@ -222,6 +222,7 @@
                   <jvmFlag>-Dcoherence.management=all</jvmFlag>
                   <jvmFlag>-Dcoherence.management.http=all</jvmFlag>
                   <jvmFlag>-Dcoherence.management.http.port=30000</jvmFlag>
+                  <jvmFlag>-Dcoherence.health.http.port=6676</jvmFlag>
                   <jvmFlag>-Dcoherence.metrics.http.enabled=true</jvmFlag>
                   <jvmFlag>-Dcoherence.metrics.http.port=9612</jvmFlag>
                   <jvmFlag>-Dcoherence.grpc.server.port=1408</jvmFlag>
@@ -270,6 +271,7 @@
                   <jvmFlag>-Dcoherence.log.level=9</jvmFlag>
                   <jvmFlag>-Dcoherence.management.http=all</jvmFlag>
                   <jvmFlag>-Dcoherence.management.http.port=30000</jvmFlag>
+                  <jvmFlag>-Dcoherence.health.http.port=6677</jvmFlag>
                   <jvmFlag>-Dcoherence.management.refresh.expiry=1s</jvmFlag>
                   <jvmFlag>-Dcoherence.distributed.localstorage=true</jvmFlag>
                   <jvmFlag>-Dcoherence.metrics.http.enabled=true</jvmFlag>
@@ -290,7 +292,7 @@
     <repository>
       <id>ossrh-staging</id>
       <name>OSS Sonatype Staging</name>
-      <url>https://oss.sonatype.org/content/groups/staging/</url>
+      <url>https://central.sonatype.com</url>
       <snapshots>
         <enabled>false</enabled>
       </snapshots>
@@ -301,6 +303,17 @@
 
     <repository>
       <id>snapshots-repo</id>
+      <url>https://central.sonatype.com/repository/maven-snapshots</url>
+      <releases>
+        <enabled>false</enabled>
+      </releases>
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
+    </repository>
+
+    <repository>
+      <id>snapshots-repo-old</id>
       <url>https://oss.sonatype.org/content/repositories/snapshots</url>
       <releases>
         <enabled>false</enabled>

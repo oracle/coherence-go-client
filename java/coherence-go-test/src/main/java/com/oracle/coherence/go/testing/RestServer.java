@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2024 Oracle and/or its affiliates.
+ * Copyright (c) 2022, 2025 Oracle and/or its affiliates.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * https://oss.oracle.com/licenses/upl.
  */
@@ -10,11 +10,13 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
+import java.net.URI;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
@@ -30,6 +32,7 @@ import com.sun.net.httpserver.HttpServer;
 import com.tangosol.net.NamedMap;
 import com.tangosol.net.SessionConfiguration;
 import com.tangosol.net.management.MBeanServerProxy;
+import com.tangosol.net.topic.NamedTopic;
 
 /**
  * A simple Http server that is deployed into a Coherence cluster
@@ -70,6 +73,7 @@ public class RestServer {
             server.createContext("/checkCustomerCache", RestServer::checkCustomerCache);
             server.createContext("/isIsReadyPresent", RestServer::isIsReadyPresent);
             server.createContext("/populateQueue", RestServer::populateQueue);
+            server.createContext("/destroyTopic", RestServer::destroyTopic);
 
             server.setExecutor(null); // creates a default executor
             server.start();
@@ -111,6 +115,28 @@ public class RestServer {
             registerMethod.invoke(inst);
         }
         catch (Exception e) {
+            e.printStackTrace();
+            send(t, 404, "Error: " + e.getMessage());
+        }
+        send(t, 200, "OK");
+    }
+
+    private static void destroyTopic(HttpExchange t) throws IOException {
+        try {
+            URI uri = t.getRequestURI();
+            String path = uri.getPath();
+            String[] pathComponents = path.split("/");
+
+            if (pathComponents.length < 3 || !pathComponents[pathComponents.length - 2].equals("destroyTopic")) {
+                t.sendResponseHeaders(400, -1); // Bad Request
+                return;
+            }
+
+            String topicName = pathComponents[pathComponents.length - 1];
+
+            NamedTopic<String> topic = Coherence.clusterMember().start().get().getSession().getTopic(topicName);
+            topic.destroy();
+        } catch (Exception e) {
             e.printStackTrace();
             send(t, 404, "Error: " + e.getMessage());
         }

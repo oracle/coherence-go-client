@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2020, 2024, Oracle and/or its affiliates.
+// Copyright (c) 2020, 2025, Oracle and/or its affiliates.
 //
 // Licensed under the Universal Permissive License v 1.0 as shown at
 // https://oss.oracle.com/licenses/upl.
@@ -112,6 +112,20 @@ const (
 	// The message field should not be set.
 	// The response will contain the Queue Id and an Int32Value in the response field.
 	NamedQueueRequestType_Size NamedQueueRequestType = 12
+	// Add a value to the tail of a Queue.
+	// The message field must contain a OfferRequest that contains the
+	// serialized value and other attributes.
+	// The response will contain the Queue Id and a QueueOfferResult containing the
+	// result of the offer operation.
+	NamedQueueRequestType_ExtendedOfferTail NamedQueueRequestType = 13
+	// Add a value to the head of a Deque.
+	// This method is only supported for a double ended Deque.
+	// The queue type used to ensure the queue must have been a Deque
+	// The message field must contain a OfferRequest that contains the
+	// serialized value and other attributes.
+	// The response will contain the Queue Id and a QueueOfferResult containing the
+	// result of the offer operation.
+	NamedQueueRequestType_ExtendedOfferHead NamedQueueRequestType = 14
 )
 
 // Enum value maps for NamedQueueRequestType.
@@ -130,21 +144,25 @@ var (
 		10: "PollTail",
 		11: "PeekTail",
 		12: "Size",
+		13: "ExtendedOfferTail",
+		14: "ExtendedOfferHead",
 	}
 	NamedQueueRequestType_value = map[string]int32{
-		"Unknown":     0,
-		"Clear":       1,
-		"Destroy":     2,
-		"EnsureQueue": 3,
-		"IsEmpty":     4,
-		"IsReady":     5,
-		"OfferTail":   6,
-		"OfferHead":   7,
-		"PollHead":    8,
-		"PeekHead":    9,
-		"PollTail":    10,
-		"PeekTail":    11,
-		"Size":        12,
+		"Unknown":           0,
+		"Clear":             1,
+		"Destroy":           2,
+		"EnsureQueue":       3,
+		"IsEmpty":           4,
+		"IsReady":           5,
+		"OfferTail":         6,
+		"OfferHead":         7,
+		"PollHead":          8,
+		"PeekHead":          9,
+		"PollTail":          10,
+		"PeekTail":          11,
+		"Size":              12,
+		"ExtendedOfferTail": 13,
+		"ExtendedOfferHead": 14,
 	}
 )
 
@@ -540,6 +558,65 @@ func (x *QueueOfferResult) GetIndex() int64 {
 	return 0
 }
 
+// A request to offer a value to a queue.
+type OfferRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The serialized value to offer to the queue.
+	Value []byte `protobuf:"bytes,1,opt,name=value,proto3" json:"value,omitempty"`
+	// The number of milliseconds until the queue entry will
+	// expire, also referred to as the entry's "time to live";
+	// pass zero (0) to use the queue's default
+	// time-to-live setting; pass minus one (-1) to
+	// indicate that the queue entry should never expire
+	Ttl           int64 `protobuf:"varint,2,opt,name=ttl,proto3" json:"ttl,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OfferRequest) Reset() {
+	*x = OfferRequest{}
+	mi := &file_queue_service_messages_v1_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OfferRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OfferRequest) ProtoMessage() {}
+
+func (x *OfferRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_queue_service_messages_v1_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OfferRequest.ProtoReflect.Descriptor instead.
+func (*OfferRequest) Descriptor() ([]byte, []int) {
+	return file_queue_service_messages_v1_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *OfferRequest) GetValue() []byte {
+	if x != nil {
+		return x.Value
+	}
+	return nil
+}
+
+func (x *OfferRequest) GetTtl() int64 {
+	if x != nil {
+		return x.Ttl
+	}
+	return 0
+}
+
 var File_queue_service_messages_v1_proto protoreflect.FileDescriptor
 
 const file_queue_service_messages_v1_proto_rawDesc = "" +
@@ -564,7 +641,10 @@ const file_queue_service_messages_v1_proto_rawDesc = "" +
 	"\x04type\x18\x02 \x01(\x0e2-.coherence.concurrent.queue.v1.NamedQueueTypeR\x04type\"F\n" +
 	"\x10QueueOfferResult\x12\x1c\n" +
 	"\tsucceeded\x18\x01 \x01(\bR\tsucceeded\x12\x14\n" +
-	"\x05index\x18\x02 \x01(\x03R\x05index*\xc7\x01\n" +
+	"\x05index\x18\x02 \x01(\x03R\x05index\"6\n" +
+	"\fOfferRequest\x12\x14\n" +
+	"\x05value\x18\x01 \x01(\fR\x05value\x12\x10\n" +
+	"\x03ttl\x18\x02 \x01(\x03R\x03ttl*\xf5\x01\n" +
 	"\x15NamedQueueRequestType\x12\v\n" +
 	"\aUnknown\x10\x00\x12\t\n" +
 	"\x05Clear\x10\x01\x12\v\n" +
@@ -579,7 +659,9 @@ const file_queue_service_messages_v1_proto_rawDesc = "" +
 	"\bPollTail\x10\n" +
 	"\x12\f\n" +
 	"\bPeekTail\x10\v\x12\b\n" +
-	"\x04Size\x10\f*S\n" +
+	"\x04Size\x10\f\x12\x15\n" +
+	"\x11ExtendedOfferTail\x10\r\x12\x15\n" +
+	"\x11ExtendedOfferHead\x10\x0e*S\n" +
 	"\x16NamedQueueResponseType\x12\v\n" +
 	"\aMessage\x10\x00\x12\x0e\n" +
 	"\n" +
@@ -606,7 +688,7 @@ func file_queue_service_messages_v1_proto_rawDescGZIP() []byte {
 }
 
 var file_queue_service_messages_v1_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_queue_service_messages_v1_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_queue_service_messages_v1_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_queue_service_messages_v1_proto_goTypes = []any{
 	(NamedQueueRequestType)(0),  // 0: coherence.concurrent.queue.v1.NamedQueueRequestType
 	(NamedQueueResponseType)(0), // 1: coherence.concurrent.queue.v1.NamedQueueResponseType
@@ -615,13 +697,14 @@ var file_queue_service_messages_v1_proto_goTypes = []any{
 	(*NamedQueueResponse)(nil),  // 4: coherence.concurrent.queue.v1.NamedQueueResponse
 	(*EnsureQueueRequest)(nil),  // 5: coherence.concurrent.queue.v1.EnsureQueueRequest
 	(*QueueOfferResult)(nil),    // 6: coherence.concurrent.queue.v1.QueueOfferResult
-	(*anypb.Any)(nil),           // 7: google.protobuf.Any
+	(*OfferRequest)(nil),        // 7: coherence.concurrent.queue.v1.OfferRequest
+	(*anypb.Any)(nil),           // 8: google.protobuf.Any
 }
 var file_queue_service_messages_v1_proto_depIdxs = []int32{
 	0, // 0: coherence.concurrent.queue.v1.NamedQueueRequest.type:type_name -> coherence.concurrent.queue.v1.NamedQueueRequestType
-	7, // 1: coherence.concurrent.queue.v1.NamedQueueRequest.message:type_name -> google.protobuf.Any
+	8, // 1: coherence.concurrent.queue.v1.NamedQueueRequest.message:type_name -> google.protobuf.Any
 	1, // 2: coherence.concurrent.queue.v1.NamedQueueResponse.type:type_name -> coherence.concurrent.queue.v1.NamedQueueResponseType
-	7, // 3: coherence.concurrent.queue.v1.NamedQueueResponse.message:type_name -> google.protobuf.Any
+	8, // 3: coherence.concurrent.queue.v1.NamedQueueResponse.message:type_name -> google.protobuf.Any
 	2, // 4: coherence.concurrent.queue.v1.EnsureQueueRequest.type:type_name -> coherence.concurrent.queue.v1.NamedQueueType
 	5, // [5:5] is the sub-list for method output_type
 	5, // [5:5] is the sub-list for method input_type
@@ -644,7 +727,7 @@ func file_queue_service_messages_v1_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_queue_service_messages_v1_proto_rawDesc), len(file_queue_service_messages_v1_proto_rawDesc)),
 			NumEnums:      3,
-			NumMessages:   4,
+			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

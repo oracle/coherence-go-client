@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Oracle and/or its affiliates.
+ * Copyright (c) 2024, 2025 Oracle and/or its affiliates.
  * Licensed under the Universal Permissive License v 1.0 as shown at
  * https://oss.oracle.com/licenses/upl.
  */
@@ -15,7 +15,7 @@ const (
 	// QueueTruncated raised when a queue is truncated.
 	QueueTruncated QueueLifecycleEventType = "queue_truncated"
 
-	// QueueReleased raised when a queue is released but the session.
+	// QueueReleased raised when a queue is released by the session.
 	QueueReleased QueueLifecycleEventType = "queue_released"
 )
 
