@@ -87,7 +87,7 @@ func TestSubscriberWithTransformer(t *testing.T) {
 
 	extractor := extractors.Extract[string]("name")
 
-	sub1, err := coherence.CreatSubscriberWithTransformer(ctx, session1, topicName, extractor)
+	sub1, err := coherence.CreateSubscriberWithTransformer(ctx, session1, topicName, extractor)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	log.Println("Subscriber created", sub1)
 
@@ -130,7 +130,7 @@ func TestSubscriberWithTransformerAndFilter(t *testing.T) {
 
 	extractor := extractors.Extract[string]("name")
 
-	sub1, err := coherence.CreatSubscriberWithTransformer(ctx, session1, topicName, extractor,
+	sub1, err := coherence.CreateSubscriberWithTransformer(ctx, session1, topicName, extractor,
 		subscriber.WithFilter(filters.GreaterEqual(extractors.Extract[int]("age"), 20)))
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	log.Println("Subscriber created", sub1)

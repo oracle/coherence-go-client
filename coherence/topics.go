@@ -545,9 +545,9 @@ func CreatePublisher[V any](ctx context.Context, session *Session, topicName str
 	return newPublisher[V](session, nil, result, topicName, publisherOptions)
 }
 
-// CreatSubscriberWithTransformer creates a subscriber which will transform the value from the topic using
+// CreateSubscriberWithTransformer creates a subscriber which will transform the value from the topic using
 // the supplied extractor.
-func CreatSubscriberWithTransformer[E any](ctx context.Context, session *Session, topicName string,
+func CreateSubscriberWithTransformer[E any](ctx context.Context, session *Session, topicName string,
 	extractor extractors.ValueExtractor[any, E], options ...func(cache *subscriber.Options)) (Subscriber[E], error) {
 
 	binExtractor, err := session.genericSerializer.Serialize(extractor)

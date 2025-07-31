@@ -46,7 +46,7 @@ func (l *publisherLifecycleEvent[V]) Source() Publisher[V] {
 
 // String returns a string representation of a [PublisherLifecycleEvent]..
 func (l *publisherLifecycleEvent[V]) String() string {
-	return fmt.Sprintf("spublisherLifecycleEvent{source=%v, type=%s}", l.Source(), l.Type())
+	return fmt.Sprintf("publisherLifecycleEvent{source=%v, type=%s}", l.Source(), l.Type())
 }
 
 // PublisherLifecycleListener allows registering callbacks to be notified when lifecycle events
@@ -88,7 +88,7 @@ func (t *publisherLifecycleListener[V]) OnAny(callback func(PublisherLifecycleEv
 		OnDisconnected(callback).OnChannelsFreed(callback)
 }
 
-// OnDestroyed registers a callback that will be notified when a [SubscPublisherriber] is destroyed.
+// OnDestroyed registers a callback that will be notified when a [Publisher] is destroyed.
 func (t *publisherLifecycleListener[V]) OnDestroyed(callback func(PublisherLifecycleEvent[V])) PublisherLifecycleListener[V] {
 	return t.on(PublisherDestroyed, callback)
 }

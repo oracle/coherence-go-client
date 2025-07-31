@@ -49,7 +49,7 @@ func (l *subscriberLifecycleEvent[V]) Source() Subscriber[V] {
 	return l.source
 }
 
-// String returns a string representation of a [SubscriberLifecycleEvent].\.
+// String returns a string representation of a [SubscriberLifecycleEvent].
 func (l *subscriberLifecycleEvent[V]) String() string {
 	return fmt.Sprintf("subscriberLifecycleEvent{source=%v, type=%s}", l.Source(), l.Type())
 }
