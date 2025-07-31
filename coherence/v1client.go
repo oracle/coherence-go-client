@@ -393,7 +393,7 @@ func processTopicEvent(m *streamManagerV1, resp *responseMessage) {
 				case pb1topics.ResponseType_Event:
 					var eventType = &pb1topics.NamedTopicEvent{}
 					if err := resp.namedTopicResponse.Message.UnmarshalTo(eventType); err != nil {
-						err = getUnmarshallError("ensure response", err)
+						err = getUnmarshallError("processTopicEvent response", err)
 						m.session.debugConnection("cannot unmarshal topic response topic for topic %v: %v", topicName, err)
 					} else {
 						if eventType.Type == pb1topics.TopicEventType_TopicDestroyed {
@@ -432,7 +432,7 @@ func processPublisherEvent(m *streamManagerV1, resp *responseMessage, publisherI
 			case pb1topics.ResponseType_Event:
 				var eventType = &pb1topics.PublisherEvent{}
 				if err := resp.namedTopicResponse.Message.UnmarshalTo(eventType); err != nil {
-					err = getUnmarshallError("ensure response", err)
+					err = getUnmarshallError("processPublisherEvent response", err)
 					m.session.debugConnection("cannot unmarshal topic response topic for publisher %v: %v", publisherID, err)
 					return
 				}
@@ -458,7 +458,7 @@ func processSubscriberEvent(m *streamManagerV1, resp *responseMessage, subscribe
 			case pb1topics.ResponseType_Event:
 				var eventType = &pb1topics.SubscriberEvent{}
 				if err := resp.namedTopicResponse.Message.UnmarshalTo(eventType); err != nil {
-					err = getUnmarshallError("ensure response", err)
+					err = getUnmarshallError("processSubscriberEvent response", err)
 					m.session.debugConnection("cannot unmarshal topic response topic for subscriber %v: %v", subscriberID, err)
 					return
 				}

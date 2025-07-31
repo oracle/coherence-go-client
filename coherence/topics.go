@@ -653,7 +653,7 @@ func (m *streamManagerV1) ensurePublisher(ctx context.Context, topicName string,
 
 	var message = &pb1topics.EnsurePublisherResponse{}
 	if err = result.UnmarshalTo(message); err != nil {
-		err = getUnmarshallError("ensure response", err)
+		err = getUnmarshallError("ensure publisher response", err)
 		return nil, err
 	}
 
@@ -933,7 +933,7 @@ func (m *streamManagerV1) ensureTopicChannels(ctx context.Context, topicName str
 
 	var message = &wrapperspb.Int32Value{}
 	if err = result.UnmarshalTo(message); err != nil {
-		err = getUnmarshallError("ensure response", err)
+		err = getUnmarshallError("ensure topics channels response", err)
 		return nil, err
 	}
 
@@ -1098,7 +1098,7 @@ func (m *streamManagerV1) newSubscriberPeekRequest(ProxyID int32, maxMessages *i
 	if err != nil {
 		return nil, err
 	}
-	// TODO: FIX THIS when SImplePeek available
+	// TODO: FIX THIS when SimplePeek available
 	return m.newWrapperProxyPublisherRequest(ProxyID, pb1topics.TopicServiceRequestType_SimpleReceive, anyReq)
 }
 
