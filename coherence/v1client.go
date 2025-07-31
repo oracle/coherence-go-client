@@ -37,6 +37,7 @@ var (
 	ALL     logLevel = 5 // all messages
 
 	// current log level
+	logLevelMutex   sync.RWMutex
 	currentLogLevel int
 )
 
@@ -251,6 +252,9 @@ func (m *streamManagerV1) processResponseMessage(id int64, resp *responseMessage
 
 // logMessage logs a message only if the level <= currentLogLevel
 func logMessage(level logLevel, format string, args ...any) {
+	logLevelMutex.RLock()
+	defer logLevelMutex.RUnlock()
+
 	if int(level) <= currentLogLevel {
 		log.Println(getLogMessage(level, format, args...))
 	}
@@ -561,7 +565,7 @@ func (m *streamManagerV1) ensure(ctx context.Context, name string, IDMap safeMap
 		return nil, err
 	}
 
-	// store the cache id in the session , no lock required as already locked
+	// store the cache/topic/queue id in the session, no lock required as already locked
 	ID = &message.Value
 	IDMap.Add(name, *ID)
 

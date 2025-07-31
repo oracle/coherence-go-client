@@ -449,7 +449,7 @@ test-e2e-standalone-queues: test-clean test gotestsum $(BUILD_PROPS) ## Run e2e 
 # ----------------------------------------------------------------------------------------------------------------------
 .PHONY: test-e2e-standalone-topics
 test-e2e-standalone-topics: test-clean test gotestsum $(BUILD_PROPS) ## Run e2e tests with Coherence queues
-	cd test && CGO_ENABLED=0 $(GOTESTSUM) --format testname --junitfile $(TEST_LOGS_DIR)/go-client-test-queues.xml \
+	cd test && CGO_ENABLED=0 $(GOTESTSUM) --format testname --junitfile $(TEST_LOGS_DIR)/go-client-test-topics.xml \
 	  -- $(GO_TEST_FLAGS) -v -coverprofile=$(COVERAGE_DIR)/cover-functional-topics.out -v ./e2e/topics/... -coverpkg=github.com/oracle/coherence-go-client/v2/coherence/...
 	go tool cover -func=$(COVERAGE_DIR)/cover-functional-topics.out | grep -v '0.0%'
 

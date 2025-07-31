@@ -32,6 +32,15 @@
       <topic-name>*</topic-name>
       <scheme-name>topic-scheme</scheme-name>
     </topic-mapping>
+    <topic-mapping>
+      <topic-name>durable-*</topic-name>
+      <scheme-name>topic-scheme</scheme-name>
+      <subscriber-groups>
+        <subscriber-group>
+          <name>subscriber-group</name>
+        </subscriber-group>
+      </subscriber-groups>
+    </topic-mapping>
   </topic-scheme-mapping>
 
   <caching-schemes>

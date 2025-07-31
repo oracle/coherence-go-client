@@ -37,6 +37,7 @@ type Options struct {
 	Extractor       []byte
 	AutoCommit      bool
 	MaxMessages     int32
+	Channels        []int32
 }
 
 // CommitResponse represents th response from a [Subscriber] commit.
@@ -82,10 +83,17 @@ func WithAutoCommit() func(options *Options) {
 	}
 }
 
-// WithMaxMessages returns a function to set the maximum messages for a[Subscriber].
+// WithMaxMessages returns a function to set the maximum messages for a [Subscriber].
 func WithMaxMessages(maxMessages int32) func(options *Options) {
 	return func(s *Options) {
 		s.MaxMessages = maxMessages
+	}
+}
+
+// WithChannels returns a function to set the channels for a [Subscriber].
+func WithChannels(channels []int32) func(options *Options) {
+	return func(s *Options) {
+		s.Channels = channels
 	}
 }
 
@@ -97,5 +105,10 @@ func WithTransformer(extractor []byte) func(options *Options) {
 }
 
 func (o *Options) String() string {
-	return fmt.Sprintf("options{SubscriberGroup=%v, filter=%v}", o.SubscriberGroup, o.Filter)
+	var subGroup string
+	if o.SubscriberGroup != nil {
+		subGroup = *o.SubscriberGroup
+	}
+	return fmt.Sprintf("options{SubscriberGroup=%v, filter=%v, MaxMessages=%v, AutoCommit=%v, Transformer=%v, Channels=%v}",
+		subGroup, o.Filter, o.MaxMessages, o.AutoCommit, o.Extractor, o.Channels)
 }

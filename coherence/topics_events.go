@@ -99,7 +99,7 @@ func (t *topicLifecycleListener[V]) on(event TopicLifecycleEventType, callback f
 }
 
 func (bt *baseTopicsClient[V]) AddLifecycleListener(listener TopicLifecycleListener[V]) error {
-	if bt.isDestroyed || bt.isReleased {
+	if bt.isTopicDestroyed() || bt.isTopicReleased() {
 		return ErrTopicDestroyedOrReleased
 	}
 
@@ -108,7 +108,7 @@ func (bt *baseTopicsClient[V]) AddLifecycleListener(listener TopicLifecycleListe
 }
 
 func (bt *baseTopicsClient[V]) RemoveLifecycleListener(listener TopicLifecycleListener[V]) error {
-	if bt.isDestroyed || bt.isReleased {
+	if bt.isTopicDestroyed() || bt.isTopicReleased() {
 		return ErrTopicDestroyedOrReleased
 	}
 

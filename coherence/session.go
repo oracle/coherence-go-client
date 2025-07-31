@@ -276,6 +276,8 @@ func NewSession(ctx context.Context, options ...func(session *SessionOptions)) (
 // setLogLevel sets the log level from the COHERENCE_LOG_LEVEL environment variable.
 func setLogLevel(envLevel string) {
 	var level int
+	logLevelMutex.Lock()
+	defer logLevelMutex.Unlock()
 
 	// try to convert from integer first
 	if lvl, err := strconv.Atoi(envLevel); err == nil {

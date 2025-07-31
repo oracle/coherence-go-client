@@ -71,7 +71,6 @@ type NamedTopic[V any] interface {
 	CreateSubscriberGroup(ctx context.Context, subscriberGroup string, options ...func(o *subscribergroup.Options)) error
 
 	// DestroySubscriberGroup destroys a subscriber group.
-	// TODO: Not viable to implement?
 	DestroySubscriberGroup(ctx context.Context, subscriberGroup string) error
 
 	// AddLifecycleListener adds a [TopicLifecycleListener] to this topic.
@@ -114,8 +113,12 @@ type Subscriber[V any] interface {
 	// If the length of the [subscriber.ReceiveResponse] is zero this means no messages were available.
 	Receive(ctx context.Context) ([]*subscriber.ReceiveResponse[V], error)
 
-	// Commit commits a channel and position meaning the message will be removed from the topic.
+	// Commit commits a channel and position meaning the message will not be get redelivered if the subscriber gets disconnected.
 	Commit(ctx context.Context, channel int32, position *pb1topics.TopicPosition) (*subscriber.CommitResponse, error)
+
+	// Peek attempts to peek messages without removing them. If the length of the [subscriber.ReceiveResponse]
+	//is zero this means no messages were available.
+	Peek(ctx context.Context) ([]*subscriber.ReceiveResponse[V], error)
 
 	// DestroySubscriberGroup destroys a subscriber group created by this subscriber.
 	DestroySubscriberGroup(ctx context.Context, subscriberGroup string) error
@@ -296,7 +299,30 @@ func (bt *baseTopicsClient[V]) CreateSubscriberGroup(ctx context.Context, subscr
 }
 
 func (bt *baseTopicsClient[V]) DestroySubscriberGroup(ctx context.Context, subscriberGroup string) error {
-	return DestroySubscriberGroup(ctx, bt.session, subscriberGroup)
+	return DestroySubscriberGroup(ctx, bt.session, bt.topicID, subscriberGroup)
+}
+
+func (bt *baseTopicsClient[V]) isTopicDestroyed() bool {
+	bt.mutex.RLock()
+	defer bt.mutex.RUnlock()
+	return bt.isDestroyed
+}
+
+func (bt *baseTopicsClient[V]) setDestroyed() {
+	bt.mutex.Lock()
+	defer bt.mutex.Unlock()
+	bt.isDestroyed = true
+}
+func (bt *baseTopicsClient[V]) isTopicReleased() bool {
+	bt.mutex.RLock()
+	defer bt.mutex.RUnlock()
+	return bt.isReleased
+}
+
+func (bt *baseTopicsClient[V]) setReleased() {
+	bt.mutex.Lock()
+	defer bt.mutex.Unlock()
+	bt.isReleased = true
 }
 
 func newPublisher[V any](session *Session, bt *baseTopicsClient[V], result *publisher.EnsurePublisherResult, topicName string, options *publisher.Options) (Publisher[V], error) {
@@ -385,12 +411,12 @@ func closeSubscriber[V any](ctx context.Context, ts *topicSubscriber[V]) error {
 	return ts.session.v1StreamManagerTopics.destroyPublisherOrSubscriber(ctx, ts.proxyID, pb1topics.TopicServiceRequestType_DestroySubscriber)
 }
 
-func receiveInternal[V any](ctx context.Context, ts *topicSubscriber[V], maxMessages *int32) ([]*pb1topics.TopicElement, error) {
+func peekOrReceiveInternal[V any](ctx context.Context, ts *topicSubscriber[V], maxMessages *int32, isReceive bool) ([]*pb1topics.TopicElement, error) {
 	if ts.isClosed {
 		return nil, ErrSubscriberClosed
 	}
 
-	return ts.session.v1StreamManagerTopics.receive(ctx, ts.proxyID, maxMessages)
+	return ts.session.v1StreamManagerTopics.peekOrReceive(ctx, ts.proxyID, maxMessages, isReceive)
 }
 
 func commitInternal[V any](ctx context.Context, ts *topicSubscriber[V], channel int32, position *pb1topics.TopicPosition) (*subscriber.CommitResponse, error) {
@@ -405,16 +431,24 @@ func (ts *topicSubscriber[V]) DestroySubscriberGroup(ctx context.Context, subscr
 	return ts.session.v1StreamManagerTopics.destroySubscriberGroup(ctx, ts.proxyID, subscriberGroup)
 }
 
-// Receive attempts to receive messages. Messages must be committed to be considered processed unless autoCommit is set.
+func (ts *topicSubscriber[V]) Peek(ctx context.Context) ([]*subscriber.ReceiveResponse[V], error) {
+	return ts.peekOrReceive(ctx, false)
+}
+
 func (ts *topicSubscriber[V]) Receive(ctx context.Context) ([]*subscriber.ReceiveResponse[V], error) {
-	r, err := receiveInternal(ctx, ts, &ts.options.MaxMessages)
+	return ts.peekOrReceive(ctx, true)
+}
+
+// Receive attempts to peekOrReceive messages. Messages must be committed to be considered processed unless autoCommit is set.
+func (ts *topicSubscriber[V]) peekOrReceive(ctx context.Context, isReceive bool) ([]*subscriber.ReceiveResponse[V], error) {
+	r, err := peekOrReceiveInternal(ctx, ts, &ts.options.MaxMessages, isReceive)
 	if err != nil {
 		return nil, err
 	}
 
 	values, err := ts.decodeAll(r)
 	if err != nil {
-		return nil, fmt.Errorf("unable to decode receive values: %v", err)
+		return nil, fmt.Errorf("unable to decode peek rr receive values: %v", err)
 	}
 
 	if ts.options.AutoCommit && len(values) > 0 {
@@ -530,7 +564,6 @@ func CreatSubscriberWithTransformer[E any](ctx context.Context, session *Session
 func CreateSubscriber[V any](ctx context.Context, session *Session, topicName string, options ...func(cache *subscriber.Options)) (Subscriber[V], error) {
 	var (
 		subscriberOptions = &subscriber.Options{}
-		binFilter         []byte
 		err               error
 	)
 
@@ -545,16 +578,13 @@ func CreateSubscriber[V any](ctx context.Context, session *Session, topicName st
 		}
 	}
 
-	if subscriberOptions.Filter != nil {
-		binFilter, err = session.genericSerializer.Serialize(subscriberOptions.Filter)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	result, err := session.v1StreamManagerTopics.ensureSubscriber(ctx, topicName, subscriberOptions.SubscriberGroup, binFilter)
+	result, err := session.v1StreamManagerTopics.ensureSubscriber(ctx, topicName, subscriberOptions)
 	if err != nil {
 		return nil, err
+	}
+
+	if result == nil {
+		return nil, fmt.Errorf("unable to create subscriber with options %v, check server logs: %v", subscriberOptions, err)
 	}
 
 	return newSubscriber[V](session, nil, result, topicName, subscriberOptions)
@@ -590,15 +620,14 @@ func CreateSubscriberGroup(ctx context.Context, session *Session, topicName stri
 }
 
 // DestroySubscriberGroup destroys a subscriber group.
-func DestroySubscriberGroup(ctx context.Context, session *Session, subscriberGroup string) error {
+func DestroySubscriberGroup(ctx context.Context, session *Session, proxyID int32, subscriberGroup string) error {
 	if session.v1StreamManagerTopics == nil {
 		if err := ensureV1StreamManagerTopics(session); err != nil {
 			return err
 		}
 	}
 
-	// TODO: Is this valid???, how can we determine the proxyID if we don't have a subscriber
-	return session.v1StreamManagerTopics.destroySubscriberGroup(ctx, 0, subscriberGroup)
+	return session.v1StreamManagerTopics.destroySubscriberGroup(ctx, proxyID, subscriberGroup)
 }
 
 // ensurePublisher ensures a publisher.
@@ -636,8 +665,8 @@ func (m *streamManagerV1) ensurePublisher(ctx context.Context, topicName string,
 }
 
 // ensureSubscriber ensures a subscriber.
-func (m *streamManagerV1) ensureSubscriber(ctx context.Context, topicName string, subscriberGroup *string, binFilter []byte) (*subscriber.EnsureSubscriberResult, error) {
-	req, err := m.newEnsureSubscriberRequest(topicName, subscriberGroup, binFilter)
+func (m *streamManagerV1) ensureSubscriber(ctx context.Context, topicName string, options *subscriber.Options) (*subscriber.EnsureSubscriberResult, error) {
+	req, err := m.newEnsureSubscriberRequest(topicName, options)
 	if err != nil {
 		return nil, err
 	}
@@ -672,14 +701,26 @@ func (m *streamManagerV1) ensureSubscriber(ctx context.Context, topicName string
 	return &s, nil
 }
 
-// receive calls receive for a subscriber.
-func (m *streamManagerV1) receive(ctx context.Context, proxyID int32, maxMessages *int32) ([]*pb1topics.TopicElement, error) {
-	req, err := m.newSubscriberReceiveRequest(proxyID, maxMessages)
+// peekOrReceive calls peek or receive for a subscriber.
+func (m *streamManagerV1) peekOrReceive(ctx context.Context, proxyID int32, maxMessages *int32, isReceive bool) ([]*pb1topics.TopicElement, error) {
+	var (
+		messageType pb1topics.TopicServiceRequestType
+		err         error
+		req         *pb1.ProxyRequest
+	)
+	if isReceive {
+		messageType = pb1topics.TopicServiceRequestType_Receive
+		req, err = m.newSubscriberReceiveRequest(proxyID, maxMessages)
+	} else {
+		messageType = pb1topics.TopicServiceRequestType_PeekAtPosition
+		req, err = m.newSubscriberPeekRequest(proxyID, maxMessages)
+	}
+
 	if err != nil {
 		return nil, err
 	}
 
-	requestType, err := m.submitTopicRequest(req, pb1topics.TopicServiceRequestType_SimpleReceive)
+	requestType, err := m.submitTopicRequest(req, messageType)
 
 	newCtx, cancel := m.session.ensureContext(ctx)
 	if cancel != nil {
@@ -789,7 +830,7 @@ func (m *streamManagerV1) ensureSubscriberGroup(ctx context.Context, topicName s
 	return err
 }
 
-// destroySubscriberGroup destroys a subscriber.
+// destroySubscriberGroup destroys a subscriber group.
 func (m *streamManagerV1) destroySubscriberGroup(ctx context.Context, proxyID int32, subscriberGroup string) error {
 	req, err := m.newDestroySubscriberGroupRequest(proxyID, subscriberGroup)
 	if err != nil {
@@ -952,7 +993,7 @@ func ensureV1StreamManagerTopics(session *Session) error {
 }
 
 func releaseTopicInternal[V any](ctx context.Context, bt *baseTopicsClient[V], destroy bool) error {
-	if bt.isDestroyed || bt.isReleased {
+	if bt.isTopicDestroyed() || bt.isTopicReleased() {
 		return ErrTopicDestroyedOrReleased
 	}
 
@@ -969,12 +1010,12 @@ func releaseTopicInternal[V any](ctx context.Context, bt *baseTopicsClient[V], d
 		if err != nil {
 			return err
 		}
-		bt.isDestroyed = true
+		bt.setDestroyed()
 		bt.generateTopicLifecycleEvent(nil, TopicDestroyed)
 	} else {
 		if existingTopic, ok := bt.session.topics[bt.name]; ok {
 			bt.generateTopicLifecycleEvent(existingTopic, TopicReleased)
-			bt.isReleased = true
+			bt.setReleased()
 		}
 	}
 
@@ -1009,11 +1050,25 @@ func (m *streamManagerV1) newDestroyPublisherOrSubscriberRequest(proxyID int32, 
 	return m.newWrapperProxyTopicsRequest("", requestType, anyReq)
 }
 
-func (m *streamManagerV1) newEnsureSubscriberRequest(topicName string, subscriberGroup *string, binFilter []byte) (*pb1.ProxyRequest, error) {
+func (m *streamManagerV1) newEnsureSubscriberRequest(topicName string, options *subscriber.Options) (*pb1.ProxyRequest, error) {
+	var (
+		err       error
+		binFilter []byte
+	)
+
+	if options.Filter != nil {
+		binFilter, err = m.session.genericSerializer.Serialize(options.Filter)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	req := &pb1topics.EnsureSimpleSubscriberRequest{
 		Topic:           topicName,
 		Filter:          binFilter,
-		SubscriberGroup: subscriberGroup,
+		SubscriberGroup: options.SubscriberGroup,
+		Extractor:       options.Extractor,
+		Channels:        options.Channels,
 	}
 
 	anyReq, err := anypb.New(req)
@@ -1032,6 +1087,18 @@ func (m *streamManagerV1) newSubscriberReceiveRequest(ProxyID int32, maxMessages
 	if err != nil {
 		return nil, err
 	}
+	return m.newWrapperProxyPublisherRequest(ProxyID, pb1topics.TopicServiceRequestType_SimpleReceive, anyReq)
+}
+func (m *streamManagerV1) newSubscriberPeekRequest(ProxyID int32, maxMessages *int32) (*pb1.ProxyRequest, error) {
+	req := &pb1topics.SimpleReceiveRequest{
+		MaxMessages: maxMessages,
+	}
+
+	anyReq, err := anypb.New(req)
+	if err != nil {
+		return nil, err
+	}
+	// TODO: FIX THIS when SImplePeek available
 	return m.newWrapperProxyPublisherRequest(ProxyID, pb1topics.TopicServiceRequestType_SimpleReceive, anyReq)
 }
 

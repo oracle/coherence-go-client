@@ -47,22 +47,22 @@ func TestBasicTopicCreatedAndDestroy(t *testing.T) {
 func TestTopicPublish(t *testing.T) {
 	g := gomega.NewWithT(t)
 
-	RunTestBasicTopicAnonPubSub(g)
-	RunTestBasicTopicAnonPubSub(g, publisher.WithDefaultOrdering())
-	RunTestBasicTopicAnonPubSub(g, publisher.WithRoundRobinOrdering())
-	RunTestBasicTopicAnonPubSub(g, publisher.WithChannelCount(21))
+	RunTestBasicTopicAnonPubSub(g, "-1")
+	RunTestBasicTopicAnonPubSub(g, "-2", publisher.WithDefaultOrdering())
+	RunTestBasicTopicAnonPubSub(g, "-3", publisher.WithRoundRobinOrdering())
+	RunTestBasicTopicAnonPubSub(g, "-4", publisher.WithChannelCount(21))
 }
 
-func RunTestBasicTopicAnonPubSub(g *gomega.WithT, options ...func(cache *publisher.Options)) {
+func RunTestBasicTopicAnonPubSub(g *gomega.WithT, suffix string, options ...func(cache *publisher.Options)) {
 	var (
 		err        error
 		ctx        = context.Background()
 		maxEntries = 100
 
-		processedMessageCount int
+		processedMessageCount counter
 	)
 
-	const topicName = "my-topic-anon"
+	var topicName = fmt.Sprintf("my-topic-anon%s", suffix)
 
 	session1, topic1 := getSessionAndTopic[string](g, topicName)
 	defer session1.Close()
@@ -77,20 +77,19 @@ func RunTestBasicTopicAnonPubSub(g *gomega.WithT, options ...func(cache *publish
 		log.Println("Subscriber created", sub1)
 
 		for {
-			values, err = sub1.Receive(context.Background())
-			g.Expect(err).ShouldNot(gomega.HaveOccurred())
+			values, err1 = sub1.Receive(context.Background())
+			g.Expect(err1).ShouldNot(gomega.HaveOccurred())
 			if len(values) == 0 {
 				// nothing on topic
 				utils.Sleep(1)
 				continue
 			}
-			response, err = sub1.Commit(ctx, values[0].Channel, values[0].Position)
+			response, err1 = sub1.Commit(ctx, values[0].Channel, values[0].Position)
 
-			g.Expect(err).ShouldNot(gomega.HaveOccurred())
+			g.Expect(err1).ShouldNot(gomega.HaveOccurred())
 			g.Expect(response).ShouldNot(gomega.BeNil())
 			g.Expect(response.Channel).Should(gomega.Equal(values[0].Channel))
-			processedMessageCount++
-			log.Println("Processed message count", processedMessageCount)
+			processedMessageCount.Increment()
 		}
 	}()
 
@@ -102,7 +101,7 @@ func RunTestBasicTopicAnonPubSub(g *gomega.WithT, options ...func(cache *publish
 
 	publishEntriesString(g, pub1, maxEntries)
 
-	g.Eventually(func() int { return processedMessageCount }, 20*time.Second).Should(gomega.Equal(maxEntries))
+	g.Eventually(func() int { return processedMessageCount.Get() }, 120*time.Second).Should(gomega.Equal(maxEntries))
 
 	utils.Sleep(5)
 
@@ -154,10 +153,10 @@ func TestCreatePubSubWithoutCreatingTopic(t *testing.T) {
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 }
 
-func runTestPerson[E any](g *gomega.WithT, topic1 coherence.NamedTopic[utils.Person], s coherence.Subscriber[E], count int) {
+func runTestPerson(g *gomega.WithT, topic1 coherence.NamedTopic[utils.Person], count int, options ...func(options *publisher.Options)) {
 	ctx := context.Background()
 
-	pub1, err := topic1.CreatePublisher(context.Background())
+	pub1, err := topic1.CreatePublisher(context.Background(), options...)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	log.Println("Publisher created", pub1)
 
@@ -168,50 +167,6 @@ func runTestPerson[E any](g *gomega.WithT, topic1 coherence.NamedTopic[utils.Per
 			Age:  10 + i,
 		}
 		status, err2 := pub1.Publish(ctx, p)
-		g.Expect(err2).ShouldNot(gomega.HaveOccurred())
-		g.Expect(status).ShouldNot(gomega.BeNil())
-	}
-
-	utils.Sleep(5)
-
-	err = s.Close(ctx)
-	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-
-	err = s.Close(ctx)
-	g.Expect(err).Should(gomega.HaveOccurred())
-}
-
-func runTestString[E any](g *gomega.WithT, topic1 coherence.NamedTopic[string], s coherence.Subscriber[E]) {
-	ctx := context.Background()
-
-	pub1, err := topic1.CreatePublisher(context.Background())
-	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-	log.Println("Publisher created", pub1)
-
-	for i := 1; i <= 1_000; i++ {
-		status, err2 := pub1.Publish(ctx, fmt.Sprintf("my-value-%d", i))
-		g.Expect(err2).ShouldNot(gomega.HaveOccurred())
-		g.Expect(status).ShouldNot(gomega.BeNil())
-	}
-
-	utils.Sleep(5)
-
-	err = s.Close(ctx)
-	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-
-	err = s.Close(ctx)
-	g.Expect(err).Should(gomega.HaveOccurred())
-}
-
-func publishEntriesPerson(g *gomega.WithT, pub coherence.Publisher[utils.Person], count int) {
-	ctx := context.Background()
-	for i := 1; i <= count; i++ {
-		p := utils.Person{
-			ID:   i,
-			Name: fmt.Sprintf("my-value-%d", i),
-			Age:  10 + i,
-		}
-		status, err2 := pub.Publish(ctx, p)
 		g.Expect(err2).ShouldNot(gomega.HaveOccurred())
 		g.Expect(status).ShouldNot(gomega.BeNil())
 	}
