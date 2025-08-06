@@ -496,6 +496,26 @@ type Address struct {
 	PostCode int    `json:"postCode"`
 }
 
+type Customer struct {
+	Class              string          `json:"@class"`
+	ID                 int             `json:"id"`
+	CustomerName       string          `json:"customerName"`
+	HomeAddress        CustomerAddress `json:"homeAddress"`
+	PostalAddress      CustomerAddress `json:"postalAddress"`
+	CustomerType       string          `json:"customerType"`
+	OutstandingBalance float32         `json:"outstandingBalance"`
+}
+
+type CustomerAddress struct {
+	Class        string `json:"@class"`
+	AddressLine1 string `json:"addressLine1"`
+	AddressLine2 string `json:"addressLine2"`
+	Suburb       string `json:"suburb"`
+	City         string `json:"city"`
+	State        string `json:"state"`
+	PostCode     int    `json:"postcode"`
+}
+
 // getDockerComposeCommand returns true if we should use "docker-compose" (v1).
 func useDockerComposeV1() bool {
 	return os.Getenv("DOCKER_COMPOSE_V1") != ""

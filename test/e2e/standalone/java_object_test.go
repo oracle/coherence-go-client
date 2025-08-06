@@ -13,26 +13,6 @@ import (
 	"testing"
 )
 
-type Customer struct {
-	Class              string          `json:"@class"`
-	ID                 int             `json:"id"`
-	CustomerName       string          `json:"customerName"`
-	HomeAddress        CustomerAddress `json:"homeAddress"`
-	PostalAddress      CustomerAddress `json:"postalAddress"`
-	CustomerType       string          `json:"customerType"`
-	OutstandingBalance float32         `json:"outstandingBalance"`
-}
-
-type CustomerAddress struct {
-	Class        string `json:"@class"`
-	AddressLine1 string `json:"addressLine1"`
-	AddressLine2 string `json:"addressLine2"`
-	Suburb       string `json:"suburb"`
-	City         string `json:"city"`
-	State        string `json:"state"`
-	PostCode     int    `json:"postCode"`
-}
-
 // TestBasicOperationsAgainstMapAndCache runs all tests against NamedMap and NamedCache
 func TestJavaSerializationAgainstMapAndCache(t *testing.T) {
 	g := gomega.NewWithT(t)
@@ -42,11 +22,11 @@ func TestJavaSerializationAgainstMapAndCache(t *testing.T) {
 
 	testCases := []struct {
 		testName string
-		nameMap  coherence.NamedMap[int, Customer]
-		test     func(t *testing.T, namedCache coherence.NamedMap[int, Customer])
+		nameMap  coherence.NamedMap[int, utils.Customer]
+		test     func(t *testing.T, namedCache coherence.NamedMap[int, utils.Customer])
 	}{
-		{"NamedMapSerializationTest", GetNamedMap[int, Customer](g, session, "customer-map"), RunSerializationTest},
-		{"NamedCacheSerializationTest", GetNamedCache[int, Customer](g, session, "customer-cache"), RunSerializationTest},
+		{"NamedMapSerializationTest", GetNamedMap[int, utils.Customer](g, session, "customer-map"), RunSerializationTest},
+		{"NamedCacheSerializationTest", GetNamedCache[int, utils.Customer](g, session, "customer-cache"), RunSerializationTest},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.testName, func(t *testing.T) {
@@ -55,10 +35,10 @@ func TestJavaSerializationAgainstMapAndCache(t *testing.T) {
 	}
 }
 
-func RunSerializationTest(t *testing.T, namedMap coherence.NamedMap[int, Customer]) {
+func RunSerializationTest(t *testing.T, namedMap coherence.NamedMap[int, utils.Customer]) {
 	var (
 		g      = gomega.NewWithT(t)
-		result *Customer
+		result *utils.Customer
 		err    error
 	)
 
@@ -71,7 +51,7 @@ func RunSerializationTest(t *testing.T, namedMap coherence.NamedMap[int, Custome
 	err = namedMap.Clear(ctx)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
-	homeAddress := CustomerAddress{
+	homeAddress := utils.CustomerAddress{
 		Class:        addressClass,
 		AddressLine1: "123 James Street",
 		Suburb:       "Balcatta",
@@ -80,7 +60,7 @@ func RunSerializationTest(t *testing.T, namedMap coherence.NamedMap[int, Custome
 		PostCode:     6000,
 	}
 
-	postalAddress := CustomerAddress{
+	postalAddress := utils.CustomerAddress{
 		Class:        addressClass,
 		AddressLine1: "PO Box 1000",
 		AddressLine2: "Balcatta Post Office",
@@ -90,7 +70,7 @@ func RunSerializationTest(t *testing.T, namedMap coherence.NamedMap[int, Custome
 		PostCode:     6000,
 	}
 
-	customer := Customer{
+	customer := utils.Customer{
 		Class:              customerClass,
 		ID:                 1,
 		CustomerName:       "Tim",
