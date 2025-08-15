@@ -19,6 +19,7 @@ import (
 	pb1 "github.com/oracle/coherence-go-client/v2/proto/v1"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
+	"math/rand/v2"
 	"strings"
 	"sync"
 )
@@ -161,8 +162,6 @@ func GetNamedTopic[V any](ctx context.Context, session *Session, topicName strin
 			return nil, getExistingError("NamedTopic", topicName)
 		}
 
-		// check any topic options
-
 		session.debug("using existing NamedTopic: %v", existing)
 		return existing, nil
 	}
@@ -190,6 +189,7 @@ type topicPublisher[V any] struct {
 	proxyID              int32
 	publisherID          int64
 	channelCount         int32
+	defaultOrderingSeed  int32
 	options              *publisher.Options
 	valueSerializer      Serializer[V]
 	mutex                sync.RWMutex
@@ -213,7 +213,12 @@ func (tp *topicPublisher[V]) Publish(ctx context.Context, value V) (*publisher.P
 		return nil, ErrPublisherClosed
 	}
 
-	publishChannel := tp.ensureTopicChannel()
+	var publishChannel = tp.defaultOrderingSeed // use defaultOrderingSeed as default
+
+	if tp.defaultOrderingSeed == -1 {
+		// use the hash from ordering option
+		publishChannel = tp.ensureTopicChannel()
+	}
 
 	binValue, err := tp.valueSerializer.Serialize(value)
 	if err != nil {
@@ -327,16 +332,26 @@ func (bt *baseTopicsClient[V]) setReleased() {
 
 func newPublisher[V any](session *Session, bt *baseTopicsClient[V], result *publisher.EnsurePublisherResult, topicName string, options *publisher.Options) (Publisher[V], error) {
 	tp := &topicPublisher[V]{
-		namedTopic:      bt,
-		publisherID:     result.PublisherID,
-		session:         session,
-		options:         options,
-		valueSerializer: NewSerializer[V](session.sessOpts.Format),
-		topicName:       topicName,
-		proxyID:         result.ProxyID,
-		channelCount:    result.ChannelCount,
-		isClosed:        false,
+		namedTopic:          bt,
+		publisherID:         result.PublisherID,
+		session:             session,
+		options:             options,
+		valueSerializer:     NewSerializer[V](session.sessOpts.Format),
+		topicName:           topicName,
+		proxyID:             result.ProxyID,
+		defaultOrderingSeed: -1,
+		channelCount:        result.ChannelCount,
+		isClosed:            false,
 	}
+
+	ordering := options.GetOrdering()
+	if _, ok := ordering.(*publisher.OrderByDefault); ok {
+		// set the defaultOrderSeed to a non -1 value which means to use this number for the channel
+		// hash all the time.
+		// #nosec G404 -- math/rand is fine here for non-security use
+		tp.defaultOrderingSeed = rand.Int32() % tp.channelCount
+	}
+
 	session.mapMutex.Lock()
 	defer session.mapMutex.Unlock()
 	session.publishers[result.PublisherID] = tp

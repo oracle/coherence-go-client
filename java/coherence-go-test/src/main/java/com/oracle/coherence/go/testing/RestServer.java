@@ -16,29 +16,31 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ExecutionException;
-import java.util.logging.Logger;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
-import com.tangosol.net.CacheFactory;
-import com.tangosol.net.Cluster;
-import com.tangosol.net.Coherence;
-import com.tangosol.net.CoherenceConfiguration;
-import com.tangosol.net.DefaultCacheServer;
-import com.tangosol.net.NamedCache;
+import com.tangosol.net.*;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
-import com.tangosol.net.NamedMap;
-import com.tangosol.net.SessionConfiguration;
+
 import com.tangosol.net.management.MBeanServerProxy;
+
 import com.tangosol.net.topic.NamedTopic;
+import com.tangosol.net.topic.Publisher;
+import com.tangosol.net.topic.Subscriber;
+
+import static com.tangosol.net.topic.Subscriber.Name.inGroup;
+import static com.tangosol.util.Base.log;
 
 /**
  * A simple Http server that is deployed into a Coherence cluster
  * and can be used to perform various tests.
  *
- * @author jk  2019.08.09
+ * @author jk   2019.08.09
  * @author tam  2022.02.08
  */
 public class RestServer {
@@ -74,6 +76,7 @@ public class RestServer {
             server.createContext("/isIsReadyPresent", RestServer::isIsReadyPresent);
             server.createContext("/populateQueue", RestServer::populateQueue);
             server.createContext("/destroyTopic", RestServer::destroyTopic);
+            server.createContext("/createCustomerTopic", RestServer::createCustomerTopic);
 
             server.setExecutor(null); // creates a default executor
             server.start();
@@ -141,6 +144,45 @@ public class RestServer {
             send(t, 404, "Error: " + e.getMessage());
         }
         send(t, 200, "OK");
+    }
+
+    private static void createCustomerTopic(HttpExchange t) throws IOException {
+        try {
+            URI uri = t.getRequestURI();
+            String path = uri.getPath();
+            String[] pathComponents = path.split("/");
+
+            if (pathComponents.length < 4 || !pathComponents[pathComponents.length - 3].equals("createCustomerTopic")) {
+                t.sendResponseHeaders(400, -1); // Bad Request
+                return;
+            }
+
+            String topicName = pathComponents[pathComponents.length - 2];
+            int count        = Integer.parseInt(pathComponents[pathComponents.length - 1]);
+
+            Coherence coherence = Coherence.getInstance();
+            if (coherence == null) {
+                coherence = Coherence.clusterMember().start().get();
+            }
+            Session session = coherence.getSession();
+
+            NamedTopic<Customer> topic = session.getTopic(topicName);
+            Publisher<Customer> publisher = topic.createPublisher();
+
+            for (int i = 0; i < count; i++) {
+                Customer customer = new Customer(i, "name-" + i, getAddress(i), getAddress(i), Customer.GOLD, 1000* i);
+                publisher.publish(customer).join();
+            }
+            publisher.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+            send(t, 404, "Error: " + e.getMessage());
+        }
+        send(t, 200, "OK");
+    }
+
+    private static Address getAddress(int id) {
+        return new Address("address-line-1-" + id, "address-line-2-" + id, "Suburb-" + id, "City-" + id, "State-" + id, id);
     }
 
     private static void ready(HttpExchange t) throws IOException {

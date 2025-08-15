@@ -11,7 +11,7 @@ toolchain go1.23.7
 
 require (
 	github.com/google/uuid v1.6.0
-	golang.org/x/text v0.26.0
+	golang.org/x/text v0.28.0
 	google.golang.org/grpc v1.73.0
 	google.golang.org/protobuf v1.36.6
 )
