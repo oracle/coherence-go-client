@@ -162,8 +162,6 @@ func GetNamedTopic[V any](ctx context.Context, session *Session, topicName strin
 			return nil, getExistingError("NamedTopic", topicName)
 		}
 
-		// check any topic options
-
 		session.debug("using existing NamedTopic: %v", existing)
 		return existing, nil
 	}
@@ -349,7 +347,7 @@ func newPublisher[V any](session *Session, bt *baseTopicsClient[V], result *publ
 	ordering := options.GetOrdering()
 	if _, ok := ordering.(*publisher.OrderByDefault); ok {
 		// set the defaultOrderSeed to a non -1 value which means to use this number for the channel
-		//hash all the time.
+		// hash all the time.
 		// #nosec G404 -- math/rand is fine here for non-security use
 		tp.defaultOrderingSeed = rand.Int32() % tp.channelCount
 	}
