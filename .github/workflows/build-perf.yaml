@@ -71,7 +71,11 @@ jobs:
     - name: Run Perf Test
       shell: bash
       run: |
-        curl --retry 5 --retry-delay 2 -sL https://raw.githubusercontent.com/oracle/coherence-cli/main/scripts/install.sh | bash
+        COHCTL_INSTALL_SCRIPT="cohctl-install.sh"
+        COHCTL_INSTALL_SHA256="45ac74a3d9e5fbe8e7f4d412e8a04a56d3cf6e0670f127d9ad0d8a71ce09e27c"
+        curl --fail --retry 5 --retry-delay 2 -sSLo "${COHCTL_INSTALL_SCRIPT}" https://raw.githubusercontent.com/oracle/coherence-cli/5cacd8a0788e72d91caf6dfd07482fa274a930db/scripts/install.sh
+        echo "${COHCTL_INSTALL_SHA256}  ${COHCTL_INSTALL_SCRIPT}" | sha256sum -c -
+        bash "${COHCTL_INSTALL_SCRIPT}"
         COHERENCE_CLIENT_REQUEST_TIMEOUT=200000 COHERENCE_VERSION=${{ matrix.coherenceVersion }} make test-perf
 
     - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # actions/upload-artifact@v7.0.1

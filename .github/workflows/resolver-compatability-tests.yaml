@@ -69,7 +69,11 @@ jobs:
       shell: bash
       run: |
         export COHERENCE_VERSION=${{ matrix.coherenceVersion }}
-        curl --retry 5 --retry-delay 2 -sL https://raw.githubusercontent.com/oracle/coherence-cli/main/scripts/install.sh | bash
+        COHCTL_INSTALL_SCRIPT="cohctl-install.sh"
+        COHCTL_INSTALL_SHA256="45ac74a3d9e5fbe8e7f4d412e8a04a56d3cf6e0670f127d9ad0d8a71ce09e27c"
+        curl --fail --retry 5 --retry-delay 2 -sSLo "${COHCTL_INSTALL_SCRIPT}" https://raw.githubusercontent.com/oracle/coherence-cli/5cacd8a0788e72d91caf6dfd07482fa274a930db/scripts/install.sh
+        echo "${COHCTL_INSTALL_SHA256}  ${COHCTL_INSTALL_SCRIPT}" | sha256sum -c -
+        bash "${COHCTL_INSTALL_SCRIPT}"
         cohctl version
         cohctl create cluster grpc-cluster -v ${{ matrix.coherenceVersion }} -y -a coherence-grpc-proxy 
         sleep 20
