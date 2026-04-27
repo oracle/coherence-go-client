@@ -14,6 +14,9 @@ on:
     branches:
       - '*'
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-22.04
@@ -34,7 +37,7 @@ jobs:
 #   Checkout the source, we need a depth of zero to fetch all of the history otherwise
 #   the copyright check cannot work out the date of the files from Git.
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # actions/checkout@v6.0.2
       with:
         fetch-depth: 0
 
@@ -45,13 +48,13 @@ jobs:
         uname -a
 
     - name: Set up JDK
-      uses: actions/setup-java@v4
+      uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # actions/setup-java@v5.2.0
       with:
         java-version: '17'
         distribution: 'zulu'
 
     - name: Cache Go Modules
-      uses: actions/cache@v4
+      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # actions/cache@v5.0.5
       with:
         path: ~/go/pkg/mod
         key: ${{ runner.os }}-go-mods-${{ hashFiles('**/go.sum') }}
@@ -59,14 +62,14 @@ jobs:
           ${{ runner.os }}-go-mods-
 
     - name: Cache Maven packages
-      uses: actions/cache@v4
+      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # actions/cache@v5.0.5
       with:
         path: ~/.m2
         key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
         restore-keys: ${{ runner.os }}-m2
 
     - name: Set up Go
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # actions/setup-go@v6.4.0
       with:
         go-version: '${{ matrix.go-version }}'
 
@@ -82,7 +85,7 @@ jobs:
         COHERENCE_BASE_IMAGE=gcr.io/distroless/java17-debian12 COHERENCE_VERSION=${{ matrix.coherenceVersion }} PROFILES=,jakarta,-javax make clean generate-proto build-test-images test-cluster-startup test-examples
         make test-cluster-shutdown || true
 
-    - uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # actions/upload-artifact@v7.0.1
       if: failure()
       with:
         name: test-output-${{ matrix.go-version }}-${{ matrix.coherenceVersion }}
